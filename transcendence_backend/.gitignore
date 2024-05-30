@@ -1,0 +1,6 @@
+.env
+others
+Pipfile
+Pipfile.lock
+backend/db.sqlite3
+static/media

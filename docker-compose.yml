@@ -1,0 +1,47 @@
+services:
+
+  backend:
+    build: ./transcendence_backend
+    container_name: backend
+    volumes:
+      - backend_data:/app/
+      - staticfiles:/app/static/
+    ports:
+      - "8000:8000"
+
+  nginx:
+    build: .
+    container_name: nginx
+    volumes:
+      - staticfiles:/app/static/
+      - ./nginx.conf.d:/etc/nginx/conf.d
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  backend_data:
+    name: backend_data
+    driver: local
+    driver_opts:
+      device: ./transcendence_backend/backend
+      o: bind
+      type: none
+  
+  staticfiles:
+      name: staticfiles
+      driver: local
+      driver_opts:
+        device: ./transcendence_backend/static
+        o: bind
+        type: none
+
+networks:
+  default:
+    name: main_network

@@ -1,0 +1,54 @@
+
+
+<!-- <h2>User Profile</h2>
+<div id="profileInfo"></div>
+
+<script src="profile.js"></script> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile Data</title>
+</head>
+<body>
+    <div id="profileData"></div>
+
+    <script>
+        // Fetch user profile data from Django backend
+        fetch('profile', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any additional headers as needed (e.g., authorization token)
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Render user profile data
+            renderProfileData(data);
+        })
+        .catch(error => {
+            console.error('Error fetching user profile data:', error);
+        });
+
+        // Function to render user profile data
+        function renderProfileData(profileData) {
+            const profileElement = document.getElementById('profileData');
+            const profileHtml = `
+                <h2>User Profile</h2>
+                <p>Name: ${profileData.name}</p>
+                <p>Email: ${profileData.email}</p>
+                <!-- Add additional profile fields as needed -->
+            `;
+            profileElement.innerHTML = profileHtml;
+        }
+    </script>
+</body>
+</html>

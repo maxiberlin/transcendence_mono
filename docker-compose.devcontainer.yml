@@ -1,0 +1,27 @@
+services:
+  devcontainer_backend:
+    build:
+      context: .
+      dockerfile: .devcontainer/devcontainer_backend/Dockerfile
+    container_name: devcontainer_backend
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    volumes:
+      - ./transcendence_backend:/backend:cached
+    working_dir: /backend
+    depends_on:
+      - backend
+
+  devcontainer_frontend:
+    image: mcr.microsoft.com/vscode/devcontainers/javascript-node:0-18
+    container_name: devcontainer_frontend
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    volumes:
+      - ./transcendence_frontend:/frontend:cached
+    working_dir: /frontend
+    environment:
+      - NODE_ENV=development
+
+networks:
+  default:
+    name: main_network
+    external: true
