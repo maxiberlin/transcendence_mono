@@ -42,6 +42,6 @@ volumes:
         o: bind
         type: none
 
-networks:
-  default:
-    name: main_network
+# networks:
+#   default:
+#     name: main_network

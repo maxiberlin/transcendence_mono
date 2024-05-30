@@ -21,7 +21,3 @@ services:
     environment:
       - NODE_ENV=development
 
-networks:
-  default:
-    name: main_network
-    external: true
