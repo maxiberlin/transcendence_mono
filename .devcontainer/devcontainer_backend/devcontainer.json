@@ -3,8 +3,8 @@
     "name": "backend devcontainer",
     "dockerComposeFile": ["../../docker-compose.yml", "../../docker-compose.devcontainer.yml"],
     "service": "devcontainer_backend",
-    "workspaceFolder": "/backend",
-	"shutdownAction": "stopCompose",
+    "workspaceFolder": "/workspace/transcendence_backend",
+	"shutdownAction": "none",
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
     },
