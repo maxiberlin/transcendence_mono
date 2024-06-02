@@ -2,9 +2,11 @@ import { Fetcher } from './api_helper.js';
 import { PubSub } from '../../lib_templ/reactivity/pubsub.js';
 
 
-export const fetcher = new Fetcher("http://127.0.0.1", {
+// export const fetcher = new Fetcher("http://127.0.0.1", {
+export const fetcher = new Fetcher(window.location.origin + "/api", {
     credentials: "include"
 });
+
 
 
 export class SessionStore {
@@ -19,7 +21,7 @@ export class SessionStore {
     constructor() {}
     #isLoggedIn = false;
 
-    /** @type {import('../../../types/api_data.js').UserData | undefined} */
+    /** @type {APITypes.UserData | undefined} */
     #userData;
     get isLoggedIn() {
         return (this.#isLoggedIn);
@@ -67,22 +69,22 @@ export class SessionStore {
         }
     }
 
-    /** @param {number} user_id @returns {import('../../../types/api_data.js').FriendUserData | undefined} */
+    /** @param {number} user_id @returns {APITypes.FriendUserData | undefined} */
     getFriend(user_id) {
         if (this.#userData)
             return this.#userData.friends.find((friend)=>friend.id === user_id);
     }
-    /** @param {number} user_id @returns {import('../../../types/api_data.js').FriendUserData | undefined} */
+    /** @param {number} user_id @returns {APITypes.FriendUserData | undefined} */
     getBlocked(user_id) {
         if (this.#userData)
             return this.#userData.friends.find((friend)=>friend.id === user_id);
     }
-    /** @param {number} user_id @returns {import('../../../types/api_data.js').RequestUserData | undefined} */
+    /** @param {number} user_id @returns {APITypes.RequestUserData | undefined} */
     getSentRequest(user_id) {
         if (this.#userData)
             return this.#userData.requestsSent.find((friend)=>friend.id === user_id);
     }
-    /** @param {number} user_id @returns {import('../../../types/api_data.js').RequestUserData | undefined} */
+    /** @param {number} user_id @returns {APITypes.RequestUserData | undefined} */
     getReceivedRequest(user_id) {
         if (this.#userData)
             return this.#userData.requestsReceived.find((friend)=>friend.id === user_id);
@@ -109,7 +111,7 @@ export class SessionStore {
             this.#fetchRequestsSent(id),
             this.#fetchGameInvitationsReceived(id),
             this.#fetchGameInvitationsSent(id),
-            this.#fetchGameShedule(id)
+            this.#fetchGameSchedule(id)
         ])
         .then((data)=> {
             if (data[0] && data[0].success === false)
@@ -149,7 +151,7 @@ export class SessionStore {
     #fetchGameInvitationsSent(id) {
         return fetcher.$get(`/game/invites-sent`);
     }
-    #fetchGameShedule(id) {
+    #fetchGameSchedule(id) {
         return fetcher.$get(`/game/schedule`);
     }
 
