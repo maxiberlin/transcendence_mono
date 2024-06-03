@@ -36,24 +36,24 @@ LOGIN_URL = '/login'
 # Application definition
 
 INSTALLED_APPS = [
-    "daphne",
-    'channels',
-
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
 
     'corsheaders',
-    
+    'channels',
 
     'user',
     'friends',
     'game',
-    'chat',
-    'pongserver',
+    'pong_server',
+    'public_chat',
+    # 'chat',
 ]
 
 MIDDLEWARE = [
@@ -72,18 +72,21 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1:5500",
     "http://localhost:5500",
+    "https://pong.com",
+    "https://pongparty.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 
 SESSION_COOKIE_SAMESITE = "None"
-SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
+    "https://pong.com",
+    "https://pongparty.com",
 ]
-
 
 
 ROOT_URLCONF = 'backend.urls'
@@ -107,12 +110,14 @@ TEMPLATES = [
 # WSGI_APPLICATION = 'backend.wsgi.application'
 
 ASGI_APPLICATION = 'backend.asgi.application'
+
 CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("redis", 6379)],
-        },
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {
+        #     'hosts': [('redis', 6379)],
+        # },
     },
 }
 

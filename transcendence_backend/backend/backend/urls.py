@@ -19,19 +19,17 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-# urlpatterns = [
-#     path('admin/', admin.site.urls),
-#     path('', include('user.urls')),
-#     path('friend/', include('friends.urls')),
-#     path('game/', include('game.urls')),
-# ]
 
 urlpatterns = [
-    path('api/admin/', admin.site.urls),
-    path('api/', include('user.urls')),
-    path('api/friend/', include('friends.urls')),
-    path('api/game/', include('game.urls')),
+    path('admin/', admin.site.urls),
+    path('', include('user.urls')),
+    path('friend/', include('friends.urls')),
+    path('game/', include('game.urls')),
+    path('public_chat/', include('public_chat.urls')),
+
+    # path('remote', include('pong_server.urls')),
 ]
+
 
 
 if bool(settings.DEBUG):

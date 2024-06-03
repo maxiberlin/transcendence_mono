@@ -285,8 +285,7 @@ def search(request, *args, **kwargs):
 		user = request.user
 		query = request.GET.get('q')
 		if len(query) > 0:
-			# search_results = UserAccount.objects.filter(username__icontains=query).filter(email__icontains=query).distinct()
-			search_results = UserAccount.objects.filter(username__icontains=query)
+			search_results = UserAccount.objects.filter(username__icontains=query).filter(email__icontains=query).distinct()
 			data = []
 			for account in search_results:
 				item = {

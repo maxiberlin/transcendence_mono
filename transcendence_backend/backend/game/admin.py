@@ -28,7 +28,7 @@ admin.site.register(GameRequest, GameRequestAdmin)
 
 
 class GameScheduleAdmin(admin.ModelAdmin):
-    list_display = ['player_one', 'player_two', 'is_active', 'scheduled', 'timestamp']
+    list_display = ['id', 'player_one', 'player_two', 'is_active', 'scheduled', 'timestamp']
 
     class Meta:
         model = GameSchedule

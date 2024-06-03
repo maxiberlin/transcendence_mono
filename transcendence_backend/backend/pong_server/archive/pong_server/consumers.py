@@ -1,0 +1,1 @@
+from pong_server.pong.payer_consumer import PlayerConsumer
