@@ -64,7 +64,7 @@ export class GameModal extends BaseElem {
   
     disconnectedCallback() {
         super.disconnectedCallback();
-        this.#closeObs();
+        if (this.#closeObs) this.#closeObs();
         this.currentGame?.terminateGame();
     }
 
