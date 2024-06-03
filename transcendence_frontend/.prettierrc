@@ -1,0 +1,13 @@
+{
+    "tabWidth": 4,
+    "useTabs": false,
+    "arrowParens": "always",
+    "bracketSpacing": true,
+    "bracketSameLine": true,
+    "endOfLine": "lf",
+    "singleQuote": false,
+    "semi": true,
+    "htmlWhitespaceSensitivity": "css",
+    "singleAttributePerLine": false,
+    "embeddedLanguageFormatting": "auto"
+}

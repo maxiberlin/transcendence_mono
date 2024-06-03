@@ -50,20 +50,20 @@ export const fetcher = new Fetcher(window.location.origin + "/api", {
 // path('unblock/<user_id>', views.unblock_user, name='friend-unblock'),
 // path('block-list', views.block_list_view, name='block-list'),
 
-const apiUserEndpoints = {
-    login: "/login",
-    logout: "/logout",
-    profile: "/profile",
-    friend: "/friend",
-}
+// const apiUserEndpoints = {
+//     login: "/login",
+//     logout: "/logout",
+//     profile: "/profile",
+//     friend: "/friend",
+// }
 
-const apiEndpoints = {
-    login: "/login",
-    logout: "/logout",
-    profile: "/profile",
-    friend: "/friend",
-    game: "/game"
-}
+// const apiEndpoints = {
+//     login: "/login",
+//     logout: "/logout",
+//     profile: "/profile",
+//     friend: "/friend",
+//     game: "/game"
+// }
 
 
 

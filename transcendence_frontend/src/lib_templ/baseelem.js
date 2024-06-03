@@ -166,7 +166,7 @@ export class BaseElem extends HTMLElement {
 
     
 
-    onSlotChange(e) {
+    onSlotChange() {
         this.update();
     }
 
@@ -208,8 +208,8 @@ export class BaseElem extends HTMLElement {
         this.#mapMyAttr(name, nVal, oVal);
     }
 
-    /** @type {LiveTemplate} */
-    #templ;
+    /** @type {LiveTemplate | undefined} */
+    #templ = undefined;
     update() {
         const res = this.render();
         
