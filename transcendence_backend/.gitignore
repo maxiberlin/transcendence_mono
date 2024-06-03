@@ -7,3 +7,5 @@ static/media
 
 venv
 db_jojo.sqlite3
+__pycache__
+*.pyc
