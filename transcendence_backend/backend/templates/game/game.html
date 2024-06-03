@@ -1,0 +1,47 @@
+{% load static %}
+<!-- static/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PONG GAME</title>
+</head>
+<body>
+    <h1>Hello, World!</h1>
+    <canvas id="remote-play"></canvas>
+    <button id="play-button">Play</button>
+    <script src="{% static 'js/game/worker_remote.js' %}"></script>
+    <script type="module">
+        var gamedata = {
+            schedule_id: "5",
+            game_id: "pong",
+            game_mode: "1v1",
+            player_one: {
+                id: 5,
+            },
+            player_two: {
+                id: 2,
+            },
+        }
+        var gameSettings = {}
+        import {GameHubRemote} from "{% static 'js/game/gameHub_remote.js' %}";
+        async function startGame() {
+            var play = document.getElementById('remote-play');
+            let game = await GameHubRemote.startGame("pong", play, gamedata, gameSettings);
+            game.resizeCanvas(400, 200, 2.0);
+
+            if (game && game.connection) {
+                game.connection.addEventListener('message', function(event) {
+                    console.log('Message from backend:', event.data);
+                });
+            } else {
+                console.warn('Unable to attach message listener to the game connection.');
+            }
+        }
+
+        startGame();
+
+    </script>
+</body>
+</html>

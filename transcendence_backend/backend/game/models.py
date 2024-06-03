@@ -33,7 +33,7 @@ class TournamentLobby(models.Model):
 
 
 
-class GameResults(models.Model): #TODO: change on_delete to SET_DEFAULT and set user to disbaled user
+class GameResults(models.Model):
 	game_id = models.CharField(max_length=10, null=False)
 	game_mode = models.CharField(max_length=20, null=False)
 	tournament = models.ForeignKey(Tournament, related_name='tournament_name', on_delete=models.SET_NULL, null=True, blank=True)
@@ -87,16 +87,19 @@ class GameRequest(models.Model):
 	def accept(self):
 		player_one = Player.objects.get(user=self.user)
 		player_two = Player.objects.get(user=self.invitee)
-		game = GameSchedule.objects.create(
-			player_one=player_one,
-			player_two=player_two,
-			game_id=self.game_id,
-			game_mode=self.game_mode,
-			tournament=self.tournament
-		)
-		game.save()
-		self.is_active = False
-		self.save()
+		if self.game_mode != 'tournament' and self.tournament != None:
+			game = GameSchedule.objects.create(
+				player_one=player_one,
+				player_two=player_two,
+				game_id=self.game_id,
+				game_mode=self.game_mode,
+				tournament=self.tournament
+			)
+			game.save()
+			self.is_active = False
+			self.save()
+		else:
+			pass # define what happens when a tournament invite is accepted 
 
 	def reject(self):
 		self.is_active = False

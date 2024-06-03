@@ -280,7 +280,7 @@ def game_invite_cancel(request, *args, **kwargs):
 def game_schedule(request, *args, **kwargs):
 	user = request.user
 	schedules = []
-	if request.method == 'GET':
+	if request.method == 'POST':
 		player = Player.objects.get(user=user)
 		if player:
 			try:
@@ -424,7 +424,7 @@ def create_tournament(request, *args, **kwargs):
 					tournament=tournament,
 					is_active=True
 					)
-					if check_request == None:
+					if  check_request == None:
 						response = send_invite(user, invitee, game_id, 'tournament', tournament)
 						if response != 'invitation was sent':
 							return JsonResponse({'success': False, 'message': response}, status=400)
@@ -465,8 +465,10 @@ def player_stats(request, *args, **kwargs):
 			elif item < 0:
 				loss_margin.append(item)
 
-		avg_win_margin = sum(win_margin) / len(win_margin)
-		avg_loss_margin = sum(loss_margin) / len(loss_margin)
+		if win_margin != 0 and len(win_margin) != 0:
+			avg_win_margin = sum(win_margin) / len(win_margin)
+		if loss_margin != 0 and len(loss_margin) != 0:
+			avg_loss_margin = sum(loss_margin) / len(loss_margin)
 		print(f"AVG_WINS: {avg_win_margin}, AVG_LOSS: {avg_loss_margin}")
 
 

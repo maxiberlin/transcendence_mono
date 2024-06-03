@@ -15,10 +15,14 @@ services:
     volumes:
       - staticfiles:/app/static/
       - ./nginx.conf.d:/etc/nginx/conf.d
+      - ./ssl/pong.com:/etc/nginx/ssl/pong.com
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - backend
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7

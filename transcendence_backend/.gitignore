@@ -3,9 +3,12 @@ others
 Pipfile
 Pipfile.lock
 backend/db.sqlite3
+backend/db_jojo.sqlite3
 static/media
-
 venv
-db_jojo.sqlite3
-__pycache__
+
+# Django #
+*.log
+*.pot
 *.pyc
+__pycache__

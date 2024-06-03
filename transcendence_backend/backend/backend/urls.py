@@ -19,11 +19,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('user.urls')),
     path('friend/', include('friends.urls')),
     path('game/', include('game.urls')),
+    path('public_chat/', include('public_chat.urls')),
+
+    # path('remote', include('pong_server.urls')),
 ]
 
 

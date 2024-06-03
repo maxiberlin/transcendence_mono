@@ -69,7 +69,9 @@ export class GameHubRemote {
        
 
         try {
-            this.#gamesocket = new WebSocket(`ws://127.0.0.1/ws/game/${this.gameData.schedule_id}/`);
+            // this.#gamesocket = new WebSocket(`ws://127.0.0.1/ws/game/${this.gameData.schedule_id}/`);
+            const url = new URL(window.location.origin);
+            this.#gamesocket = new WebSocket(`wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`);
             
         } catch (error) {
             // console.log("unable to connect to game websocket: ", error);
