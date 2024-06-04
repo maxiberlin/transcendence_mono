@@ -25,7 +25,7 @@ urlpatterns = [
     path('', include('user.urls')),
     path('friend/', include('friends.urls')),
     path('game/', include('game.urls')),
-    path('public_chat/', include('public_chat.urls')),
+    # path('public_chat/', include('public_chat.urls')),
 
     # path('remote', include('pong_server.urls')),
 ]

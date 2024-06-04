@@ -40,13 +40,14 @@ def register_view(request):
 		password = data.get('password')
 
 		if UserAccount.objects.filter(username=username).exists():
-			return JsonResponse({'success': False, 'error':'Username already exists'}, status=400)
+			return JsonResponse({'success': False, 'message':'Username already exists'}, status=400)
 		if UserAccount.objects.filter(email=email).exists():
-			return JsonResponse({'success': False, 'error':'email already exists'}, status=400)
+			return JsonResponse({'success': False, 'message':'email already exists'}, status=400)
 		
 		user = UserAccount.objects.create_user(username, email, password)
 		player = Player.objects.create(user=user)
 		friend_list = FriendList.objects.create(user=user)
+		block_list = BlockList.objects.create(user=user)
 		return JsonResponse({'success': True, 'message':'Registration Successful'}, status=200)
 	# return render(request, 'user/register.html')
 	else:
@@ -74,9 +75,9 @@ def login_view(request):
 				user.save()
 				return JsonResponse({'success': True, 'message': 'Login Successful', 'user_id': request.user.pk}, status=200)
 			else:
-				return JsonResponse({'success': False, 'error': 'Account is disabled'}, status=400)
+				return JsonResponse({'success': False, 'message': 'Account is disabled'}, status=400)
 		else:
-			return JsonResponse({'success': False, 'error': 'Invalid credentials'}, status=400)
+			return JsonResponse({'success': False, 'message': 'Invalid credentials'}, status=400)
 	# else:
 	# 	return JsonResponse({'success': False}, status=403)   
 	return render(request, 'user/login.html')
@@ -285,7 +286,8 @@ def search(request, *args, **kwargs):
 		user = request.user
 		query = request.GET.get('q')
 		if len(query) > 0:
-			search_results = UserAccount.objects.filter(username__icontains=query).filter(email__icontains=query).distinct()
+			# search_results = UserAccount.objects.filter(username__icontains=query).filter(email__icontains=query).distinct()
+			search_results = UserAccount.objects.filter(username__icontains=query).distinct()
 			data = []
 			for account in search_results:
 				item = {

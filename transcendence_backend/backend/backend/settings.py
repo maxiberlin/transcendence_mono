@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'friends',
     'game',
     'pong_server',
-    'public_chat',
+    # 'public_chat',
     # 'chat',
 ]
 
@@ -79,7 +79,7 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 SESSION_COOKIE_SAMESITE = "None"
-# SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",

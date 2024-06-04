@@ -87,7 +87,7 @@ class GameRequest(models.Model):
 	def accept(self):
 		player_one = Player.objects.get(user=self.user)
 		player_two = Player.objects.get(user=self.invitee)
-		if self.game_mode != 'tournament' and self.tournament != None:
+		if self.game_mode != 'tournament' and self.tournament == None:
 			game = GameSchedule.objects.create(
 				player_one=player_one,
 				player_two=player_two,

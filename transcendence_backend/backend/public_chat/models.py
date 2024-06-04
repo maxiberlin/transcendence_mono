@@ -5,7 +5,7 @@ from django.conf import settings
 
 class PublicChatRoom(models.Model):
 	title 				= models.CharField(max_length=255, unique=True, blank=False,)
-	users 				= models.ManyToManyField(settings.AUTH_USER_MODEL, help_text="users who are connected to chat room.", blank=True, null=True)
+	# users 				= models.ManyToManyField(settings.AUTH_USER_MODEL, help_text="users who are connected to chat room.", blank=True, null=True)
 
 	def __str__(self):
 		return self.title

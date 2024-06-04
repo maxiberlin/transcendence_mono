@@ -161,7 +161,7 @@ def received_invites(request, *args, **kwargs):
 				'game_mode': invite.game_mode,
 				'tournament': invite.tournament,
 				'id': inviter.pk,
-				'inviter': inviter.username,
+				'username': inviter.username,
 				'alias': player.alias,
 				'avatar': inviter.avatar.url,
 			}
@@ -191,7 +191,7 @@ def sent_invites(request, *args, **kwargs):
 				'game_mode': invite.game_mode,
 				'tournament': invite.tournament,
 				'id': invitee.pk,
-				'invitee': invitee.username,
+				'username': invitee.username,
 				'alias': player.alias,
 				'avatar': invitee.avatar.url,
 			}
