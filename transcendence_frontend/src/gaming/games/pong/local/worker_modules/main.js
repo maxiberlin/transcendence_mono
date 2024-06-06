@@ -1,26 +1,82 @@
-import { PongBall } from './Ball.js';
-import { PongPaddle } from './Paddle.js';
-import { GameCourt } from './GameCourt.js';
+import PongBall from './Ball.js';
+import PongPaddle from './Paddle.js';
+import GameCourt from './GameCourt.js';
 
-import { msg_to_main } from '../../../services/game_worker_messages.js';
+import { msg_to_main } from '../../../../exchange/game_msg.js';
 
+/**
+ * @param {(elapsedTimeMs: number) => boolean | undefined} callback
+ * @returns {{startRender: () => void, stopRender: () => void, resetTime: () => void}}
+ */
+const useFrame = (callback) => {
+    if (typeof callback !== 'function') throw new Error('invalid callback');
+    let prevTimeStamp;
+    let currFrame;
+    const renderFunc = (timeStamp) => {
+        // console.log('render! currFrame: ', currFrame);
+        if (prevTimeStamp === undefined) prevTimeStamp = timeStamp;
+        const elapsed = Math.floor(timeStamp - prevTimeStamp) / 1000;
+        prevTimeStamp = timeStamp;
+        if (callback(elapsed)) {
+            currFrame = requestAnimationFrame(renderFunc);
+        } else {
+            currFrame = undefined;
+            prevTimeStamp = undefined;
+        }
+    };
+    const startRender = () => {
+        if (currFrame) return;
+        currFrame = requestAnimationFrame(renderFunc);
+    };
+    const stopRender = () => {
+        if (!currFrame) return;
+        cancelAnimationFrame(currFrame);
+        currFrame = undefined;
+        prevTimeStamp = undefined;
+    };
 
+    const resetTime = () => {
+        prevTimeStamp = undefined;
+    };
 
-const handleKeypress = () => {
-
+    return {
+        startRender,
+        stopRender,
+        resetTime,
+    };
 };
 
-export class Pong {
-    /** @param {import('../../../services/game_worker_messages.js').WorkerDataInit} d */
-    constructor(d) {
+/**
+ * @param {number} time
+ * @returns {(newTime: number) => number}
+ */
+// eslint-disable-next-line no-unused-vars
+function useFps(time) {
+    let currTime = time ?? performance.now();
+    let fpsCount = 0;
+    let currFps = 0;
+    return (newTime) => {
+        fpsCount += 1000;
+        const diff = newTime - currTime;
+        if (diff > 1000) {
+            currFps = Math.floor(fpsCount / diff);
+            currTime = newTime;
+            fpsCount = 0;
+        }
+        return currFps;
+    };
+}
 
-        console.log("constructor Pong!");
+export default class Pong {
+    /** @param {import('../../../../exchange/game_msg.js').WorkerDataInit} d */
+    constructor(d) {
+        // console.log('constructor Pong!');
 
         this.canvas = d.canvas;
-        this.ctx = this.canvas.getContext("2d");
+        this.ctx = this.canvas.getContext('2d');
         if (!this.ctx) {
             postMessage(msg_to_main.error);
-            return ;
+            return;
         }
 
         this.width = this.canvas.width;
@@ -28,8 +84,8 @@ export class Pong {
 
         this.gameSettings = d.gameSettings ?? { speed: 10, maxScore: 2 };
 
-        this.colorWhite = "#FFF";
-        this.colorBlack = "#000";
+        this.colorWhite = '#FFF';
+        this.colorBlack = '#000';
         this.resetTime = 1000;
 
         this.initGameObjects();
@@ -37,25 +93,37 @@ export class Pong {
         this.frame = useFrame(this.render.bind(this));
     }
 
-
     initGameObjects() {
-
         this.runningGame = false;
         this.paused = false;
         this.scoreBreak = false;
 
         /** @type {GameCourt} */
-        this.gamePlane = new GameCourt(5/300);
+        this.gamePlane = new GameCourt(5 / 300);
         this.gamePlane.setScale(this.width, this.height);
         /** @type {PongPaddle} */
-        this.paddleL = new PongPaddle(5/300, 25/200, 5/300, PongPaddle.PADDLE_POS_LEFT, 250/300, this.gamePlane);
-        this.paddleL.setScale(this.width,  this.height);
+        this.paddleL = new PongPaddle(
+            5 / 300,
+            25 / 200,
+            5 / 300,
+            PongPaddle.PADDLE_POS_LEFT,
+            250 / 300,
+            this.gamePlane,
+        );
+        this.paddleL.setScale(this.width, this.height);
         /** @type {PongPaddle} */
-        this.paddleR = new PongPaddle(5/300, 25/200, 5/300, PongPaddle.PADDLE_POS_RIGHT, 250/300, this.gamePlane);
-        this.paddleR.setScale(this.width,  this.height);
+        this.paddleR = new PongPaddle(
+            5 / 300,
+            25 / 200,
+            5 / 300,
+            PongPaddle.PADDLE_POS_RIGHT,
+            250 / 300,
+            this.gamePlane,
+        );
+        this.paddleR.setScale(this.width, this.height);
         /** @type {PongBall} */
-        this.ball = new PongBall(5/300, 150/300, this.gamePlane);
-        this.ball.setScale(this.width,  this.height);
+        this.ball = new PongBall(5 / 300, 150 / 300, this.gamePlane);
+        this.ball.setScale(this.width, this.height);
     }
 
     startGame() {
@@ -69,8 +137,8 @@ export class Pong {
     }
 
     pauseGame() {
-        if (!this.ctx) return ;
-        if (this.paused) return ;
+        if (!this.ctx) return;
+        if (this.paused) return;
         this.paused = true;
         this.frame?.stopRender();
         // if (this.currentFrame)
@@ -79,67 +147,79 @@ export class Pong {
     }
 
     continueGame() {
-        if (!this.ctx) return ;
-        if (!this.paused) return ;
+        if (!this.ctx) return;
+        if (!this.paused) return;
         this.paused = false;
         this.frame?.startRender();
         // this.prevTimestamp = undefined;
         // this.currentFrame = requestAnimationFrame((t) => this.render(t));
     }
 
-    /** @param {import('../../../services/game_worker_messages.js').WorkerDataChangeColors} d */
+    /** @param {import('../../../../exchange/game_msg.js').WorkerDataChangeColors} d */
     changeColor(d) {
-        if (d.colorWhite && typeof d.colorWhite === "string" && d.colorBlack && typeof d.colorBlack === "string") {
+        if (
+            d.colorWhite &&
+            typeof d.colorWhite === 'string' &&
+            d.colorBlack &&
+            typeof d.colorBlack === 'string'
+        ) {
             this.colorWhite = d.colorWhite;
             this.colorBlack = d.colorBlack;
         }
     }
 
-    /** @param {import('../../../services/game_worker_messages.js').WorkerDataKeyEvent} d */
+    /** @param {import('../../../../exchange/game_msg.js').WorkerDataKeyEvent} d */
     handleKey(d) {
-        if (d.keyevent === "keydown") {
+        if (d.keyevent === 'keydown') {
             switch (d.key) {
-                case "ArrowUp": this.paddleR?.moveUp();
+                case 'ArrowUp':
+                    this.paddleR?.moveUp();
                     break;
-                case "ArrowDown": this.paddleR?.moveDown();
+                case 'ArrowDown':
+                    this.paddleR?.moveDown();
                     break;
-                case "a": this.paddleL?.moveUp();
+                case 'a':
+                    this.paddleL?.moveUp();
                     break;
-                case "y": this.paddleL?.moveDown();
+                case 'y':
+                    this.paddleL?.moveDown();
                     break;
-                case "Escape":
+                case 'Escape':
                     if (this.paused) this.continueGame();
                     else this.pauseGame();
                     break;
+                default:
+                    break;
             }
-        } else if (d.keyevent === "keyup") {
+        } else if (d.keyevent === 'keyup') {
             switch (d.key) {
-                case "ArrowUp": this.paddleR?.moveUp(true);
+                case 'ArrowUp':
+                    this.paddleR?.moveUp(true);
                     break;
-                case "ArrowDown": this.paddleR?.moveDown(true);
+                case 'ArrowDown':
+                    this.paddleR?.moveDown(true);
                     break;
-                case "a": this.paddleL?.moveUp(true);
+                case 'a':
+                    this.paddleL?.moveUp(true);
                     break;
-                case "y": this.paddleL?.moveDown(true);
+                case 'y':
+                    this.paddleL?.moveDown(true);
+                    break;
+                default:
                     break;
             }
         }
     }
 
-    /** @param {import('../../../services/game_worker_messages.js').WorkerDataMouseEvent} d */
-    handleMouse(d) {
-
-    }
-
-    /** @param {import('../../../services/game_worker_messages.js').WorkerDataResize} d */
+    /** @param {import('../../../../exchange/game_msg.js').WorkerDataResize} d */
     setCanvasSizes(d) {
-        console.log("set canvas sizes")
-        if (!this.ctx) return ;
-        console.log("set canvas sizes joooo: ", d)
+        // console.log('set canvas sizes');
+        if (!this.ctx) return;
+        // console.log('set canvas sizes joooo: ', d);
         this.width = d.width;
-        this.height = d.height
-        console.log("this.width: ", this.width);
-        console.log("this.height: ", this.height);
+        this.height = d.height;
+        // console.log('this.width: ', this.width);
+        // console.log('this.height: ', this.height);
         this.ctx.canvas.width = Math.floor(this.width * d.dpr);
         this.ctx.canvas.height = Math.floor(this.height * d.dpr);
         this.ctx.scale(d.dpr, d.dpr);
@@ -152,8 +232,6 @@ export class Pong {
         // this.#cancelNextFrame();
         // this.currentFrame = requestAnimationFrame((t)=>{this.render(t)});
     }
-
-
 
     // resetBall(side) {
     //     if (!this.ctx || ! this.gamePlane || !this.gameSettings) return ;
@@ -182,7 +260,7 @@ export class Pong {
     // }
 
     resetBall(side) {
-        if (!this.ctx || ! this.gamePlane || !this.gameSettings) return ;
+        if (!this.ctx || !this.gamePlane || !this.gameSettings) return;
         if (side === 1) {
             this.gamePlane.scoreL++;
             postMessage(msg_to_main.player_1_score);
@@ -195,13 +273,14 @@ export class Pong {
             if (this.gamePlane.scoreR === this.gameSettings.maxScore) {
                 postMessage(msg_to_main.player_2_win);
             }
-        }  else return ;
+        } else return;
 
         this.scoreBreak = true;
 
         setTimeout(() => {
-            if (!this.gamePlane || !this.ball || !this.paddleL || !this.paddleR) return ;
-            this.ball = new PongBall(5/300, 150/300, this.gamePlane);
+            if (!this.gamePlane || !this.ball || !this.paddleL || !this.paddleR)
+                return;
+            this.ball = new PongBall(5 / 300, 150 / 300, this.gamePlane);
             this.ball.setScale(this.width, this.height);
             this.scoreBreak = false;
             // timediff = Date.now();
@@ -209,93 +288,39 @@ export class Pong {
     }
 
     #drawRectColor(color, obj, cb) {
-        if (!this.ctx) return ;
+        if (!this.ctx) return;
         this.ctx.fillStyle = color;
-        if (typeof cb === "function") cb();
+        if (typeof cb === 'function') cb();
         this.ctx.fillRect(obj.x_start, obj.y_start, obj.w, obj.h);
     }
 
     render(elapsed) {
-        if (!this.gamePlane || !this.ball || !this.paddleL || !this.paddleR) return ;
-        this.#drawRectColor(this.colorBlack, {x_start: 0, y_start: 0, w: this.width, h: this.height});
+        if (!this.gamePlane || !this.ball || !this.paddleL || !this.paddleR)
+            return undefined;
+        this.#drawRectColor(this.colorBlack, {
+            x_start: 0,
+            y_start: 0,
+            w: this.width,
+            h: this.height,
+        });
         this.gamePlane?.draw(this.ctx, this.colorWhite, this.colorBlack);
 
-        this.#drawRectColor(this.colorBlack, this.paddleL, () => this.paddleL?.update(elapsed) );
-        this.#drawRectColor(this.colorBlack, this.paddleR, () => this.paddleR?.update(elapsed) );
+        this.#drawRectColor(this.colorBlack, this.paddleL, () =>
+            this.paddleL?.update(elapsed),
+        );
+        this.#drawRectColor(this.colorBlack, this.paddleR, () =>
+            this.paddleR?.update(elapsed),
+        );
         if (!this.scoreBreak && this.runningGame && !this.paused) {
-            this.#drawRectColor(this.colorBlack, this.ball, () => this.ball?.update(elapsed) );
+            this.#drawRectColor(this.colorBlack, this.ball, () =>
+                this.ball?.update(elapsed),
+            );
             const score = this.ball?.checkCollision(this.paddleL, this.paddleR);
             this.resetBall(score);
         }
-        return (!this.paused && this.runningGame);
-    }
-
-}
-
-/**
- * @param {(elapsedTimeMs: number) => boolean | undefined} callback 
- */
-const useFrame = (callback) => {
-
-    if (typeof callback !== "function")
-        throw new Error("invalid callback");
-    let prevTimeStamp;
-    let currFrame;
-    const renderFunc = (timeStamp) => {
-        console.log("render! currFrame: ", currFrame);
-        if (prevTimeStamp === undefined) prevTimeStamp = timeStamp;
-        const elapsed = Math.floor(timeStamp - prevTimeStamp) / 1000;
-        prevTimeStamp = timeStamp;
-        if (callback(elapsed)) {
-            currFrame = requestAnimationFrame(renderFunc);
-        } else {
-            currFrame = undefined;
-            prevTimeStamp = undefined;
-        }
-    };
-    const startRender = () => {
-        if (currFrame) return ;
-        currFrame = requestAnimationFrame(renderFunc);
-    };
-    const stopRender = () => {
-        if (!currFrame) return ;
-        cancelAnimationFrame(currFrame);
-        currFrame = undefined;
-        prevTimeStamp = undefined;
-    };
-
-    const resetTime = () => {
-        prevTimeStamp = undefined;
-    }
-    
-    return {
-        startRender,
-        stopRender,
-        resetTime,
+        return !this.paused && this.runningGame;
     }
 }
-
-
-function useFps(time) {
-    let currTime = time ?? performance.now();
-    let fpsCount = 0;
-    let currFps = 0;
-    return (newTime) => {
-        fpsCount += 1000;
-        const diff = newTime - currTime;
-        if (diff > 1000) {
-            currFps = Math.floor(fpsCount / diff);
-            currTime = newTime;
-            fpsCount = 0;
-        }
-        return (currFps);
-    };
-}
-
-
-
-
-
 
 // export class Pong {
 //     /** @param {import('../../../services/game_worker_messages.js').WorkerDataInit} d */
@@ -425,8 +450,6 @@ function useFps(time) {
 //         this.currentFrame = requestAnimationFrame((t)=>{this.render(t)});
 //     }
 
-
-
 //     resetBall(side) {
 //         if (!this.ctx || ! this.gamePlane || !this.gameSettings) return ;
 //         if (side === 1) {
@@ -469,8 +492,6 @@ function useFps(time) {
 //     #makeScore() {
 
 //     }
-   
-
 
 //     #drawRectColor(color, obj, cb) {
 //         if (!this.ctx) return ;
@@ -481,15 +502,15 @@ function useFps(time) {
 
 //     render(timestamp) {
 //         if (!this.ctx) return ;
-    
+
 //         if (this.prevTimestamp === undefined) this.prevTimestamp = timestamp;
 //         const elapsed = Math.floor(timestamp - this.prevTimestamp) / 1000;
 //         this.prevTimestamp = timestamp;
-    
+
 //         this.#drawRectColor(s.colorBlack, {x_start: 0, y_start: 0, w: globals.currW, h: globals.currH});
-    
+
 //         this.gamePlane?.draw(this.ctx, s.colorWhite, s.colorBlack);
-        
+
 //         this.#drawRectColor(s.colorBlack, this.paddleL, () => this.paddleL?.update(elapsed) );
 //         this.#drawRectColor(s.colorBlack, this.paddleR, () => this.paddleR?.update(elapsed) );
 //         if (!this.scoreBreak && this.runningGame && !this.paused) {
@@ -504,7 +525,7 @@ function useFps(time) {
 // }
 
 // /**
-//  * @param {(elapsedTimeMs: number) => void} callback 
+//  * @param {(elapsedTimeMs: number) => void} callback
 //  */
 // function useFrame(callback) {
 
@@ -518,9 +539,8 @@ function useFps(time) {
 //     const continueFrame = () => {
 
 //     };
-    
-// }
 
+// }
 
 // function useFps(time) {
 //     let currTime = time ?? performance.now();
@@ -537,5 +557,3 @@ function useFps(time) {
 //         return (currFps);
 //     };
 // }
-
-

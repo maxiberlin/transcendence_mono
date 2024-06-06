@@ -1,3 +1,7 @@
+/**
+ * @param {string} name
+ * @returns {string | null}
+ */
 export function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -5,8 +9,10 @@ export function getCookie(name) {
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
             // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            if (cookie.substring(0, name.length + 1) === `${name}=`) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1),
+                );
                 break;
             }
         }
@@ -16,12 +22,9 @@ export function getCookie(name) {
 export const csrftoken = getCookie('csrftoken');
 
 export const csrfHeader = new Headers();
-if (csrftoken)
-csrfHeader.set("X-CSRFToken", csrftoken);
-
+if (csrftoken) csrfHeader.set('X-CSRFToken', csrftoken);
 
 // const request = new Request( "/profile", { method: 'POST', headers, mode: 'same-origin' } );
-
 
 // fetch(request).then(function(response) {
 //     // ...
@@ -33,7 +36,7 @@ csrfHeader.set("X-CSRFToken", csrftoken);
 //         if (typeof data !== "object") throw new Error("invalid Data Object");
 //     }
 //     get() {
-        
+
 //     }
 //     post() {
 
@@ -42,6 +45,6 @@ csrfHeader.set("X-CSRFToken", csrftoken);
 
 //     }
 //     delete() {
-        
+
 //     }
 // }

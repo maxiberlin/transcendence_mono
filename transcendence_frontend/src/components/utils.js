@@ -1,23 +1,9 @@
-import { BaseElem, html } from '../modules.js';
+import { html } from '../lib_templ/BaseElement.js';
 
 export const rRow = (classes, content) => html`
-    <div class="row ${classes}">
-        ${content}
-    </div>
-`
+    <div class="row ${classes}">${content}</div>
+`;
 
 export const rCol = (classes, content) => html`
-    <div class="${classes}">
-        ${content}
-    </div>
-`
-
-
-export function debounce(func, wait) {
-    let timeout;
-    return function() {
-        const context = this, args = arguments;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
-    };
-}
+    <div class="${classes}">${content}</div>
+`;

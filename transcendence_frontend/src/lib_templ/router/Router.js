@@ -1,46 +1,36 @@
-import { BaseElem, html } from '../../modules.js';
-
-// * @property {Route[]} children - Eine Liste von Unterrouten, die dieser Route untergeordnet sind.
+import { BaseElement } from '../BaseElement.js';
 
 /**
  * Beschreibt ein Objekt, das eine Route in einer Anwendung darstellt.
- * @typedef {Object} Route
+ * @typedef {object} Route
  * @property {string} path - Der Pfad der Route.
  * @property {string} title - Der Pfad der Route.
  * @property {string} component - Der Name des Komponenten, der mit dieser Route verknüpft ist.
  * @property {Array<string>} [segments]
  */
 
-customElements.define("router-default-not-found", class extends BaseElem {
-    constructor() {super();}
-    render() {return html`<h1>404 Not Found</h1>`};
-});
-customElements.define("router-invalid-web-component", class extends BaseElem {
-    constructor() {super();}
-    render() {return html`<h1>unable to create component</h1>`};
-});
-
-export class Router {
+export default class Router {
     static #fadeDuration = 100;
-
 
     /** @type {Route} */
     static componentDefault404 = {
-        component: "router-default-not-found",
-        title: "404 Not Found",
-        path: ""
-    }
+        component: 'router-default-not-found',
+        title: '404 Not Found',
+        path: '',
+    };
+
     static componentinvalidComponent = {
-        component: "router-invalid-web-component",
-        title: "INVALID COMPONENT",
-        path: ""
-    }
+        component: 'router-invalid-web-component',
+        title: 'INVALID COMPONENT',
+        path: '',
+    };
 
-    static makeRedirect = Symbol("router-make-redirect");
+    static makeRedirect = Symbol('router-make-redirect');
 
-    /** @type {Array<Route>} */
+    /** @type {Array<Route> | undefined} */
     #routes;
-    /** @type {HTMLElement} */
+
+    /** @type {HTMLElement | undefined} */
     #root;
 
     /** @param {Array<Route>} routes */
@@ -51,33 +41,38 @@ export class Router {
     /** @param {Array<Route>} routes  */
     #setRoutes(routes) {
         this.#routes = routes;
-        routes.forEach(route => {
-            const routeSegments = route.path.split("/").slice(1);
+        routes.forEach((route) => {
+            const routeSegments = route.path.split('/').slice(1);
             routeSegments.forEach((segment) => {
-                if (segment[0] === ":") {
-                    Object.defineProperty(route, segment.slice(1), {writable: true});
+                if (segment[0] === ':') {
+                    Object.defineProperty(route, segment.slice(1), {
+                        writable: true,
+                    });
                 }
-            })
+            });
             route.segments = routeSegments;
         });
     }
 
     #isInit = false;
+
     /** @param {string} rootElem */
     init(rootElem) {
-        if (this.#isInit) return ;
-        window.addEventListener("click", (e) => {
+        if (this.#isInit) return;
+        window.addEventListener('click', (e) => {
             const target = e.composedPath()[0];
             if (target instanceof HTMLElement) {
-               
                 let href;
                 const rootNode = target.getRootNode();
                 if (target instanceof HTMLAnchorElement)
-                    href = target.getAttribute("href");
-                else if (target.closest("a"))
-                    href = target.closest("a")?.getAttribute("href");
-                else if (rootNode instanceof ShadowRoot && rootNode.host.closest("a"))
-                    href = rootNode.host.closest("a")?.getAttribute("href");
+                    href = target.getAttribute('href');
+                else if (target.closest('a'))
+                    href = target.closest('a')?.getAttribute('href');
+                else if (
+                    rootNode instanceof ShadowRoot &&
+                    rootNode.host.closest('a')
+                )
+                    href = rootNode.host.closest('a')?.getAttribute('href');
                 if (href) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -85,11 +80,11 @@ export class Router {
                 }
             }
         });
-        window.addEventListener('popstate',  event => {
+        window.addEventListener('popstate', (event) => {
             // console.log("popstate!")
             if (!event.state?.route) {
                 // console.log("no prev entry: go to '/'");
-                this.go("/", false);
+                this.go('/', false);
             } else {
                 this.go(event.state.route, false);
             }
@@ -99,12 +94,16 @@ export class Router {
         document.body.appendChild(this.#root);
         // // console.log("first path: ", location.pathname);
         // console.log("router, go on init");
-        this.go(location.pathname, false);
+        this.go(window.location.pathname, false);
     }
 
-    /** @param {Array<string>} urlSegments  */
+    /**
+     * @param {Array<string>} urlSegments
+     * @param {{ [x: string]: string; } | {}} params
+     * @returns {Route | undefined}
+     */
     #findRoute(urlSegments, params) {
-        const match = this.#routes.find((route) => {
+        const match = this.#routes?.find((route) => {
             // // console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
             if (route.segments?.length !== urlSegments.length) {
                 return false;
@@ -112,83 +111,96 @@ export class Router {
             const isMatch = route.segments.every((segment, i) => {
                 // // console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
                 // console.log("segments: ", segment);
-                if (segment[0] === ":") {
-                    route[segment.slice(1)] = decodeURIComponent(urlSegments[i]);
-                    params[segment.slice(1)] = decodeURIComponent(urlSegments[i]);
+                if (segment[0] === ':') {
+                    route[segment.slice(1)] = decodeURIComponent(
+                        urlSegments[i],
+                    );
+                    params[segment.slice(1)] = decodeURIComponent(
+                        urlSegments[i],
+                    );
                     // console.log("new param route obj: ", route);
                 }
-                return (segment === urlSegments[i] || segment[0] === ":");
+                return segment === urlSegments[i] || segment[0] === ':';
             });
             // // console.log("is Match? ", isMatch);
-            return (isMatch);
-        })
-        return (match);
+            return isMatch;
+        });
+        return match;
     }
 
-
-
-    toggleHistoryState(route, addToHistory, replace) {
+    static toggleHistoryState(route, addToHistory, replace) {
         if (addToHistory && !replace) {
             // console.log("ROUTER Push State, current history: ", history.state);
-            history.pushState({ route }, '', route);
+            window.history.pushState({ route }, '', route);
             // console.log("ROUTER Push State, new history: ", history.state);
         } else if (!addToHistory && replace) {
             // console.log("ROUTER REPLACE, current history: ", history.state);
-            history.replaceState({route}, '', route);
+            window.history.replaceState({ route }, '', route);
             // console.log("ROUTER REPLACE, new history: ", history.state);
         }
     }
 
-    getOutlet = () => this.#root.querySelector("#root-outlet");
-
+    getOutlet = () => this.#root?.querySelector('#root-outlet');
 
     /**
-     * 
-     * @param {HTMLElement} component 
-     * @param {string} route 
-     * @param {Object} params 
-     * @returns 
+     *
+     * @param {HTMLElement} component
+     * @param {string} route
+     * @param {object} params
+     * @returns {Promise<boolean>}
      */
     async mountComp(component, route, params) {
         let val;
-        if (typeof component["onBeforeMount"] === "function") {
-            val = await component["onBeforeMount"](route, this, params);
+        if (
+            component instanceof BaseElement &&
+            typeof component.onBeforeMount === 'function'
+        ) {
+            val = await component.onBeforeMount(route, params, this);
             if (val === Router.makeRedirect) {
-                return (false);
+                return false;
             }
         }
         this.getOutlet()?.appendChild(component);
-        if (typeof component["onAfterMount"] === "function")
-        component["onAfterMount"](route, this);
-        return (true);
+        if (
+            component instanceof BaseElement &&
+            typeof component.onAfterMount === 'function'
+        )
+            component.onAfterMount(route, this);
+        return true;
     }
+
     unmountComp(component, route) {
         const firstChildElem = this.getOutlet()?.firstElementChild;
-        if (!firstChildElem) return ;
-        if (typeof component["onBeforeUnMount"] === "function")
-            component["onBeforeUnMount"](route, this);
+        if (!firstChildElem) return;
+        if (typeof component.onBeforeUnMount === 'function')
+            component.onBeforeUnMount(route, this);
         firstChildElem.remove();
-        if (typeof component["onAfterUnMount"] === "function")
-            component["onAfterUnMount"](route, this);
+        if (typeof component.onAfterUnMount === 'function')
+            component.onAfterUnMount(route, this);
     }
+
+    /**
+     * @param {string | URL | null | undefined} route
+     * @returns {symbol}
+     */
     redirect(route) {
-        history.replaceState({route}, '', route);
-        this.go(route, false);
-        return (Router.makeRedirect);
+        window.history.replaceState({ route }, '', route);
+        if (typeof route === 'string') this.go(route, false);
+        return Router.makeRedirect;
     }
-   
 
-    /** @param {string} route  */
-    go(route, addToHistory=true, replace=false) {
-
-        console.log("router go!, curr scroll: ", history.scrollRestoration)
+    /**
+     * @param {string} route
+     * @param {boolean} addToHistory
+     * @param {boolean} replace
+     */
+    go(route, addToHistory = true, replace = false) {
+        // console.log('router go!, curr scroll: ', window.history.scrollRestoration);
         if (!this.#isInit) this.#isInit = true;
-
-        const oldRoute = location.pathname;
 
         let component;
         const params = {};
-        const urlSegments = route.split("/").slice(1);
+        const urlSegments = route.split('/').slice(1);
         let matchObj = this.#findRoute(urlSegments, params);
         if (!matchObj) matchObj = Router.componentDefault404;
         component = document.createElement(matchObj.component);
@@ -196,42 +208,35 @@ export class Router {
             matchObj = Router.componentinvalidComponent;
             component = document.createElement(matchObj.component);
         }
-        this.toggleHistoryState(route, addToHistory, replace);
+        Router.toggleHistoryState(route, addToHistory, replace);
         document.title = matchObj.title;
-        
-      
+
         const curr = this.getOutlet()?.firstElementChild;
         if (curr?.tagName === component.tagName) {
-            if (typeof curr["onRouteChange"] === "function") {
-                curr["onRouteChange"](route);
-                return ;
+            if (
+                curr instanceof BaseElement &&
+                typeof curr.onRouteChange === 'function'
+            ) {
+                curr.onRouteChange(route);
+                return;
             }
         }
-        
+
         if (!curr) {
             this.mountComp(component, route, params);
-            return ;
+            return;
         }
-       
-        let fadeOut = curr.animate([{opacity: 1}, {opacity: 0}],{ duration: Router.#fadeDuration});
-        fadeOut.addEventListener("finish", () => {
-            this.unmountComp(curr, route);
-            if (!this.mountComp(component, route, params))
-                return ;
-            let fadeIn = component.animate([
-                {opacity: 0}, {opacity: 1}
-            ],{ duration: Router.#fadeDuration});
-        });
 
-        // console.log("Router Go done, component name: ", matchObj.component);
-        
-      
-            
-            // else if (curr.tagName === component.tagName && curr instanceof BaseElem && typeof curr["onRouteChange"] === "function") {
-            // //     console.log("SAME NODE");
-            //     curr["onRouteChange"]();
-            // }
-       
+        const fadeOut = curr.animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: Router.#fadeDuration,
+        });
+        fadeOut.addEventListener('finish', () => {
+            this.unmountComp(curr, route);
+            if (!this.mountComp(component, route, params)) return;
+            component.animate([{ opacity: 0 }, { opacity: 1 }], {
+                duration: Router.#fadeDuration,
+            });
+        });
     }
 }
 
@@ -257,7 +262,7 @@ export class Router {
 // go(route, addToHistory=true, replace=false) {
 // //     console.log("router, go: ", route);
 //     const oldRoute = location.pathname;
-   
+
 //     let component;
 //     const urlSegments = route.split("/").slice(1);
 //     const matchObj = this.#findRoute(urlSegments);
@@ -277,12 +282,12 @@ export class Router {
 //         document.title = matchObj?.title ?? "Title";
 //         if (typeof component["afterRouteMount"] === "function")
 //             component["afterRouteMount"]();
-        
+
 //     } else {
 //         component = document.createElement("template");
 //         component.innerHTML = /*html*/`<div><h1>DOCUMENT NOT FOUND</h1></div>`.trim();
 //         this.#appendNode(component.content?.firstChild?.cloneNode(true))
 //         document.title = "Not Found";
 //     }
-   
+
 // }

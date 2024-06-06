@@ -1,48 +1,45 @@
-
 /**
- * @typedef {Object} GameSettings
+ * @typedef {object} GameSettings
  * @property {number} speed
  * @property {number} maxScore
  */
 
 /**
- * @typedef {Object} WorkerDataInit
+ * @typedef {object} WorkerDataInit
  * @property {HTMLCanvasElement} canvas
  * @property {GameSettings} [gameSettings]
  */
 
 /**
- * @typedef {Object} WorkerDataResize
+ * @typedef {object} WorkerDataResize
  * @property {number} width
  * @property {number} height
  * @property {number} dpr
  */
 
 /**
- * @typedef {Object} WorkerDataChangeColors
+ * @typedef {object} WorkerDataChangeColors
  * @property {string} colorWhite
  * @property {number} colorBlack
  */
 
 /**
- * @typedef {Object} WorkerDataKeyEvent
+ * @typedef {object} WorkerDataKeyEvent
  * @property {string} keyevent
  * @property {string} key
  */
 
 /**
- * @typedef {Object} WorkerDataMouseEvent
+ * @typedef {object} WorkerDataMouseEvent
  * @property {number} posX
  * @property {number} posY
  */
 
 /**
- * @typedef {Object} WorkerData
+ * @typedef {object} WorkerData
  * @property {number} message
- * @property {Object | WorkerDataInit | WorkerDataResize | WorkerDataChangeColors | WorkerDataKeyEvent | WorkerDataMouseEvent} data
+ * @property {object | WorkerDataInit | WorkerDataResize | WorkerDataChangeColors | WorkerDataKeyEvent | WorkerDataMouseEvent} data
  */
-
-
 
 export const msg_to_worker = {
     init: 0,
@@ -54,14 +51,14 @@ export const msg_to_worker = {
     resize: 6,
     keyEvent: 7,
     mouseEvent: 8,
-    changeColor: 9
+    changeColor: 9,
 };
 
 export const msg_to_main = {
-    player_1_score : 10,
-    player_1_win : 20,
-    player_2_score : 30,
-    player_2_win : 40,
-    draw_timeout : 50,
-    error: 100
+    player_1_score: 10,
+    player_1_win: 20,
+    player_2_score: 30,
+    player_2_win: 40,
+    draw_timeout: 50,
+    error: 100,
 };

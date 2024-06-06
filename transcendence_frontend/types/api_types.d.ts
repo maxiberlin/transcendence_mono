@@ -1,33 +1,21 @@
 declare namespace APITypes {
-
-    export type JSONValue =
-        | string
-        | number
-        | boolean
-        | JSONObject
-        | JSONArray;
+    // eslint-disable-next-line no-use-before-define
+    export type JSONValue = string | number | boolean | JSONObject | JSONArray;
 
     export interface JSONObject {
         [x: string]: JSONValue;
     }
 
+    // eslint-disable-next-line prettier/prettier
     export interface JSONArray extends Array<JSONValue> { }
 
-    export type ApiData =
-        | LoginData
-        | UserData;
-
-
-
-
-
-    export interface LoginData extends Object {
+    export interface LoginData {
         success: boolean;
         message: string;
         user_id: number;
     }
 
-    export interface FriendUserData extends Object {
+    export interface FriendUserData {
         id: number;
         avatar: string;
         email: string;
@@ -37,7 +25,7 @@ declare namespace APITypes {
         last_login: string;
         is_mutual_friend: boolean;
     }
-    export interface BlockedUserData extends Object {
+    export interface BlockedUserData {
         id: number;
         avatar: string;
         email: string;
@@ -47,14 +35,14 @@ declare namespace APITypes {
         last_login: string;
     }
 
-    export interface RequestUserData extends Object {
+    export interface RequestUserData {
         request_id: number;
         id: number;
         avatar: string;
         username: string;
     }
 
-    export interface GameInvitations extends Object {
+    export interface GameInvitations {
         invite_id: number;
         id: number;
         username: string;
@@ -62,7 +50,7 @@ declare namespace APITypes {
         avatar: string;
     }
 
-    export interface GameScheduleItem extends Object {
+    export interface GameScheduleItem {
         schedule_id: number;
         game_id: string;
         game_mode: string;
@@ -84,13 +72,12 @@ declare namespace APITypes {
             won?: boolean;
         };
         gameSettings: {
-            speed: number,
-            maxScore: number,
+            speed: number;
+            maxScore: number;
         };
     }
 
-
-    export interface UserData extends Object {
+    export interface UserData {
         id: number;
         avatar: string;
         email: string;
@@ -109,7 +96,7 @@ declare namespace APITypes {
         is_self: boolean;
     }
 
-    export interface SearchResult extends Object {
+    export interface SearchResult {
         id: number;
         avatar: string;
         email: string;
@@ -117,5 +104,4 @@ declare namespace APITypes {
         first_name: string;
         last_name: string;
     }
-
 }

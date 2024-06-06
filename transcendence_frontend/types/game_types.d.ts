@@ -1,4 +1,3 @@
-
 declare namespace PongGameTypes {
     export interface GameSettingsRemote {
         width: number;
@@ -41,12 +40,12 @@ declare namespace PongGameTypes {
         state: GameState;
     }
 
-    type GameUpdateMsgType = "game_update";
-    type InitGameMsgType = "init_game";
-    type StartGameMsgType = "start_game";
-    type HideBallMsgType = "hide_ball";
-    type ShowBallMsgType = "show_ball";
-    type GameEndMsgType = "game_end";
+    type GameUpdateMsgType = 'game_update';
+    type InitGameMsgType = 'init_game';
+    type StartGameMsgType = 'start_game';
+    type HideBallMsgType = 'hide_ball';
+    type ShowBallMsgType = 'show_ball';
+    type GameEndMsgType = 'game_end';
 
     export interface GameUpdateMessage {
         msg: GameUpdateMsgType;
@@ -95,7 +94,6 @@ declare namespace PongGameTypes {
         | GameEndMessage;
 }
 
-
 declare namespace PongGameTypes2 {
     export interface GameSettingsRemote {
         width: number;
@@ -134,24 +132,24 @@ declare namespace PongGameTypes2 {
         };
     }
 
-    type InitGameMsgType = "init_game";
-    type StartGameMsgType = "start_game";
-    type UpdateGameMsgType = "update_game";
-    type EndGameMsgType = "end_game";
+    type InitGameMsgType = 'init_game';
+    type StartGameMsgType = 'start_game';
+    type UpdateGameMsgType = 'update_game';
+    type EndGameMsgType = 'end_game';
 
-    type PauseGameMsgType = "pause_game";
-    type ContinueGameMsgType = "continue_game";
+    type PauseGameMsgType = 'pause_game';
+    type ContinueGameMsgType = 'continue_game';
 
-    type HideBallMsgType = "update_score";
-    type ShowBallMsgType = "new_round";
+    type HideBallMsgType = 'update_score';
+    type ShowBallMsgType = 'new_round';
 
-    type PlayerJoinedMsgType = "player_joined";
+    type PlayerJoinedMsgType = 'player_joined';
 
     export interface GameUpdateMessage {
         msg: UpdateGameMsgType;
         data: {
             state: GameState;
-        }
+        };
     }
 
     export interface StartGameData {
@@ -194,11 +192,9 @@ declare namespace PongGameTypes2 {
         | HideBallMessage
         | ShowBallMessage
         | GameEndMessage;
-
 }
 
 declare namespace PongRemoteServerMsgTypes {
-
     export interface GameSettings {
         border_width: number;
         border_height: number;
@@ -218,63 +214,61 @@ declare namespace PongRemoteServerMsgTypes {
         tick_duration: number;
     }
 
-    export interface InitGameMessage {
-        msg: "init_game";
-        data: {
-            settings: GameSettings;
-            state: GameState
-        }
-    }
-
-    export interface StartGameMessage {
-        msg: "start_game";
-        data: {
-            settings: GameSettings;
-        }
-    }
-
-
     export interface GameObject {
         x: number;
         y: number;
         dx: number;
         dy: number;
     }
-
     export interface GameState {
         timestamp: number;
-        debug: null | Object;
+        debug: null | object;
         ball: GameObject;
         paddle_left: GameObject;
         paddle_right: GameObject;
     }
+    export interface InitGameMessage {
+        msg: 'init_game';
+        data: {
+            settings: GameSettings;
+            state: GameState;
+        };
+    }
+
+    export interface StartGameMessage {
+        msg: 'start_game';
+        data: {
+            settings: GameSettings;
+        };
+    }
+
     export interface GameUpdateMessage {
-        msg: "update_game";
+        msg: 'update_game';
         data: {
             state: GameState;
-        }
+        };
     }
     export interface GameEndMessage {
-        msg: "end_game";
+        msg: 'end_game';
         data: {
             winner: string;
         };
     }
 
     export interface HideBallMessage {
-        msg: "hide_ball";
+        msg: 'hide_ball';
         data: null;
     }
 
     export interface ShowBallMessage {
-        msg: "show_ball";
+        msg: 'show_ball';
         data: {
             state: GameState;
         };
     }
-        
+
     export interface PlayerJoined {
-        msg: "player_joined";
+        msg: 'player_joined';
         data: null;
     }
 
@@ -286,22 +280,19 @@ declare namespace PongRemoteServerMsgTypes {
         | HideBallMessage
         | ShowBallMessage
         | PlayerJoined;
-   
 }
-
-
 
 declare namespace PongRemoteClientMsgTypes {
     export interface PauseGame {
-        msg: "pause_game";
+        msg: 'pause_game';
     }
     export interface ContinueGame {
-        msg: "continue_game";
+        msg: 'continue_game';
     }
     export interface UpdatePlayerMove {
-        msg: "update_player_move";
-        player_id: "player_one" | "player_two";
-        action: "up" | "down" | "release_up" | "release_down" | "none";
+        msg: 'update_player_move';
+        player_id: 'player_one' | 'player_two';
+        action: 'up' | 'down' | 'release_up' | 'release_down' | 'none';
     }
     export type ClientMessageTypes =
         | UpdatePlayerMove
@@ -309,72 +300,64 @@ declare namespace PongRemoteClientMsgTypes {
         | ContinueGame;
 }
 
-
-
-
-
-
 declare namespace GameWorkerTypes {
-   
-    
     export interface Create {
-        message: "worker_game_create";
+        message: 'worker_game_create';
         canvas: OffscreenCanvas;
     }
     export interface GameWorkerInit {
-        message: "worker_game_init";
+        message: 'worker_game_init';
         settings: PongRemoteServerMsgTypes.GameSettings;
         state: PongRemoteServerMsgTypes.GameState;
     }
     export interface GameWorkerStart {
-        message: "worker_game_start";
+        message: 'worker_game_start';
     }
     export interface GameWorkerQuit {
-        message: "worker_game_quit";
+        message: 'worker_game_quit';
     }
     export interface GameWorkerPause {
-        message: "worker_game_pause";
+        message: 'worker_game_pause';
     }
     export interface GameWorkerContinue {
-        message: "worker_game_continue";
+        message: 'worker_game_continue';
     }
     export interface GameWorkerTerminate {
-        message: "worker_game_terminate";
+        message: 'worker_game_terminate';
     }
     export interface GameWorkerResize {
-        message: "worker_game_resize";
+        message: 'worker_game_resize';
         width: number;
         height: number;
         dpr: number;
     }
     export interface GameWorkerKeyEvent {
-        message: "worker_game_keyevent";
+        message: 'worker_game_keyevent';
         keyevent: string;
         key: string;
     }
     export interface GameWorkerMouseEvent {
-        message: "worker_game_mouseevent";
+        message: 'worker_game_mouseevent';
         posX: number;
         posY: number;
     }
     export interface GameWorkerChangeColor {
-        message: "worker_game_change_color";
+        message: 'worker_game_change_color';
         colorWhite: string;
         colorBlack: string;
     }
     export interface GameWorkerUpdatePos {
-        message: "worker_game_update_pos";
+        message: 'worker_game_update_pos';
         state: PongRemoteServerMsgTypes.GameState;
     }
     export interface GameWorkerHideBall {
-        message: "worker_game_hide_ball";
+        message: 'worker_game_hide_ball';
     }
     export interface GameWorkerShowBall {
-        message: "worker_game_show_ball";
+        message: 'worker_game_show_ball';
     }
 
-    
-    export type GameWorkerMessage = 
+    export type GameWorkerMessage =
         | Create
         | GameWorkerInit
         | GameWorkerStart
@@ -389,62 +372,59 @@ declare namespace GameWorkerTypes {
         | GameWorkerUpdatePos
         | GameWorkerHideBall
         | GameWorkerShowBall;
-
 }
-
 
 declare namespace GameWorkerTypesOld {
     export interface WorkerDataInit {
         canvas: HTMLCanvasElement;
     }
-    
+
     export interface WorkerDataResize {
         width: number;
         height: number;
         dpr: number;
     }
-    
+
     export interface WorkerDataChangeColors {
         colorWhite: string;
         colorBlack: number;
     }
-    
+
     export interface WorkerDataKeyEvent {
         keyevent: string;
         key: string;
     }
-    
+
     export interface WorkerDataMouseEvent {
         posX: number;
         posY: number;
     }
-    
+
     export type WorkerData =
         | WorkerDataInit
         | WorkerDataResize
         | WorkerDataChangeColors
         | WorkerDataKeyEvent
         | WorkerDataMouseEvent
-        | { [key: string]: any };
+        // eslint-disable-next-line prettier/prettier
+        | { [key: string]: string; };
 
+    type GameWorkerMsgCreate = 'worker_game_create';
+    type GameWorkerMsgInit = 'worker_game_init';
+    type GameWorkerMsgStart = 'worker_game_start';
+    type GameWorkerMsgQuit = 'worker_game_quit';
 
-    type GameWorkerMsgCreate = "worker_game_create";
-    type GameWorkerMsgInit = "worker_game_init";
-    type GameWorkerMsgStart = "worker_game_start";
-    type GameWorkerMsgQuit = "worker_game_quit";
+    type GameWorkerMsgPause = 'worker_game_pause';
+    type GameWorkerMsgContinue = 'worker_game_continue';
 
-    type GameWorkerMsgPause = "worker_game_pause";
-    type GameWorkerMsgContinue = "worker_game_continue";
-
-    type GameWorkerMsgTerminate = "worker_game_terminate";
-    type GameWorkerMsgResize = "worker_game_resize";
-    type GameWorkerMsgKeyEvent = "worker_game_keyevent";
-    type GameWorkerMsgMouseEvent = "worker_game_mouseevent";
-    type GameWorkerMsgChangeColor = "worker_game_change_color";
-    type GameWorkerMsgUpdatePos = "worker_game_update_pos";
-    type GameWorkerMsgHideBall = "worker_game_hide_ball";
-    type GameWorkerMsgShowBall = "worker_game_show_ball";
-
+    type GameWorkerMsgTerminate = 'worker_game_terminate';
+    type GameWorkerMsgResize = 'worker_game_resize';
+    type GameWorkerMsgKeyEvent = 'worker_game_keyevent';
+    type GameWorkerMsgMouseEvent = 'worker_game_mouseevent';
+    type GameWorkerMsgChangeColor = 'worker_game_change_color';
+    type GameWorkerMsgUpdatePos = 'worker_game_update_pos';
+    type GameWorkerMsgHideBall = 'worker_game_hide_ball';
+    type GameWorkerMsgShowBall = 'worker_game_show_ball';
 
     export interface WorkerMessage {
         message: number;

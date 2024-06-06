@@ -1,239 +1,275 @@
+// import * as m from '../../modules.js';
+// import { pongMessageTypes, msg_to_worker_remote } from '../../modules.js';
 
+// export class GameHubRemote {
+//     static games = {
+//         pong: 'pong',
+//         other: 'other',
+//     };
 
-import * as m from '../../modules.js'
-import { pongMessageTypes, msg_to_worker_remote } from '../../modules.js';
+//     static gamesWorker = {
+//         pong: '/src/gaming/games/pong/remote/v1/worker_remote.js',
+//         other: '/src/gaming/games/pong/remote/v1/worker_remote.js',
+//     };
 
+//     static currentUser = m.sessionService.subscribe(null);
 
-export class GameHubRemote {
+//     /**
+//      * @param {HTMLCanvasElement} canvas
+//      * @param {string} game
+//      * @param {APITypes.GameScheduleItem} gameData
+//      * @param {PongGameTypes.GameSettingsRemote} gameSettings
+//      */
+//     static async startGame(game, canvas, gameData, gameSettings) {
+//         // console.log("start game, user: ", GameHubRemote.currentUser);
+//         if (!GameHubRemote.currentUser.value) return;
 
-    static games = {
-        pong: "pong",
-        other: "other"
-    }
-    static gamesWorker = {
-        pong: "/src/gaming/games/pong/remote/v1/worker_remote.js",
-        other: "/src/gaming/games/pong/remote/v1/worker_remote.js"
-    }
-    
-    
-    static currentUser = m.sessionService.subscribe(null);
+//         // console.log("gameData: ", gameData);
+//         // const data = await fetcher.$post(`/game/play/${gameData.schedule_id}`, {});
+//         // // console.log("start game, data: ", data);
+//         return new GameHubRemote(game, canvas, gameData, gameSettings);
+//     }
 
+//     #gamesocket;
 
+//     /**
+//      * @param {HTMLCanvasElement} canvas
+//      * @param {string} game
+//      * @param {APITypes.GameScheduleItem} gameData
+//      * @param {PongGameTypes.GameSettingsRemote} gameSettings
+//      */
+//     constructor(game, canvas, gameData, gameSettings) {
+//         if (
+//             !GameHubRemote.gamesWorker[game] ||
+//             !(canvas instanceof HTMLCanvasElement)
+//         )
+//             throw new Error('No Canvas Element or no Worker Files');
 
-    /**
-     * @param {HTMLCanvasElement} canvas
-     * @param {string} game 
-     * @param {APITypes.GameScheduleItem} gameData
-     * @param {PongGameTypes.GameSettingsRemote} gameSettings
-     */
-    static async startGame(game, canvas, gameData, gameSettings) {
-        // console.log("start game, user: ", GameHubRemote.currentUser);
-        if (!GameHubRemote.currentUser.value) return ;
+//         // console.log("gamehub constructor");
+//         this.gameData = gameData;
+//         this.gameSettings = gameSettings;
 
-        // console.log("gameData: ", gameData);
-        // const data = await fetcher.$post(`/game/play/${gameData.schedule_id}`, {});
-        // // console.log("start game, data: ", data);
-        return new GameHubRemote(game, canvas, gameData, gameSettings);
-    }
+//         this.worker = new Worker(GameHubRemote.gamesWorker[game], {
+//             type: 'module',
+//         });
+//         console.log('worker: ', this.worker);
 
-    #gamesocket;
-    /**
-     * @param {HTMLCanvasElement} canvas
-     * @param {string} game 
-     * @param {APITypes.GameScheduleItem} gameData
-     * @param {PongGameTypes.GameSettingsRemote} gameSettings
-     */
-    constructor(game, canvas, gameData, gameSettings) {
-        if (!GameHubRemote.gamesWorker[game] || !(canvas instanceof HTMLCanvasElement))
-            throw new Error("No Canvas Element or no Worker Files");
+//         this.worker.onerror = (ev) => {
+//             console.log(ev);
+//             this.terminateGame();
+//             throw new Error('WORKER ERROR');
+//         };
+//         this.worker.onmessageerror = (ev) => {
+//             this.terminateGame();
+//             throw new Error('WORKER MESSAGE ERROR');
+//         };
 
-        // console.log("gamehub constructor");
-        this.gameData = gameData;
-        this.gameSettings = gameSettings;
+//         try {
+//             this.#gamesocket = new WebSocket(
+//                 `ws://127.0.0.1/ws/game/${this.gameData.schedule_id}/`,
+//             );
+//         } catch (error) {
+//             // console.log("unable to connect to game websocket: ", error);
+//         }
+//         this.gameData.player_one.score = 0;
+//         this.gameData.player_two.score = 0;
+//         this.gameData.player_one.won = false;
+//         this.gameData.player_two.won = false;
 
-        this.worker = new Worker(GameHubRemote.gamesWorker[game], {
-            type: "module"
-        });
-        console.log("worker: ", this.worker)
+//         if (this.#gamesocket) {
+//             /** @param {MessageEvent} e */
+//             this.#gamesocket.onmessage = (e) => {
+//                 // // console.log("game socket msg: ", e.data)
+//                 /** @type {PongGameTypes.PongMessage} */
+//                 const data = JSON.parse(e.data);
+//                 // console.log("parsed ws data: ", data)
+//                 if (data.msg === pongMessageTypes.INIT_GAME) {
+//                     // console.log("start game!");
+//                     this.initGame(data.data);
+//                 } else if (data.msg === pongMessageTypes.START_GAME) {
+//                     // console.log("start game!");
+//                     this.startGame();
+//                 } else if (data.msg === pongMessageTypes.GAME_END) {
+//                     // console.log("end game!");
+//                 } else if (data.msg === pongMessageTypes.HIDE_BALL) {
+//                     // console.log("hide ball!");
+//                     this.worker.postMessage({
+//                         message: msg_to_worker_remote.hide_ball,
+//                         data: {},
+//                     });
+//                 } else if (data.msg === pongMessageTypes.SHOW_BALL) {
+//                     // console.log("show ball!");
+//                     this.worker.postMessage({
+//                         message: msg_to_worker_remote.show_ball,
+//                         data: {},
+//                     });
+//                 } else if (data.msg === pongMessageTypes.GAME_UPDATE) {
+//                     // console.log("update game!");
+//                     this.worker.postMessage({
+//                         message: msg_to_worker_remote.update_pos,
+//                         data: data.data,
+//                     });
+//                 }
+//             };
+//         }
 
-        this.worker.onerror = (ev) => {
-            console.log(ev)
-            this.terminateGame();
-            throw new Error("WORKER ERROR");
-        };
-        this.worker.onmessageerror = (ev) => {
-            this.terminateGame();
-            throw new Error("WORKER MESSAGE ERROR");
-        };
-    
+//         const sendWsMsg = (data) => {
+//             try {
+//                 this.#gamesocket?.send(JSON.stringify(data));
+//             } catch (error) {
+//                 // console.log("unable to send data to game websocket: ", error);
+//             }
+//         };
 
-       
+//         /** @param {KeyboardEvent} e */
+//         const handleKeyDown = (e) => {
+//             switch (e.key) {
+//                 case 'ArrowUp':
+//                     sendWsMsg({ player_id: 'player_two', action: 'up' });
+//                     break;
+//                 case 'ArrowDown':
+//                     sendWsMsg({ player_id: 'player_two', action: 'down' });
+//                     break;
+//                 case 'a':
+//                     sendWsMsg({ player_id: 'player_one', action: 'up' });
+//                     break;
+//                 case 'y':
+//                     sendWsMsg({ player_id: 'player_one', action: 'down' });
+//                     break;
+//             }
+//         };
 
-        try {
-            this.#gamesocket = new WebSocket(`ws://127.0.0.1/ws/game/${this.gameData.schedule_id}/`);
-            
-        } catch (error) {
-            // console.log("unable to connect to game websocket: ", error);
-        }
-        this.gameData.player_one.score = 0;
-        this.gameData.player_two.score = 0;
-        this.gameData.player_one.won = false;
-        this.gameData.player_two.won = false;
+//         /** @param {KeyboardEvent} e */
+//         const handleKeyUp = (e) => {
+//             switch (e.key) {
+//                 case 'ArrowUp':
+//                     sendWsMsg({
+//                         player_id: 'player_two',
+//                         action: 'release_up',
+//                     });
+//                     break;
+//                 case 'ArrowDown':
+//                     sendWsMsg({
+//                         player_id: 'player_two',
+//                         action: 'release_down',
+//                     });
+//                     break;
+//                 case 'a':
+//                     sendWsMsg({
+//                         player_id: 'player_one',
+//                         action: 'release_up',
+//                     });
+//                     break;
+//                 case 'y':
+//                     sendWsMsg({
+//                         player_id: 'player_one',
+//                         action: 'release_down',
+//                     });
+//                     break;
+//             }
+//         };
 
-        if (this.#gamesocket) {
-            /** @param {MessageEvent} e */
-            this.#gamesocket.onmessage = (e) => {
-                // // console.log("game socket msg: ", e.data)
-                /** @type {PongGameTypes.PongMessage} */
-                const data = JSON.parse(e.data);
-                // console.log("parsed ws data: ", data)
-                if (data.msg === pongMessageTypes.INIT_GAME) {
-                    // console.log("start game!");
-                    this.initGame(data.data)
-                } else if (data.msg === pongMessageTypes.START_GAME) {
-                    // console.log("start game!");
-                    this.startGame()
-                } else if (data.msg === pongMessageTypes.GAME_END) {
-                    // console.log("end game!");
-                } else if (data.msg === pongMessageTypes.HIDE_BALL) {
-                    // console.log("hide ball!");
-                    this.worker.postMessage({message: msg_to_worker_remote.hide_ball, data: {} });
-                } else if (data.msg === pongMessageTypes.SHOW_BALL) {
-                    // console.log("show ball!");
-                    this.worker.postMessage({message: msg_to_worker_remote.show_ball, data: {} });
-                } else if (data.msg === pongMessageTypes.GAME_UPDATE) {
-                    // console.log("update game!");
-                    this.worker.postMessage({message: msg_to_worker_remote.update_pos, data: data.data})
-                }
-            }
-        }
+//         window.addEventListener('keydown', handleKeyDown);
+//         window.addEventListener('keyup', handleKeyUp);
 
-        const sendWsMsg = (data) => {
-            try {
-                this.#gamesocket?.send(JSON.stringify(data))
-            } catch (error) {
-                // console.log("unable to send data to game websocket: ", error);
-            }
-        }
-        
+//         this.canvas = canvas;
 
-        /** @param {KeyboardEvent} e */
-        const handleKeyDown = (e) => {
-            switch (e.key) {
-                case "ArrowUp": sendWsMsg({ player_id: "player_two", action: "up"})
-                    break;
-                case "ArrowDown": sendWsMsg({ player_id: "player_two", action: "down"})
-                    break;
-                case "a": sendWsMsg({ player_id: "player_one", action: "up"})
-                    break;
-                case "y": sendWsMsg({ player_id: "player_one", action: "down"})
-                    break;
-            }
-        }
+//         this.createGame();
+//     }
 
-        /** @param {KeyboardEvent} e */
-        const handleKeyUp = (e) => {
-            switch (e.key) {
-                case "ArrowUp": sendWsMsg({ player_id: "player_two", action: "release_up"})
-                    break;
-                case "ArrowDown": sendWsMsg({ player_id: "player_two", action: "release_down"})
-                    break;
-                case "a": sendWsMsg({ player_id: "player_one", action: "release_up"})
-                    break;
-                case "y": sendWsMsg({ player_id: "player_one", action: "release_down"})
-                    break;
-            }
-        }
+//     #quitGameAndPushResult() {}
 
-        
-        window.addEventListener("keydown", handleKeyDown);
-        window.addEventListener("keyup", handleKeyUp);
-        
-        this.canvas = canvas;
+//     #gameTerminated = false;
 
-        this.createGame()
-        
-    }
+//     #gameCreated = false;
 
-    #quitGameAndPushResult() {
+//     #gameInited = false;
 
-    }
-   
+//     #gameStarted = false;
 
-    #gameTerminated = false;
-    #gameCreated = false;
-    #gameInited = false;
-    #gameStarted = false;
-    #gameQuited = false;
-    createGame() {
-        console.log("createGame")
-        console.log("canvas: ", this.canvas);
-        const offscreen = this.canvas.transferControlToOffscreen();
-        this.worker.postMessage({ message: msg_to_worker_remote.create, data: {canvas: offscreen} }, [offscreen]);
-        // this.worker.postMessage({ type: "canvas", canvas: offscreen }, [offscreen]);
-        this.#gameCreated = true;
-    }
+//     #gameQuited = false;
 
-    /** @param {PongGameTypes.StartGameData} startData */
-    initGame(startData) {
-        this.worker.postMessage({ message: msg_to_worker_remote.init, data: {gameSettings: startData.settings} });
-        // this.worker.postMessage({ type: "canvas", canvas: offscreen }, [offscreen]);
-        this.#gameInited = true;
-    }
+//     createGame() {
+//         console.log('createGame');
+//         console.log('canvas: ', this.canvas);
+//         const offscreen = this.canvas.transferControlToOffscreen();
+//         this.worker.postMessage(
+//             {
+//                 message: msg_to_worker_remote.create,
+//                 data: { canvas: offscreen },
+//             },
+//             [offscreen],
+//         );
+//         // this.worker.postMessage({ type: "canvas", canvas: offscreen }, [offscreen]);
+//         this.#gameCreated = true;
+//     }
 
-    startGame() {
-        this.worker.postMessage({ message: msg_to_worker_remote.start, data: {} });
-        this.#gameStarted = true;
-    }
+//     /** @param {PongGameTypes.StartGameData} startData */
+//     initGame(startData) {
+//         this.worker.postMessage({
+//             message: msg_to_worker_remote.init,
+//             data: { gameSettings: startData.settings },
+//         });
+//         // this.worker.postMessage({ type: "canvas", canvas: offscreen }, [offscreen]);
+//         this.#gameInited = true;
+//     }
 
-    terminateGame() {
-        if (!this.#gameInited ) return ;
-        this.#gameInited = false;
-        this.worker?.terminate();
-        this.#gamesocket?.close();
-    }
+//     startGame() {
+//         this.worker.postMessage({
+//             message: msg_to_worker_remote.start,
+//             data: {},
+//         });
+//         this.#gameStarted = true;
+//     }
 
-    quitGame() {
-        if (!this.#gameInited || !this.#gameStarted) return ;
-        this.worker.postMessage({ message: msg_to_worker_remote.quit });
-        this.#gameStarted = false;
-    }
+//     terminateGame() {
+//         if (!this.#gameInited) return;
+//         this.#gameInited = false;
+//         this.worker?.terminate();
+//         this.#gamesocket?.close();
+//     }
 
-    pauseGame() {
-        this.worker.postMessage({ message: msg_to_worker_remote.pause });
-    }
+//     quitGame() {
+//         if (!this.#gameInited || !this.#gameStarted) return;
+//         this.worker.postMessage({ message: msg_to_worker_remote.quit });
+//         this.#gameStarted = false;
+//     }
 
-    continueGame() {
-        this.worker.postMessage({ message: msg_to_worker_remote.continue });
-    }
+//     pauseGame() {
+//         this.worker.postMessage({ message: msg_to_worker_remote.pause });
+//     }
 
-    resizeCanvas(newCanvasWidth, newCanvasHeight, dpr) {
-        this.worker.postMessage({
-            message: msg_to_worker_remote.resize,
-            data: {
-                width: newCanvasWidth,
-                height: newCanvasHeight,
-                dpr: dpr
-            }
-        });
-    }
+//     continueGame() {
+//         this.worker.postMessage({ message: msg_to_worker_remote.continue });
+//     }
 
-    get scorePlayerOne() {
-        return (this.gameData.player_one.score);
-    }
-    get scorePlayerTwo() {
-        return (this.gameData.player_two.score);
-    }
+//     resizeCanvas(newCanvasWidth, newCanvasHeight, dpr) {
+//         this.worker.postMessage({
+//             message: msg_to_worker_remote.resize,
+//             data: {
+//                 width: newCanvasWidth,
+//                 height: newCanvasHeight,
+//                 dpr,
+//             },
+//         });
+//     }
 
-    get playerOneWon() {
-        return (this.gameData.player_one.won)
-    }
+//     get scorePlayerOne() {
+//         return this.gameData.player_one.score;
+//     }
 
-    get playerTwoWon() {
-        return (this.gameData.player_two.won)
-    }
+//     get scorePlayerTwo() {
+//         return this.gameData.player_two.score;
+//     }
 
-}
+//     get playerOneWon() {
+//         return this.gameData.player_one.won;
+//     }
+
+//     get playerTwoWon() {
+//         return this.gameData.player_two.won;
+//     }
+// }
 
 // /**
 //  * @typedef {Object} GameTwoCreateInfo
@@ -249,7 +285,6 @@ export class GameHubRemote {
 //  * @property {import('./game_worker_messages').GameSettings} [settings]
 //  */
 
-
 // export class GameHub {
 
 //     static games = {
@@ -260,13 +295,8 @@ export class GameHubRemote {
 //         pong: "/src/games/pong/worker.js",
 //         other: "/src/games/pong/worker.js"
 //     }
-    
-    
+
 //     static currentUser = sessionService.subscribe(null);
-
-
-
-   
 
 //     /** @param {GameTournamentCreateInfo} conf  */
 //     static createTournament(conf) {
@@ -275,12 +305,12 @@ export class GameHubRemote {
 
 //     /** @param {GameTwoCreateInfo} conf  */
 //     static createTwoPlayerGame(conf) {
-        
+
 //     }
 
 //     /**
 //      * @param {HTMLCanvasElement} canvas
-//      * @param {string} game 
+//      * @param {string} game
 //      * @param {import('./types').GameScheduleItem} gameData
 //      * @param {import('./game_worker_messages').GameSettings} gameSettings
 //      */
@@ -293,7 +323,7 @@ export class GameHubRemote {
 
 //     /**
 //      * @param {HTMLCanvasElement} canvas
-//      * @param {string} game 
+//      * @param {string} game
 //      * @param {import('./types').GameScheduleItem} gameData
 //      * @param {import('./game_worker_messages').GameSettings} gameSettings
 //      */
@@ -324,7 +354,7 @@ export class GameHubRemote {
 //                 this.gameData.player_two.won = true;
 //             }
 //         };
-//         this.worker.onerror = (ev) => { 
+//         this.worker.onerror = (ev) => {
 //             this.terminateGame();
 //             throw new Error("WORKER ERROR");
 //         };
@@ -332,7 +362,6 @@ export class GameHubRemote {
 //             this.terminateGame();
 //             throw new Error("WORKER MESSAGE ERROR");
 //         };
-    
 
 //         window.addEventListener("keydown", (e) => {
 //             this.worker.postMessage({ type: "event", keyevent: e.type, key: e.key });
@@ -343,15 +372,14 @@ export class GameHubRemote {
 //         // window.addEventListener("mousemove", (e) => {
 
 //         // })
-        
+
 //         this.canvas = canvas;
-        
+
 //     }
 
 //     #quitGameAndPushResult() {
 
 //     }
-   
 
 //     #gameTerminated = false;
 //     #gameInited = false;
@@ -419,11 +447,9 @@ export class GameHubRemote {
 
 // }
 
-
-
 //      // updateScales(event.data.data.w, event.data.data.h, event.data.data.dpr);
 //      const newWidth = event.data.data.w, newHeight = event.data.data.h, dpr = event.data.data.dpr;
-            
+
 //      sizes.currW = newWidth;
 //      sizes.currH = newHeight;
 // //      console.log("dpr: ", dpr)

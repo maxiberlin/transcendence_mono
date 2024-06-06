@@ -1,4 +1,3 @@
-
 // /**
 //  * @typedef {null | boolean | number | string | JsonArray | {[property: string]: Json}} Json
 //  */
@@ -18,12 +17,10 @@
 
 // /** @typedef {Json[]} JsonArray */
 
-
-
 /**
- * @typedef {Object} RequestData
+ * @typedef {object} RequestData
  * @property {URLSearchParams} [searchParams]
- * @property {string | Object | FormData} [bodyData]
+ * @property {string | object | FormData} [bodyData]
  * @property {HeadersInit} [additionalHeaders]
  * @property {string} [csrfHeaderName]
  * @property {string} [csrfCookieName]
@@ -32,37 +29,40 @@
 export class Fetcher {
     /** @type {URL} */
     #baseUrl;
+
     /** @type {RequestInit} */
     #requestInit;
+
     /** @type {number} */
     #timeoutMs;
+
     #csrf;
 
     /**
-     * @param {string} [baseUrl] 
-     * @param {number} [timeoutMs] 
+     * @param {string} [baseUrl]
      * @param {RequestInit} [baseRequest]
+     * @param {number} [timeoutMs]
      * @param {{cookieName: string, headerName: string}} [csrfCookieHeaderName]
      */
     constructor(baseUrl, baseRequest, timeoutMs, csrfCookieHeaderName) {
-        this.#baseUrl = new URL(baseUrl ?? "");
-        console.log("base url: ", this.#baseUrl);
+        this.#baseUrl = new URL(baseUrl ?? '');
+        // console.log('base url: ', this.#baseUrl);
         this.#timeoutMs = timeoutMs ?? 10000;
         if (baseRequest) {
-            this.#requestInit = {... baseRequest};
+            this.#requestInit = { ...baseRequest };
         } else {
             this.#requestInit = {};
         }
         if (csrfCookieHeaderName) this.#csrf = csrfCookieHeaderName;
         this.#requestInit.headers = new Headers(this.#requestInit.headers);
-        this.#requestInit.headers.set("Content-Type", "application/json");
+        this.#requestInit.headers.set('Content-Type', 'application/json');
     }
 
-    /** 
-     * @param {Response} response 
-     * @returns {Promise<Object>}
+    /**
+     * @param {Response} response
+     * @returns {Promise<object>}
      */
-    #handleResponse(response) {
+    static #handleResponse(response) {
         return response.text().then((text) => {
             // console.log("RESPONSE TEXT: ");
             // console.log(text);
@@ -73,10 +73,10 @@ export class Fetcher {
                 error.status = response.status;
                 error.statusText = response.statusText;
                 if (data) error.data = data;
-                console.log("error: ", error);
+                // console.log('error: ', error);
                 return Promise.reject(error);
             }
-            return (data);
+            return data;
         });
     }
 
@@ -84,36 +84,39 @@ export class Fetcher {
      * @param {Headers} headersOld
      * @param {HeadersInit | undefined} headersAdd
      */
-    #setHeaders(headersOld, headersAdd) {
-        if (headersAdd === undefined || headersAdd === null)
-            return ;
+    static #setHeaders(headersOld, headersAdd) {
+        if (headersAdd === undefined || headersAdd === null) return;
         if (headersAdd instanceof Headers) {
             headersAdd.forEach((v, k) => {
                 headersOld.append(k, v);
-            })
+            });
         } else if (headersAdd instanceof Array) {
             headersAdd.forEach((arr) => {
-                if (typeof arr[0] !== "string" || typeof arr[1] !== "string")
-                    throw new Error("wrong header format");
+                if (typeof arr[0] !== 'string' || typeof arr[1] !== 'string')
+                    throw new Error('wrong header format');
                 headersOld.append(arr[0], arr[1]);
-            })
+            });
         } else {
-            throw new Error("wrong header format");
+            throw new Error('wrong header format');
         }
     }
 
-    /** @param {RequestInit} usedRequest  @param {string | Object | FormData | undefined} bodyData  */
-    #setBody(usedRequest, bodyData) {
-        if (bodyData === undefined || bodyData === null)
-            return ;
-        if (typeof bodyData === "string") {
+    /**
+     * @param {RequestInit} usedRequest
+     * @param {string | object | FormData | undefined} bodyData
+     */
+    static #setBody(usedRequest, bodyData) {
+        if (bodyData === undefined || bodyData === null) return;
+        if (typeof bodyData === 'string') {
             usedRequest.body = bodyData;
-            return ;
+            return;
         }
         let object = bodyData;
         if (bodyData instanceof FormData) {
             object = {};
-            bodyData.forEach((value, key) => object[key] = value);
+            bodyData.forEach((value, key) => {
+                object[key] = value;
+            });
         }
         usedRequest.body = JSON.stringify(object);
     }
@@ -122,15 +125,16 @@ export class Fetcher {
      * @param {string} url
      * @param {string} method
      * @param {RequestData | undefined} data
-     * @returns {Promise<Object>}
+     * @returns {Promise<object>}
      */
     $request(url, method, data) {
         const searchParams = data?.searchParams;
+        let newUrl = url;
         if (searchParams instanceof URLSearchParams) {
-            console.log("search params string: ", searchParams.toString());
-            url += `?${searchParams.toString()}`;
+            // console.log('search params string: ', searchParams.toString());
+            newUrl = `${url}?${searchParams.toString()}`;
         }
-        const usedUrl = new URL(url, this.#baseUrl);
+        const usedUrl = new URL(newUrl, this.#baseUrl);
         // console.log("used url: ", usedUrl);
         /** @type {RequestInit} */
         const usedRequest = {};
@@ -138,10 +142,17 @@ export class Fetcher {
         // console.log("base req: ", this.#requestInit);
         // console.log("used req: ", usedRequest);
         usedRequest.method = method;
-        if (data && usedRequest.headers && usedRequest.headers instanceof Headers) {
-            usedRequest.body = typeof data.bodyData === "string" ? data.bodyData : JSON.stringify(data.bodyData);
-            this.#setHeaders(usedRequest.headers, data.additionalHeaders);
-            this.#setBody(usedRequest, data.bodyData);
+        if (
+            data &&
+            usedRequest.headers &&
+            usedRequest.headers instanceof Headers
+        ) {
+            usedRequest.body =
+                typeof data.bodyData === 'string' ?
+                    data.bodyData
+                :   JSON.stringify(data.bodyData);
+            Fetcher.#setHeaders(usedRequest.headers, data.additionalHeaders);
+            Fetcher.#setBody(usedRequest, data.bodyData);
         }
         usedRequest.signal = AbortSignal.timeout(this.#timeoutMs);
 
@@ -149,33 +160,53 @@ export class Fetcher {
         // console.log("fetch headers: ", usedRequest.headers);
         // console.log("fetch body Data: ", usedRequest.body);
 
-        console.log("fetch url: ", usedUrl);
-        return (fetch(usedUrl, usedRequest)
-            .then(this.#handleResponse.bind(this))
-            
+        // console.log('fetch url: ', usedUrl);
+        return fetch(usedUrl, usedRequest).then(
+            Fetcher.#handleResponse.bind(this),
         );
     }
 
-    /** @param {string} url @param {RequestData} [data] @returns {Promise<Object>} */
+    /**
+     * @param {string} url
+     * @param {RequestData} [data]
+     * @returns {Promise<object>}
+     */
     $get(url, data) {
-        return this.$request(url, "GET", data);
+        return this.$request(url, 'GET', data);
     }
 
-    /** @param {string} url @param {RequestData} data @returns {Promise<Object>} */
+    /**
+     * @param {string} url
+     * @param {RequestData} data
+     * @returns {Promise<object>}
+     */
     $post(url, data) {
-        return this.$request(url, "POST", data);
+        return this.$request(url, 'POST', data);
     }
 
-    /** @param {string} url @param {RequestData} data @returns {Promise<Object>} */
+    /**
+     * @param {string} url
+     * @param {RequestData} data
+     * @returns {Promise<object>}
+     */
     $put(url, data) {
-        return this.$request(url, "PUT", data);
+        return this.$request(url, 'PUT', data);
     }
-    /** @param {string} url @param {RequestData} [data] @returns {Promise<Object>} */
+
+    /**
+     * @param {string} url
+     * @param {RequestData} [data]
+     * @returns {Promise<object>}
+     */
     $delete(url, data) {
-        return this.$request(url, "DELETE", data);
+        return this.$request(url, 'DELETE', data);
     }
 }
 
+/**
+ * @param {string} name
+ * @returns {string | null}
+ */
 export function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -183,8 +214,10 @@ export function getCookie(name) {
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
             // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            if (cookie.substring(0, name.length + 1) === `${name}=`) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1),
+                );
                 break;
             }
         }

@@ -1,64 +1,57 @@
 /// <reference path="../types.d.ts"/>
 
-// Lib Templ
-export  *  from './lib_templ/reactivity/pubsub.js'
-export  *  from './lib_templ/templ/template.js'
-export  *  from './lib_templ/baseelem.js'
+// // Lib Templ
+// export * from './lib_templ/reactivity/PubSub.js';
+// export * from './lib_templ/templ/Template.js';
+// export * from './lib_templ/BaseElement.js';
 
+// // Services
+// export * from './services/api/api_helper.js';
+// export * from './services/api/API.js';
 
-// Services
-export  *  from './services/api/api_helper.js'
-export  *  from './services/api/API.js'
+// export * from './services/routing/Router.js';
+// export * from './services/routing/routesData.js';
 
-export  *  from './services/routing/Router.js'
-export  *  from './services/routing/routesData.js'
+// export * from './services/styles/externalStyles.js';
 
-export  *  from './services/styles/externalStyles.js'
+// // Game Data
+// export * from './gaming/exchange/game_msg_remote.js';
+// export * from './gaming/exchange/game_msg.js';
+// export * from './gaming/manager/gameHub.js';
+// export * from './gaming/manager/gameHub_remote.js';
 
+// // Components
+// export * from './components/bootstrap/BsButton.js';
+// export * from './components/bootstrap/BsCard.js';
+// export * from './routes/home/GameMenu.js';
+// export * from './components/bootstrap/BsDropDown.js';
+// export * from './components/bootstrap/BsCard.js';
+// export * from './components/bootstrap/BsModal.js';
+// export * from './components/bootstrap/BsToasts.js';
+// export * from './components/bootstrap/AvatarComponent.js';
+// export * from './components/ActionButtons.js';
+// export * from './components/utils.js';
 
-// Game Data
-export  *  from './gaming/exchange/game_msg_remote.js'
-export  *  from './gaming/exchange/game_msg.js'
-export  *  from './gaming/manager/gameHub.js'
-export  *  from './gaming/manager/gameHub_remote.js'
+// // Routes Web Components
+// export * from './routes/root.js';
 
+// export * from './routes/auth/LoginRegisterRoute.js';
+// export * from './routes/auth/PongBg.js';
 
-// Components
-export  *  from './components/bootstrap/BsButton.js'
-export  *  from './components/bootstrap/BsCard.js'
-export  *  from './routes/home/GameMenu.js'
-export  *  from './components/bootstrap/BsDropDown.js'
-export  *  from './components/bootstrap/BsCard.js'
-export  *  from './components/bootstrap/BsModal.js'
-export  *  from './components/bootstrap/BsToasts.js'
-export  *  from './components/bootstrap/AvatarComponent.js'
-export  *  from './components/ActionButtons.js'
-export  *  from './components/utils.js'
+// export * from './routes/home/GameWindow.js';
+// export * from './routes/home/PongGame.js';
+// export * from './routes/home/PongGame_remote.js';
 
+// export * from './routes/profile/ProfileView.js';
 
-// Routes Web Components
-export  *  from './routes/root.js'
-
-export  *  from './routes/auth/LoginRegisterRoute.js'
-export  *  from './routes/auth/PongBg.js'
-
-export  *  from './routes/home/GameWindow.js'
-export  *  from './routes/home/PongGame.js'
-export  *  from './routes/home/PongGame_remote.js'
-
-export  *  from './routes/profile/ProfileView.js'
-
-export  *  from './routes/social/ProfileSearch.js'
-export  *  from './routes/social/FriendsView.js';
-export  *  from './routes/social/ChatView.js'
-
-
+// export * from './routes/social/ProfileSearch.js';
+// export * from './routes/social/FriendsView.js';
+// export * from './routes/social/ChatView.js';
 
 // // Lib Templ
 // import { PubSub } from './lib_templ/reactivity/pubsub.js'
 // import { html, css } from './lib_templ/templ/template.js'
 // import { BaseElem } from './lib_templ/baseelem.js'
-
 
 // // Services
 // import { Fetcher } from './services/api/api_helper.js'
@@ -69,13 +62,11 @@ export  *  from './routes/social/ChatView.js'
 
 // import { useExternalStyles } from './services/styles/externalStyles.js'
 
-
 // // Game Data
 // import { GameHub } from './gaming/manager/gameHub.js'
 // import { GameHubRemote } from './gaming/manager/gameHub_remote.js'
 // import { msg_to_main } from './gaming/exchange/game_worker_messages.js'
 // import { msg_to_worker } from './gaming/exchange/game_worker_messages.js'
-
 
 // // Components
 // import { BsButton } from './components/bootstrap/BsButton.js'
@@ -87,7 +78,6 @@ export  *  from './routes/social/ChatView.js'
 // import { BsToasts } from './components/bootstrap/BsToasts.js'
 // import { AvatarComponent, AvatarLink, renderAvatar } from './components/bootstrap/AvatarComponent.js'
 // import { actions, renderDropdow } from './components/ActionButtons.js'
-
 
 // // Routes Web Components
 // import { PongApp } from './routes/root.js'

@@ -9,9 +9,20 @@
         "module": "ESNext",
         "target": "ES2020",
         "declarationDir": "./types",
-        "noImplicitAny": false
+        "noImplicitAny": false,
+        "moduleResolution": "node",
+        "types": [
+            "vitest/globals"
+        ],
     },
-    "include": ["src/**/*", "types/**/*"],
+    "paths": {
+        "*": [
+            "node_modules/*"
+        ]
+    },
+    "include": [
+        "src/**/*"
+    ],
     "exclude": [
         "node_modules",
         "**/node_modules/*",

@@ -1,45 +1,50 @@
-import { BaseElem, html } from '../../modules.js';
+import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
 /**
- * @typedef {Object} ToastNotificationData
+ * @typedef {object} ToastNotificationData
  * @property {string | undefined} color
  * @property {string} message
  */
 
-const det = {
-    color: "",
-    message: "",
+// const det = {
+//     color: '',
+//     message: '',
+// };
 
-}
-
-
-
-export class BsToasts extends BaseElem {
+export default class BsToasts extends BaseElement {
     constructor() {
         super(false, false);
+        this.#onNotification = (event) => {
+            this.onNotification(event);
+        };
     }
+
+    #onNotification;
 
     connectedCallback() {
         super.connectedCallback();
-        document.addEventListener("render-notification", this.onNotification.bind(this));
+        document.addEventListener('render-notification', this.#onNotification);
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
-        document.removeEventListener("render-notification", this.onNotification.bind(this));
+        document.removeEventListener(
+            'render-notification',
+            this.#onNotification,
+        );
     }
 
     /** @param {CustomEvent} event  */
     onNotification(event) {
-        console.log("on notification!")
+        // console.log('on notification!');
         /** @type {ToastNotificationData} */
         const data = event.detail;
         this.renderToastErrorMessage(data.message);
     }
 
     renderToastErrorMessage = (message) => {
-        const templ = document.createElement("template");
-        templ.innerHTML =  /*html*/`
+        const templ = document.createElement('template');
+        templ.innerHTML = /* html */ `
             <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex alert alert-danger p-1">
                     <div class="toast-body">
@@ -47,34 +52,42 @@ export class BsToasts extends BaseElem {
                     </div>
                     <button type="button" class="btn-close btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-            </div>`
-        
+            </div>`;
+
         const toast = templ.content.firstElementChild?.cloneNode(true);
-        if (!(toast instanceof HTMLElement)) return ;
-        const onHidden = (el) => {
-            toast.removeEventListener("hidden.bs.toast", onHidden);
+        if (!(toast instanceof HTMLElement)) return;
+        const onHidden = () => {
+            toast.removeEventListener('hidden.bs.toast', onHidden);
             toast.remove();
         };
-        toast?.addEventListener("hidden.bs.toast", onHidden);
-        console.log("toast: ");
-        console.log(toast);
+        toast?.addEventListener('hidden.bs.toast', onHidden);
+        // console.log('toast: ');
+        // console.log(toast);
         this.toastCont.appendChild(toast);
-        const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toast)
+        // @ts-ignore
+        // eslint-disable-next-line no-undef
+        const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toast);
         toastBootstrap.show();
-
-    }
+    };
 
     render() {
         return html`
-            <div aria-live="polite" aria-atomic="true" class="position-relative">
-                <div ${(el)=>{this.toastCont = el;}} class="toast-container top-0 end-0 p-3">
-                    
-                </div>
+            <div
+                aria-live="polite"
+                aria-atomic="true"
+                class="position-relative"
+            >
+                <div
+                    ${(el) => {
+                        this.toastCont = el;
+                    }}
+                    class="toast-container top-0 end-0 p-3"
+                ></div>
             </div>
-        `
+        `;
     }
 }
-customElements.define("bs-toasts", BsToasts);
+customElements.define('bs-toasts', BsToasts);
 
 // /**
 //  * @typedef {Object} ToastNotificationData
@@ -87,8 +100,6 @@ customElements.define("bs-toasts", BsToasts);
 //     message: "",
 
 // }
-
-
 
 // export class BsToasts extends BaseElem {
 //     constructor() {
@@ -130,7 +141,7 @@ customElements.define("bs-toasts", BsToasts);
 //     render() {
 //         return html`
 //             <div ${(el)=>{this.toastCont = el;}} class="toast-container position-static">
-                
+
 //             </div>
 //         `
 //     }

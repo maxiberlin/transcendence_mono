@@ -1,34 +1,28 @@
+import { sessionService } from '../../services/api/API.js';
 
-
-import * as m from '../../modules.js'
-import { pongMessageTypes, msg_to_worker_remote } from '../../modules.js';
-
-
-export class GameHubRemote {
-
+export default class GameHubRemote {
     static games = {
-        pong: "pong",
-        other: "other"
-    }
+        pong: 'pong',
+        other: 'other',
+    };
+
     static gamesWorker = {
-        pong: "/src/gaming/games/pong/remote/v1/worker_remote.js",
-        other: "/src/gaming/games/pong/remote/v1/worker_remote.js"
-    }
-    
-    
-    static currentUser = m.sessionService.subscribe(null);
+        pong: '/src/gaming/games/pong/remote/v1/worker_remote.js',
+        other: '/src/gaming/games/pong/remote/v1/worker_remote.js',
+    };
 
-
+    static currentUser = sessionService.subscribe(null);
 
     /**
+     * @param {string} game
      * @param {HTMLCanvasElement} canvas
-     * @param {string} game 
      * @param {APITypes.GameScheduleItem} gameData
-     * @param {PongGameTypes.GameSettingsRemote} gameSettings
+     * @param {PongGameTypes.GameSettingsRemote} [gameSettings]
+     * @returns {Promise<GameHubRemote | undefined>}
      */
     static async startGame(game, canvas, gameData, gameSettings) {
         // console.log("start game, user: ", GameHubRemote.currentUser);
-        if (!GameHubRemote.currentUser.value) return ;
+        if (!GameHubRemote.currentUser.value) return undefined;
 
         // console.log("gameData: ", gameData);
         // const data = await fetcher.$post(`/game/play/${gameData.schedule_id}`, {});
@@ -37,42 +31,44 @@ export class GameHubRemote {
     }
 
     #gamesocket;
+
     /**
+     * @param {string} game
      * @param {HTMLCanvasElement} canvas
-     * @param {string} game 
      * @param {APITypes.GameScheduleItem} gameData
-     * @param {PongGameTypes.GameSettingsRemote} gameSettings
+     * @param {PongGameTypes.GameSettingsRemote} [gameSettings]
      */
     constructor(game, canvas, gameData, gameSettings) {
-        if (!GameHubRemote.gamesWorker[game] || !(canvas instanceof HTMLCanvasElement))
-            throw new Error("No Canvas Element or no Worker Files");
+        if (
+            !GameHubRemote.gamesWorker[game] ||
+            !(canvas instanceof HTMLCanvasElement)
+        )
+            throw new Error('No Canvas Element or no Worker Files');
 
         // console.log("gamehub constructor");
         this.gameData = gameData;
         this.gameSettings = gameSettings;
 
         this.worker = new Worker(GameHubRemote.gamesWorker[game], {
-            type: "module"
+            type: 'module',
         });
-        console.log("worker: ", this.worker)
+        // console.log('worker: ', this.worker);
 
-        this.worker.onerror = (ev) => {
-            console.log(ev)
-            throw new Error("WORKER ERROR");
+        this.worker.onerror = () => {
+            // console.log(ev);
+            throw new Error('WORKER ERROR');
         };
-        this.worker.onmessageerror = (ev) => {
-            console.log(ev)
-            throw new Error("WORKER MESSAGE ERROR");
+        this.worker.onmessageerror = () => {
+            // console.log(ev);
+            throw new Error('WORKER MESSAGE ERROR');
         };
-    
-
-       
 
         try {
             // this.#gamesocket = new WebSocket(`ws://127.0.0.1/ws/game/${this.gameData.schedule_id}/`);
             const url = new URL(window.location.origin);
-            this.#gamesocket = new WebSocket(`wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`);
-            
+            this.#gamesocket = new WebSocket(
+                `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`,
+            );
         } catch (error) {
             // console.log("unable to connect to game websocket: ", error);
         }
@@ -82,69 +78,96 @@ export class GameHubRemote {
         this.gameData.player_two.won = false;
 
         if (this.#gamesocket) {
-            this.#gamesocket.onmessage = (e) => { this.onSocketMessage(JSON.parse(e.data)); };
+            this.#gamesocket.onmessage = (e) => {
+                this.onSocketMessage(JSON.parse(e.data));
+            };
         }
 
-        /** @type {PongRemoteClientMsgTypes.UpdatePlayerMove} */
+        /**
+         * @type {PongRemoteClientMsgTypes.UpdatePlayerMove}
+         */
         const keyAction = {
-            msg: "update_player_move",
-            player_id: this.gameData.player_one.id === GameHubRemote.currentUser.value.id ? "player_one" : "player_two",
-            action: "none"
-        }
-        const keyUp = this.gameData.player_one.id === GameHubRemote.currentUser.value.id ? "a" : "ArrowUp";
-        const keyDown = this.gameData.player_one.id === GameHubRemote.currentUser.value.id ? "y" : "ArrowDown";
+            msg: 'update_player_move',
+            player_id:
+                (
+                    this.gameData.player_one.id ===
+                    GameHubRemote.currentUser.value.id
+                ) ?
+                    'player_one'
+                :   'player_two',
+            action: 'none',
+        };
+        const keyUp =
+            this.gameData.player_one.id === GameHubRemote.currentUser.value.id ?
+                'a'
+            :   'ArrowUp';
+        const keyDown =
+            this.gameData.player_one.id === GameHubRemote.currentUser.value.id ?
+                'y'
+            :   'ArrowDown';
 
         /** @param {KeyboardEvent} e */
         const handleKey = (e) => {
             /** @type {PongRemoteClientMsgTypes.UpdatePlayerMove} */
-            
-            if (e.type === "keydown" && e.key === keyUp) {
-                console.log("keydown");
-                keyAction.action = "up"
-            } else if (e.type === "keydown" && e.key === keyDown) {
-                console.log("keydown");
-                keyAction.action = "down"
-            } else if (e.type === "keyup" && e.key === keyUp) {
-                console.log("keyup");
-                keyAction.action = "release_up"
-            } else if (e.type === "keyup" && e.key === keyDown) {
-                console.log("rkeyup");
-                keyAction.action = "release_down"
-            } else return ;
-            this.sendWebSocketMessage(keyAction)
-        }
-        window.addEventListener("keydown", handleKey);
-        window.addEventListener("keyup", handleKey);
 
-        
+            if (e.type === 'keydown' && e.key === keyUp) {
+                // console.log('keydown');
+                keyAction.action = 'up';
+            } else if (e.type === 'keydown' && e.key === keyDown) {
+                // console.log('keydown');
+                keyAction.action = 'down';
+            } else if (e.type === 'keyup' && e.key === keyUp) {
+                // console.log('keyup');
+                keyAction.action = 'release_up';
+            } else if (e.type === 'keyup' && e.key === keyDown) {
+                // console.log('rkeyup');
+                keyAction.action = 'release_down';
+            } else return;
+            this.sendWebSocketMessage(keyAction);
+        };
+        window.addEventListener('keydown', handleKey);
+        window.addEventListener('keyup', handleKey);
 
-        console.log("createGame")
-        console.log("canvas: ", canvas);
+        // console.log('createGame');
+        // console.log('canvas: ', canvas);
         const offscreen = canvas.transferControlToOffscreen();
-        this.sendWorkerMessage({ message: "worker_game_create", canvas: offscreen}, [offscreen]);
+        this.sendWorkerMessage(
+            { message: 'worker_game_create', canvas: offscreen },
+            [offscreen],
+        );
     }
 
-
-    /** @param {PongRemoteServerMsgTypes.PongMessage} msg  */
+    /**
+     * @param {PongRemoteServerMsgTypes.PongMessage} msg
+     */
     onSocketMessage(msg) {
-        if (!msg.msg) return ;
+        if (!msg.msg) return;
         switch (msg.msg) {
-            case "init_game":
-                this.sendWorkerMessage({message: "worker_game_init", settings: msg.data.settings, state: msg.data.state})
+            case 'init_game':
+                this.sendWorkerMessage({
+                    message: 'worker_game_init',
+                    settings: msg.data.settings,
+                    state: msg.data.state,
+                });
                 break;
-            case "start_game":
-                this.sendWorkerMessage({message: "worker_game_start"})
+            case 'start_game':
+                this.sendWorkerMessage({ message: 'worker_game_start' });
                 break;
-            case "end_game":
+            case 'end_game':
                 break;
-            case "hide_ball":
-                this.sendWorkerMessage({message: "worker_game_hide_ball"})
+            case 'hide_ball':
+                this.sendWorkerMessage({ message: 'worker_game_hide_ball' });
                 break;
-            case "show_ball":
-                this.sendWorkerMessage({message: "worker_game_show_ball"})
+            case 'show_ball':
+                this.sendWorkerMessage({ message: 'worker_game_show_ball' });
                 break;
-            case "update_game":
-                this.sendWorkerMessage({message: "worker_game_update_pos", state: msg.data.state})
+            case 'update_game':
+                this.sendWorkerMessage({
+                    message: 'worker_game_update_pos',
+                    state: msg.data.state,
+                });
+                break;
+            default:
                 break;
         }
     }
@@ -152,44 +175,40 @@ export class GameHubRemote {
     /**
      * @param {number} width
      * @param {number} height
-     * @param {number} dpr 
+     * @param {number} dpr
      */
     resizeCanvas(width, height, dpr) {
-        this.sendWorkerMessage({message:"worker_game_resize", width, height, dpr});
+        this.sendWorkerMessage({
+            message: 'worker_game_resize',
+            width,
+            height,
+            dpr,
+        });
     }
 
-    
-
-
-    /**
-     * Functions to get current game player data
-     */
     get scorePlayerOne() {
-        return (this.gameData.player_one.score);
+        return this.gameData.player_one.score;
     }
+
     get scorePlayerTwo() {
-        return (this.gameData.player_two.score);
+        return this.gameData.player_two.score;
     }
 
     get playerOneWon() {
-        return (this.gameData.player_one.won)
+        return this.gameData.player_one.won;
     }
 
     get playerTwoWon() {
-        return (this.gameData.player_two.won)
+        return this.gameData.player_two.won;
     }
 
-
-
     /**
-     * Helper Functions for sending messages to worker and websocket
-     */
-    /**
-     * @param {GameWorkerTypes.GameWorkerMessage} data @param {Transferable[]} [transferArr]
+     * @param {GameWorkerTypes.GameWorkerMessage} data
+     * @param {Transferable[]} [transferArr]
      */
     sendWorkerMessage(data, transferArr) {
-        if (transferArr) this.worker.postMessage(data, transferArr)
-        else this.worker.postMessage(data)
+        if (transferArr) this.worker.postMessage(data, transferArr);
+        else this.worker.postMessage(data);
     }
 
     /**
@@ -197,12 +216,11 @@ export class GameHubRemote {
      */
     sendWebSocketMessage(data) {
         try {
-            this.#gamesocket?.send(JSON.stringify(data))
+            this.#gamesocket?.send(JSON.stringify(data));
         } catch (error) {
-            console.log("unable to send data to game websocket: ", error);
+            // console.log('unable to send data to game websocket: ', error);
         }
     }
-
 }
 
 // /**
@@ -219,7 +237,6 @@ export class GameHubRemote {
 //  * @property {import('./game_worker_messages').GameSettings} [settings]
 //  */
 
-
 // export class GameHub {
 
 //     static games = {
@@ -230,13 +247,8 @@ export class GameHubRemote {
 //         pong: "/src/games/pong/worker.js",
 //         other: "/src/games/pong/worker.js"
 //     }
-    
-    
+
 //     static currentUser = sessionService.subscribe(null);
-
-
-
-   
 
 //     /** @param {GameTournamentCreateInfo} conf  */
 //     static createTournament(conf) {
@@ -245,12 +257,12 @@ export class GameHubRemote {
 
 //     /** @param {GameTwoCreateInfo} conf  */
 //     static createTwoPlayerGame(conf) {
-        
+
 //     }
 
 //     /**
 //      * @param {HTMLCanvasElement} canvas
-//      * @param {string} game 
+//      * @param {string} game
 //      * @param {import('./types').GameScheduleItem} gameData
 //      * @param {import('./game_worker_messages').GameSettings} gameSettings
 //      */
@@ -263,7 +275,7 @@ export class GameHubRemote {
 
 //     /**
 //      * @param {HTMLCanvasElement} canvas
-//      * @param {string} game 
+//      * @param {string} game
 //      * @param {import('./types').GameScheduleItem} gameData
 //      * @param {import('./game_worker_messages').GameSettings} gameSettings
 //      */
@@ -294,7 +306,7 @@ export class GameHubRemote {
 //                 this.gameData.player_two.won = true;
 //             }
 //         };
-//         this.worker.onerror = (ev) => { 
+//         this.worker.onerror = (ev) => {
 //             this.terminateGame();
 //             throw new Error("WORKER ERROR");
 //         };
@@ -302,7 +314,6 @@ export class GameHubRemote {
 //             this.terminateGame();
 //             throw new Error("WORKER MESSAGE ERROR");
 //         };
-    
 
 //         window.addEventListener("keydown", (e) => {
 //             this.worker.postMessage({ type: "event", keyevent: e.type, key: e.key });
@@ -313,15 +324,14 @@ export class GameHubRemote {
 //         // window.addEventListener("mousemove", (e) => {
 
 //         // })
-        
+
 //         this.canvas = canvas;
-        
+
 //     }
 
 //     #quitGameAndPushResult() {
 
 //     }
-   
 
 //     #gameTerminated = false;
 //     #gameInited = false;
@@ -389,11 +399,9 @@ export class GameHubRemote {
 
 // }
 
-
-
 //      // updateScales(event.data.data.w, event.data.data.h, event.data.data.dpr);
 //      const newWidth = event.data.data.w, newHeight = event.data.data.h, dpr = event.data.data.dpr;
-            
+
 //      sizes.currW = newWidth;
 //      sizes.currH = newHeight;
 // //      console.log("dpr: ", dpr)
