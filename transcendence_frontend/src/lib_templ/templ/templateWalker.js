@@ -170,8 +170,10 @@ function walkingTheTemplate(maxNodes, staleNodes) {
         nodeCount++;
         node = walker.nextNode();
     }
-    // console.log("maxNodes: ", maxNodes)
-    // console.log("stale nodes: ", staleNodes)
+    console.log('maxNodes: ', maxNodes);
+    console.log('stale nodes: ', staleNodes);
+    console.log('staleNodes.length: ', staleNodes.length);
+
     if (staleNodes.length !== maxNodes) throw new Error('Not same number :o');
 }
 
