@@ -84,34 +84,33 @@ const htmlPos = {
 
 /**
  * @param {string} str
- * @param {string} excludeLeft
- * @param {string} delim
- * @param {string} excludeRight
  * @returns {number}
  */
-export const getHtmlPosition = (str, excludeLeft, delim, excludeRight) => {
-    const lastPos = -1;
-    const getString = (pos, cmpLeft) => {
-        if (cmpLeft)
-            return str.slice(
-                Math.max(0, pos - (excludeLeft.length + 1)),
-                Math.max(0, pos),
-            );
-        return str.slice(
-            Math.max(0, pos + 1),
-            Math.max(0, pos + excludeRight.length),
-        );
-    };
-    let lo = 0;
-    let j = str.length;
-    let openPos = -1;
-    let closePos = -1;
-    for (let i = str.length; i > 0; i--) {
+export const getHtmlPosition = (str) => {
+    // const lastPos = -1;
+    // const getString = (pos, cmpLeft) => {
+    //     if (cmpLeft)
+    //         return str.slice(
+    //             Math.max(0, pos - (excludeLeft.length + 1)),
+    //             Math.max(0, pos),
+    //         );
+    //     return str.slice(
+    //         Math.max(0, pos + 1),
+    //         Math.max(0, pos + excludeRight.length),
+    //     );
+    // };
+    // let lo = 0;
+    // let j = str.length;
+    // let openPos = -1;
+    // let closePos = -1;
+    for (let i = str.length; i >= 0; i--) {
         const c = str[i];
-        if (c === '>' && str.slice(i - 3, i) !== '-->') {
-            closePos = i;
-            break;
-        }
+        if (c === '>') console.log('>: ', str.slice(i - 2, 1));
+        if (c === '<') console.log('<: ', str.slice(i, 2));
+        // if (c === '>' && str.slice(i - 2, 1) !== '-->') {
+        //     closePos = i;
+        //     break;
+        // }
     }
     // while (lo !== -1) {
     //     lo = str.lastIndexOf(delim, j);

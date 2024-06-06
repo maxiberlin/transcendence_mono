@@ -22,7 +22,7 @@ export default {
     },
     test: {
         globals: true,
-        environment: 'node',
+        environment: 'jsdom',
     },
 
     // Configure the server options (optional)
