@@ -19,6 +19,8 @@ import { sessionService } from '../services/api/API.js';
 /**
  *
  * @param {any} handler
+ *
+ * @param {any} handler
  * @param {ActionBtnData} conf
  * @param {ActionBtnData} defConf
  * @returns {import('../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
@@ -34,7 +36,13 @@ const getBtn = (handler, conf, defConf) => {
     if (conf.showText || (conf.showText === undefined && defConf.showText))
         text = conf.text ?? defConf.text;
     else text = '';
+    if (conf.showText || (conf.showText === undefined && defConf.showText))
+        text = conf.text ?? defConf.text;
+    else text = '';
     let loadingText;
+    if (conf.showText || (conf.showText === undefined && defConf.showText))
+        loadingText = conf.loadingText ?? defConf.loadingText;
+    else loadingText = '';
     if (conf.showText || (conf.showText === undefined && defConf.showText))
         loadingText = conf.loadingText ?? defConf.loadingText;
     else loadingText = '';
@@ -44,8 +52,21 @@ const getBtn = (handler, conf, defConf) => {
     const outline = conf.outline ?? defConf.outline;
     const dropdownitem = conf.dropdownitem ?? '';
     const stretch = conf.stretch ?? '';
+    const dropdownitem = conf.dropdownitem ?? '';
+    const stretch = conf.stretch ?? '';
 
     return html`
+        <bs-button
+            ._async_handler=${asyncHandler}
+            color="${color}"
+            icon="${icon}"
+            radius="${radius}"
+            ?outline=${outline}
+            loadingText="${loadingText}"
+            text="${text}"
+            ?dropdownitem="${dropdownitem}"
+            ?stretch="${stretch}"
+        >
         <bs-button
             ._async_handler=${asyncHandler}
             color="${color}"
@@ -63,14 +84,27 @@ const getBtn = (handler, conf, defConf) => {
 
 /**
  *
+ *
  * @param {ActionBtnData} conf
  * @param {Array<import('../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral>} actions
  * @returns {import('../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
  */
 export const renderDropdow = (conf, actions) => {
     const color = `btn-${conf.outline ? 'outline-' : ''}${conf.color ?? 'primary'}`;
+    const color = `btn-${conf.outline ? 'outline-' : ''}${conf.color ?? 'primary'}`;
     return html`
         <div class="dropdown">
+            <button
+                class="btn ${color} "
+                ?outline=${conf.outline}
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                ${conf.icon ?
+                    html`<i class="fa-solid fa-fw fa-${conf.icon}"></i>`
+                :   ''}
+                ${conf.text ?? ''}
             <button
                 class="btn ${color} "
                 ?outline=${conf.outline}
@@ -87,8 +121,12 @@ export const renderDropdow = (conf, actions) => {
                 ${actions && actions instanceof Array ?
                     actions.map((action) => html`<li>${action}</li>`)
                 :   ''}
+                ${actions && actions instanceof Array ?
+                    actions.map((action) => html`<li>${action}</li>`)
+                :   ''}
             </ul>
         </div>
+    `;
     `;
 };
 
@@ -321,4 +359,5 @@ actions.receivedGameInvitations = (invitationId, showText) => html`
         ${actions.acceptGameInvitation(invitationId, { showText })}
         ${actions.rejectGameInvitation(invitationId, { showText })}
     </div>
+`;
 `;

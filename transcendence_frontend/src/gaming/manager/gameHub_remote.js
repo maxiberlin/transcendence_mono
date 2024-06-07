@@ -44,12 +44,18 @@ export default class GameHubRemote {
             !(canvas instanceof HTMLCanvasElement)
         )
             throw new Error('No Canvas Element or no Worker Files');
+        if (
+            !GameHubRemote.gamesWorker[game] ||
+            !(canvas instanceof HTMLCanvasElement)
+        )
+            throw new Error('No Canvas Element or no Worker Files');
 
         // console.log("gamehub constructor");
         this.gameData = gameData;
         this.gameSettings = gameSettings;
 
         this.worker = new Worker(GameHubRemote.gamesWorker[game], {
+            type: 'module',
             type: 'module',
         });
         // console.log('worker: ', this.worker);
@@ -69,6 +75,9 @@ export default class GameHubRemote {
             this.#gamesocket = new WebSocket(
                 `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`,
             );
+            this.#gamesocket = new WebSocket(
+                `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`,
+            );
         } catch (error) {
             // console.log("unable to connect to game websocket: ", error);
         }
@@ -81,12 +90,33 @@ export default class GameHubRemote {
             this.#gamesocket.onmessage = (e) => {
                 this.onSocketMessage(JSON.parse(e.data));
             };
+            this.#gamesocket.onmessage = (e) => {
+                this.onSocketMessage(JSON.parse(e.data));
+            };
         }
 
         /**
          * @type {PongRemoteClientMsgTypes.UpdatePlayerMove}
          */
         const keyAction = {
+            msg: 'update_player_move',
+            player_id:
+                (
+                    this.gameData.player_one.id ===
+                    GameHubRemote.currentUser.value.id
+                ) ?
+                    'player_one'
+                :   'player_two',
+            action: 'none',
+        };
+        const keyUp =
+            this.gameData.player_one.id === GameHubRemote.currentUser.value.id ?
+                'a'
+            :   'ArrowUp';
+        const keyDown =
+            this.gameData.player_one.id === GameHubRemote.currentUser.value.id ?
+                'y'
+            :   'ArrowDown';
             msg: 'update_player_move',
             player_id:
                 (
@@ -135,12 +165,17 @@ export default class GameHubRemote {
             { message: 'worker_game_create', canvas: offscreen },
             [offscreen],
         );
+        this.sendWorkerMessage(
+            { message: 'worker_game_create', canvas: offscreen },
+            [offscreen],
+        );
     }
 
     /**
      * @param {PongRemoteServerMsgTypes.PongMessage} msg
      */
     onSocketMessage(msg) {
+        if (!msg.msg) return;
         if (!msg.msg) return;
         switch (msg.msg) {
             case 'init_game':
@@ -176,8 +211,15 @@ export default class GameHubRemote {
      * @param {number} width
      * @param {number} height
      * @param {number} dpr
+     * @param {number} dpr
      */
     resizeCanvas(width, height, dpr) {
+        this.sendWorkerMessage({
+            message: 'worker_game_resize',
+            width,
+            height,
+            dpr,
+        });
         this.sendWorkerMessage({
             message: 'worker_game_resize',
             width,
@@ -188,17 +230,21 @@ export default class GameHubRemote {
 
     get scorePlayerOne() {
         return this.gameData.player_one.score;
+        return this.gameData.player_one.score;
     }
 
     get scorePlayerTwo() {
+        return this.gameData.player_two.score;
         return this.gameData.player_two.score;
     }
 
     get playerOneWon() {
         return this.gameData.player_one.won;
+        return this.gameData.player_one.won;
     }
 
     get playerTwoWon() {
+        return this.gameData.player_two.won;
         return this.gameData.player_two.won;
     }
 
@@ -209,6 +255,8 @@ export default class GameHubRemote {
     sendWorkerMessage(data, transferArr) {
         if (transferArr) this.worker.postMessage(data, transferArr);
         else this.worker.postMessage(data);
+        if (transferArr) this.worker.postMessage(data, transferArr);
+        else this.worker.postMessage(data);
     }
 
     /**
@@ -216,6 +264,7 @@ export default class GameHubRemote {
      */
     sendWebSocketMessage(data) {
         try {
+            this.#gamesocket?.send(JSON.stringify(data));
             this.#gamesocket?.send(JSON.stringify(data));
         } catch (error) {
             // console.log('unable to send data to game websocket: ', error);
@@ -248,6 +297,7 @@ export default class GameHubRemote {
 //         other: "/src/games/pong/worker.js"
 //     }
 
+
 //     static currentUser = sessionService.subscribe(null);
 
 //     /** @param {GameTournamentCreateInfo} conf  */
@@ -258,10 +308,12 @@ export default class GameHubRemote {
 //     /** @param {GameTwoCreateInfo} conf  */
 //     static createTwoPlayerGame(conf) {
 
+
 //     }
 
 //     /**
 //      * @param {HTMLCanvasElement} canvas
+//      * @param {string} game
 //      * @param {string} game
 //      * @param {import('./types').GameScheduleItem} gameData
 //      * @param {import('./game_worker_messages').GameSettings} gameSettings
@@ -275,6 +327,7 @@ export default class GameHubRemote {
 
 //     /**
 //      * @param {HTMLCanvasElement} canvas
+//      * @param {string} game
 //      * @param {string} game
 //      * @param {import('./types').GameScheduleItem} gameData
 //      * @param {import('./game_worker_messages').GameSettings} gameSettings
@@ -307,6 +360,7 @@ export default class GameHubRemote {
 //             }
 //         };
 //         this.worker.onerror = (ev) => {
+//         this.worker.onerror = (ev) => {
 //             this.terminateGame();
 //             throw new Error("WORKER ERROR");
 //         };
@@ -325,7 +379,9 @@ export default class GameHubRemote {
 
 //         // })
 
+
 //         this.canvas = canvas;
+
 
 //     }
 
@@ -401,6 +457,7 @@ export default class GameHubRemote {
 
 //      // updateScales(event.data.data.w, event.data.data.h, event.data.data.dpr);
 //      const newWidth = event.data.data.w, newHeight = event.data.data.h, dpr = event.data.data.dpr;
+
 
 //      sizes.currW = newWidth;
 //      sizes.currH = newHeight;

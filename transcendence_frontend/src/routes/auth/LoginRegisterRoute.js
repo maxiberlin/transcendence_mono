@@ -98,18 +98,6 @@ export default class LoginRegisterRoute extends BaseElement {
         super.requestUpdate();
     }
 
-    /** @param {FormData} formData  */
-    handleRegister(formData) {
-        fetcher
-            .$post('/register', { bodyData: formData })
-            .then(() => {
-                this.handleLogin(formData);
-            })
-            .catch(() => {
-                // alert('An Error occured');
-            });
-    }
-
     toggleErrorMessage(errorMessage) {
         if (errorMessage) {
             this.showSpinner = false;
@@ -118,6 +106,27 @@ export default class LoginRegisterRoute extends BaseElement {
             this.errorMessage = undefined;
         }
         super.requestUpdate();
+    }
+
+    /** @param {FormData} formData  */
+    async handleRegister(formData) {
+        try {
+            this.showSpinner = true;
+            super.requestUpdate();
+            /** @type {APITypes.LoginData} */
+            // console.log("credentials: ", formData.get("username"), formData.get("currentPassword"))
+            const loginData = await sessionService.register(
+                formData.get('username'),
+                formData.get('email'),
+                formData.get('password'),
+                formData.get('confirmPassword'),
+            );
+            console.log('login : login data received: ', loginData);
+            if (loginData.success) router.redirect('/');
+            else this.toggleErrorMessage(loginData.message);
+        } catch (error) {
+            this.toggleErrorMessage(error.data.message);
+        }
     }
 
     /** @param {FormData} formData  */
@@ -311,6 +320,8 @@ export default class LoginRegisterRoute extends BaseElement {
         </small>
         <div class="mt-4">
             <small class="text-body-secondary">
+                Already have an Account?
+                <a id="login-to-other-site" href="${link}">sign-in</a>
                 Already have an Account?
                 <a id="login-to-other-site" href="${link}">sign-in</a>
             </small>

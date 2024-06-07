@@ -103,48 +103,63 @@ export default class GameWindow extends BaseElement {
                         ${renderListCard(
                             'Invitations Received',
                             'scroll',
-                            gameInvitationsReceived?.map((data) =>
-                                rendListItem(html`
-                                    ${renderAvatar(
-                                        data.id,
-                                        data.username,
-                                        data.avatar,
-                                        '',
-                                        'after',
-                                        'col-6 col-sm-4 text-center ',
-                                    )}
-                                    <div class="col-3 col-sm-2 text-center">
-                                        ${renderCardInfo('Game', data)}
-                                    </div>
-                                    <div class="col-3 col-sm-2 text-center">
-                                        ${renderCardInfo('Mode', '1vs1')}
-                                    </div>
-                                    <div
-                                        class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
-                                    >
-                                        <div class="row">
-                                            <div class="col-6 col-sm-auto">
-                                                ${actions.acceptGameInvitation(
-                                                    data.invite_id,
-                                                    {
-                                                        showText: false,
-                                                        stretch: true,
-                                                    },
-                                                )}
-                                            </div>
-                                            <div class="col-6 col-sm-auto">
-                                                ${actions.rejectGameInvitation(
-                                                    data.invite_id,
-                                                    {
-                                                        showText: false,
-                                                        stretch: true,
-                                                    },
-                                                )}
+                            (
+                                !gameInvitationsReceived ||
+                                    gameInvitationsReceived.length === 0
+                            ) ?
+                                rendListItem(
+                                    html`<p class="text-center m-0">
+                                        No Invitations received
+                                    </p>`,
+                                )
+                            :   gameInvitationsReceived.map((data) =>
+                                    rendListItem(html`
+                                        ${renderAvatar(
+                                            data.id,
+                                            data.username,
+                                            data.avatar,
+                                            '',
+                                            'after',
+                                            'col-6 col-sm-4 text-center ',
+                                        )}
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Game',
+                                                data.game_id,
+                                            )}
+                                        </div>
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Mode',
+                                                data.game_mode,
+                                            )}
+                                        </div>
+                                        <div
+                                            class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
+                                        >
+                                            <div class="row">
+                                                <div class="col-6 col-sm-auto">
+                                                    ${actions.acceptGameInvitation(
+                                                        data.invite_id,
+                                                        {
+                                                            showText: false,
+                                                            stretch: true,
+                                                        },
+                                                    )}
+                                                </div>
+                                                <div class="col-6 col-sm-auto">
+                                                    ${actions.rejectGameInvitation(
+                                                        data.invite_id,
+                                                        {
+                                                            showText: false,
+                                                            stretch: true,
+                                                        },
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                `),
-                            ),
+                                    `),
+                                ),
                         )}
                     </div>
                     <div class="col-12">
@@ -168,19 +183,31 @@ export default class GameWindow extends BaseElement {
                                             data.avatar,
                                             '',
                                             'after',
-                                            'col-6',
+                                            'col-6 col-sm-4 text-center ',
                                         )}
-                                        <div class="col-3 text-center">
-                                            ${renderCardInfo('Game', 'pong')}
-                                        </div>
-                                        <div class="col-3 text-center">
-                                            ${renderCardInfo('Mode', '1v1')}
-                                        </div>
-                                        <div class="col-3">
-                                            ${actions.cancelGameInvitation(
-                                                data.invite_id,
-                                                {},
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Game',
+                                                data.game_id,
                                             )}
+                                        </div>
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Mode',
+                                                data.game_mode,
+                                            )}
+                                        </div>
+                                        <div
+                                            class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
+                                        >
+                                            <div class="row">
+                                                <div class="col-6 col-sm-auto">
+                                                    ${actions.cancelGameInvitation(
+                                                        data.invite_id,
+                                                        {},
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     `),
                                 ),
@@ -190,7 +217,7 @@ export default class GameWindow extends BaseElement {
                         ${renderListCard(
                             'New Matches',
                             'gamepad',
-                            gameSchedule?.map((data) =>
+                            gameSchedule.map((data) =>
                                 rendListItem(html`
                                     <div
                                         class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center"
@@ -225,7 +252,7 @@ export default class GameWindow extends BaseElement {
                                             class="btn btn-outline-primary"
                                             data-bs-toggle="modal"
                                             data-bs-target="#gameModal-id"
-                                            @click=${() => {
+                                            @click=${(e) => {
                                                 this.selectedGame = data;
                                                 super.requestUpdate();
                                             }}
