@@ -1,6 +1,11 @@
 import { BaseElem, css, html, sessionService } from '../../modules.js';
 
-import { rendListItem, BsCard, renderListCard, renderCardInfo } from '../../components/bootstrap/BsCard.js';
+import {
+    rendListItem,
+    BsCard,
+    renderListCard,
+    renderCardInfo,
+} from '../../components/bootstrap/BsCard.js';
 import { actions, renderDropdow } from '../../components/ActionButtons.js';
 import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
 
@@ -13,110 +18,269 @@ import { GameModalRemote } from './PongGame_remote.js';
 export class GameWindow extends BaseElem {
     constructor() {
         super(false, false);
-       
+
         this.sessionUser = sessionService.subscribe(this);
     }
 
     userInvitations = [
-        {invite_id: 1, id: "6", avatar: "https://picsum.photos/200/300?random=1", username: "peterjo", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "7", avatar: "https://picsum.photos/200/300?random=2", username: "dedr werber", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "8", avatar: "https://picsum.photos/200/300?random=3", username: "hayloo", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "9", avatar: "https://picsum.photos/200/300?random=4", username: "dewdw", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "2", avatar: "https://picsum.photos/200/300?random=5", username: "petdewh5erjo", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "1", avatar: "https://picsum.photos/200/300?random=6", username: "giorghinho", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "10", avatar: "https://picsum.photos/200/300?random=7", username: "marmelade", game: "pong", mode: "1v1"},
-        {invite_id: 1, id: "34", avatar: "https://picsum.photos/200/300?random=8", username: "xoxoxP", game: "pong", mode: "1v1"},
-    ]
+        {
+            invite_id: 1,
+            id: '6',
+            avatar: 'https://picsum.photos/200/300?random=1',
+            username: 'peterjo',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '7',
+            avatar: 'https://picsum.photos/200/300?random=2',
+            username: 'dedr werber',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '8',
+            avatar: 'https://picsum.photos/200/300?random=3',
+            username: 'hayloo',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '9',
+            avatar: 'https://picsum.photos/200/300?random=4',
+            username: 'dewdw',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '2',
+            avatar: 'https://picsum.photos/200/300?random=5',
+            username: 'petdewh5erjo',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '1',
+            avatar: 'https://picsum.photos/200/300?random=6',
+            username: 'giorghinho',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '10',
+            avatar: 'https://picsum.photos/200/300?random=7',
+            username: 'marmelade',
+            game: 'pong',
+            mode: '1v1',
+        },
+        {
+            invite_id: 1,
+            id: '34',
+            avatar: 'https://picsum.photos/200/300?random=8',
+            username: 'xoxoxP',
+            game: 'pong',
+            mode: '1v1',
+        },
+    ];
 
-    
-//<div class="col-12 col-sm-auto text-end align-self-stretch">${actions.receivedGameInvitations(data.invite_id, false)}</div>
+    //<div class="col-12 col-sm-auto text-end align-self-stretch">${actions.receivedGameInvitations(data.invite_id, false)}</div>
     render() {
-         /** @type {import('../../../types/api_data.js').UserData} */
+        /** @type {import('../../../types/api_data.js').UserData} */
         const userData = this.sessionUser.value;
         const gameInvitationsReceived = userData.gameInvitationsReceived;
         const gameInvitationsSent = userData.gameInvitationsSent;
         const gameSchedule = userData.gameSchedule;
 
         return html`
-        <div class="mt-3 container-fluid text-center">
-            <div class="row g-3">
-                <div class="col-12">
-                    ${renderListCard("Invitations Received", "scroll", 
-                        gameInvitationsReceived.map(data=>rendListItem(html`
-                            ${renderAvatar(data.id, data.username, data.avatar, "", "after", "col-6 col-sm-4 text-center ")}
-                            <div class="col-3 col-sm-2 text-center">${renderCardInfo("Game", data)}</div>
-                            <div class="col-3 col-sm-2 text-center">${renderCardInfo("Mode", data.mode)}</div>
-                            <div class="col-12 col-sm-auto text-end mt-2 mt-sm-0">
-                                <div class="row">
-                                    <div class="col-6 col-sm-auto">
-                                        ${actions.acceptGameInvitation(data.invite_id, {showText: false, stretch: true})}
+            <div class="mt-3 container-fluid text-center">
+                <div class="row g-3">
+                    <div class="col-12">
+                        ${renderListCard(
+                            'Invitations Received',
+                            'scroll',
+                            (
+                                !gameInvitationsReceived ||
+                                    gameInvitationsReceived.length === 0
+                            ) ?
+                                rendListItem(
+                                    html`<p class="text-center m-0">
+                                        No Invitations received
+                                    </p>`,
+                                )
+                            :   gameInvitationsReceived.map((data) =>
+                                    rendListItem(html`
+                                        ${renderAvatar(
+                                            data.id,
+                                            data.username,
+                                            data.avatar,
+                                            '',
+                                            'after',
+                                            'col-6 col-sm-4 text-center ',
+                                        )}
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Game',
+                                                data.game_id,
+                                            )}
+                                        </div>
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Mode',
+                                                data.game_mode,
+                                            )}
+                                        </div>
+                                        <div
+                                            class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
+                                        >
+                                            <div class="row">
+                                                <div class="col-6 col-sm-auto">
+                                                    ${actions.acceptGameInvitation(
+                                                        data.invite_id,
+                                                        {
+                                                            showText: false,
+                                                            stretch: true,
+                                                        },
+                                                    )}
+                                                </div>
+                                                <div class="col-6 col-sm-auto">
+                                                    ${actions.rejectGameInvitation(
+                                                        data.invite_id,
+                                                        {
+                                                            showText: false,
+                                                            stretch: true,
+                                                        },
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `),
+                                ),
+                        )}
+                    </div>
+                    <div class="col-12">
+                        ${renderListCard(
+                            'Invitations Sent',
+                            'scroll',
+                            (
+                                !gameInvitationsSent ||
+                                    gameInvitationsSent.length === 0
+                            ) ?
+                                rendListItem(
+                                    html`<p class="text-center m-0">
+                                        No Invitations sent
+                                    </p>`,
+                                )
+                            :   gameInvitationsSent.map((data) =>
+                                    rendListItem(html`
+                                        ${renderAvatar(
+                                            data.id,
+                                            data.username,
+                                            data.avatar,
+                                            '',
+                                            'after',
+                                            'col-6 col-sm-4 text-center ',
+                                        )}
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Game',
+                                                data.game_id,
+                                            )}
+                                        </div>
+                                        <div class="col-3 col-sm-2 text-center">
+                                            ${renderCardInfo(
+                                                'Mode',
+                                                data.game_mode,
+                                            )}
+                                        </div>
+                                        <div
+                                            class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
+                                        >
+                                            <div class="row">
+                                                <div class="col-6 col-sm-auto">
+                                                    ${actions.cancelGameInvitation(
+                                                        data.invite_id,
+                                                        {},
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `),
+                                ),
+                        )}
+                    </div>
+                    <div class="col-12">
+                        ${renderListCard(
+                            'New Matches',
+                            'gamepad',
+                            gameSchedule.map((data) =>
+                                rendListItem(html`
+                                    <div
+                                        class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center"
+                                    >
+                                        ${renderAvatar(
+                                            data.player_one.id,
+                                            data.player_one.username,
+                                            data.player_one.avatar,
+                                            '',
+                                            'before',
+                                        )}
+                                        ${renderCardInfo('VS', '')}
+                                        ${renderAvatar(
+                                            data.player_two.id,
+                                            data.player_two.username,
+                                            data.player_two.avatar,
+                                            '',
+                                            'after',
+                                        )}
                                     </div>
-                                    <div class="col-6 col-sm-auto">
-                                        ${actions.rejectGameInvitation(data.invite_id, {showText: false, stretch: true})}
+                                    <div class="col-3 col-md-2">
+                                        ${renderCardInfo('Game', 'pong')}
                                     </div>
-                                </div>
-                            </div>
-                        `))
-                    )}
+                                    <div class="col-3 col-md-2">
+                                        ${renderCardInfo('Mode', '1v1')}
+                                    </div>
+                                    <div
+                                        class="col-6 col-sm-auto text-end mt-2 mt-sm-0"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#gameModal-id"
+                                            @click=${(e) => {
+                                                this.selectedGame = data;
+                                                super.requestUpdate();
+                                            }}
+                                        >
+                                            <i class="fa-solid fa-gamepad"></i>
+                                            start Match
+                                        </button>
+                                    </div>
+                                `),
+                            ),
+                        )}
+                    </div>
                 </div>
-                <div class="col-12">
-                    ${renderListCard("Invitations Sent", "scroll", 
-                        (!gameInvitationsSent || gameInvitationsSent.length === 0) ?
-                        rendListItem(html`<p class="text-center m-0">No Invitations sent</p>`) :
-                        gameInvitationsSent.map(data=>rendListItem(html`
-                            ${renderAvatar(data.id, data.username, data.avatar, "", "after", "col-6")}
-                            <div class="col-3 text-center">
-                                ${renderCardInfo("Game", "pong")}
-                            </div>
-                            <div class="col-3 text-center">
-                                ${renderCardInfo("Mode", "1v1")}
-                            </div>
-                            <div class="col-3">
-                                ${actions.cancelGameInvitation(data.invite_id, {})}
-                            </div>
-                        `))
-                    )}
-                </div>
-                <div class="col-12">
-                    ${renderListCard("New Matches", "gamepad", 
-                        gameSchedule.map(data=>rendListItem(html`
-                            <div class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center">
-                                ${renderAvatar(data.player_one.id, data.player_one.username, data.player_one.avatar, "", "before")}
-                                ${renderCardInfo("VS", "")}
-                                ${renderAvatar(data.player_two.id, data.player_two.username, data.player_two.avatar, "", "after")}
-                            </div>
-                            <div class="col-3 col-md-2">
-                                ${renderCardInfo("Game", "pong")}
-                            </div>
-                            <div class="col-3 col-md-2">
-                                ${renderCardInfo("Mode", "1v1")}
-                            </div>
-                            <div class="col-6 col-sm-auto text-end mt-2 mt-sm-0">
-                                <button
-                                    type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#gameModal-id"
-                                    @click=${(e)=>{this.selectedGame = data; super.requestUpdate()}} >
-                                    <i class="fa-solid fa-gamepad"></i>
-                                    start Match
-                                </button>
-
-                            </div>
-                        `))
-                    )}
-                </div>
+                <game-modal-remote
+                    id="gameModal"
+                    .game_data=${this.selectedGame}
+                ></game-modal-remote>
             </div>
-            <game-modal-remote id="gameModal" .game_data=${this.selectedGame} ></game-modal-remote>
-        </div>
-            
-
-        `
+        `;
     }
 }
-customElements.define("game-window", GameWindow);
+customElements.define('game-window', GameWindow);
 
 // export class GameWindow extends BaseElem {
 //     constructor() {
 //         super(false, false);
-       
+
 //         this.sessionUser = sessionService.subscribe(this);
 //     }
 
@@ -131,7 +295,6 @@ customElements.define("game-window", GameWindow);
 //         {invite_id: 1, id: "34", avatar: "https://picsum.photos/200/300?random=8", username: "xoxoxP", game: "pong", mode: "1v1"},
 //     ]
 
-    
 // //<div class="col-12 col-sm-auto text-end align-self-stretch">${actions.receivedGameInvitations(data.invite_id, false)}</div>
 //     render() {
 //          /** @type {import('../../services/types.js').UserData} */
@@ -144,7 +307,7 @@ customElements.define("game-window", GameWindow);
 //         <div class="mt-3 container-fluid text-center">
 //             <div class="row g-3">
 //                 <div class="col-12">
-//                     ${renderListCard("Invitations Received", "scroll", 
+//                     ${renderListCard("Invitations Received", "scroll",
 //                         this.userInvitations.map(data=>rendListItem(html`
 //                             ${renderAvatar(data.id, data.username, data.avatar, "", "after", "col-6 col-sm-4 text-center ")}
 //                             <div class="col-3 col-sm-2 text-center">${renderCardInfo("Game", data.game)}</div>
@@ -163,7 +326,7 @@ customElements.define("game-window", GameWindow);
 //                     )}
 //                 </div>
 //                 <div class="col-12">
-//                     ${renderListCard("Invitations Sent", "scroll", 
+//                     ${renderListCard("Invitations Sent", "scroll",
 //                         (!gameInvitationsSent || gameInvitationsSent.length === 0) ?
 //                         rendListItem(html`<p class="text-center m-0">No Invitations sent</p>`) :
 //                         gameInvitationsSent.map(data=>rendListItem(html`
@@ -181,7 +344,7 @@ customElements.define("game-window", GameWindow);
 //                     )}
 //                 </div>
 //                 <div class="col-12">
-//                     ${renderListCard("New Matches", "gamepad", 
+//                     ${renderListCard("New Matches", "gamepad",
 //                         gameSchedule.map(data=>rendListItem(html`
 //                             <div class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center">
 //                                 ${renderAvatar(data.player_one.id, data.player_one.username, data.player_one.avatar, "", "before")}
@@ -232,7 +395,6 @@ customElements.define("game-window", GameWindow);
 //                             </div>
 //                         </div>
 
-                       
 //                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 //                     </div>
 //                     <div class="modal-body">
@@ -245,28 +407,16 @@ customElements.define("game-window", GameWindow);
 //                     </div>
 //                 </div>
 //             </div>
-        
-        
-            
 
 //         `
 //     }
 // }
 // customElements.define("game-window", GameWindow);
 
-
-
-
-
-
-
-
-
-
 // export class GameWindow extends BaseElem {
 //     constructor() {
 //         super(false, false);
-       
+
 //         this.sessionUser = sessionService.subscribe(this);
 //     }
 
@@ -337,7 +487,7 @@ customElements.define("game-window", GameWindow);
 //                     await sessionService.startGameByScheduleId(scheduleItem.schedule_id);
 //                     await sessionService.refetchSessionUserData();
 //                     super.requestUpdate();
-                    
+
 //                 }} color="warning" radius="5" loadingtext="start match...">VS</bs-button>
 //                 <div class="col-5 p-0">
 //                     <a class="pw-3 m-0 link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" href="/profile/${scheduleItem.player_two.id}">
