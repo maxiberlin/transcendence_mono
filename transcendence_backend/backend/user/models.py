@@ -5,19 +5,19 @@ from .utils import *
 
 class UserAccountManager(BaseUserManager):
 
-    def create_user(self, username, email, password=None):
+    def create_user(self, username: str, email: str, password: str | None = None) -> "UserAccount":
         if not username:
             raise ValueError('Username cannot be null')
         if not email:
             raise ValueError('email cannot be null')
-        user = self.model(
+        user: "UserAccount" = self.model(
             username=username,
             email=self.normalize_email(email),
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
-    
+
     def create_superuser(self, username, email, password):
         user = self.create_user(
             username=username,
@@ -40,19 +40,22 @@ class UserAccount(AbstractBaseUser):
     email = models.EmailField(max_length=60, verbose_name='email', unique=True)
     first_name = models.CharField(max_length=30, verbose_name='first name')
     last_name = models.CharField(max_length=30, verbose_name='last name')
-    avatar = models.ImageField(max_length=255, upload_to=get_avatar_path, null=True, blank=True, default=set_default_avatar)
+    avatar = models.ImageField(max_length=255, upload_to=get_avatar_path,
+                               null=True, blank=True, default=set_default_avatar)
     status = models.CharField(max_length=10, default='offline')
     is_2fa = models.BooleanField(default=False)
-    oauth = models.CharField(max_length=10, choices=Oauth_Choices, null=True, default=None)
+    oauth = models.CharField(
+        max_length=10, choices=Oauth_Choices, null=True, default=None)
     full_profile = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     last_login = models.DateTimeField(verbose_name='last login', auto_now=True)
-    date_joined = models.DateTimeField(verbose_name='date joined', auto_now_add=True)
+    date_joined = models.DateTimeField(
+        verbose_name='date joined', auto_now_add=True)
 
-    objects = UserAccountManager()
+    objects: UserAccountManager = UserAccountManager()
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
@@ -62,24 +65,23 @@ class UserAccount(AbstractBaseUser):
 
     def get_avatar_filename(self):
         return str(self.avatar)[str(self.avatar).index(f'avatars/{self.pk}/'):]
-    
+
     def has_perm(self, perm, object=None):
         return self.is_admin
-    
+
     def has_module_perms(self, app_label):
         return True
-    
 
 
 class Player(models.Model):
-    user = models.OneToOneField(UserAccount, related_name='player', on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        UserAccount, related_name='player', on_delete=models.CASCADE)
     alias = models.CharField(max_length=30, unique=True)
     games_played = models.PositiveIntegerField(default=0)
     wins = models.PositiveIntegerField(default=0)
     losses = models.PositiveIntegerField(default=0)
     win_loss_margin = models.JSONField(default=list)
     xp = models.PositiveIntegerField(default=10)
-
 
     def __str__(self):
         return self.user.username
@@ -88,10 +90,6 @@ class Player(models.Model):
         if not self.alias:
             self.alias = self.user.username
         super().save(*args, **kwargs)
-
-
-
-
 
 
 # class GameSession(models.Model):
@@ -129,7 +127,7 @@ class Player(models.Model):
 #         else:
 #             winner = player_two
 #             losser = player_one
-        
+
 #         # TODO: update the wins and losses in the user profile
 
 
@@ -149,7 +147,6 @@ class Player(models.Model):
 #         pass
 
 
-
 # class TournamentInvite(models.Model):
 #     id = models.AutoField(primary_key=True)
 #     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
@@ -159,10 +156,8 @@ class Player(models.Model):
 #     timestamp = models.DateTimeField(auto_now_add=True)
 
 
-
 # class Chat(models.Model):
 #     sender = models.ForeignKey(UserAccount, related_name='sent_messages', on_delete=models.CASCADE)
 #     receiver = models.ForeignKey(UserAccount, related_name='received_messages', on_delete=models.CASCADE)
 #     message = models.TextField()
 #     timestamp = models.DateTimeField(auto_now_add=True)
-
