@@ -32,9 +32,7 @@ export class BaseElement extends BaseBase {
         document.querySelectorAll('a').forEach((btn) => {
             this.#toggleBtnColor(btn, color, revColor);
         });
-        this.#colorModePubSub.dispatchEvent(
-            new CustomEvent(this.#colorModeEvent, { detail: newColor }),
-        );
+        this.#colorModePubSub.dispatchEvent(new CustomEvent(this.#colorModeEvent, { detail: newColor }));
     }
 
     static #changeDocumentBtnColors() {
@@ -100,8 +98,7 @@ export class BaseElement extends BaseBase {
     #initAttrPropMap() {
         // @ts-ignore
         const obs = this.constructor.observedAttributes;
-        if (this.#attrPropMapRef !== undefined || !(obs instanceof Array))
-            return;
+        if (this.#attrPropMapRef !== undefined || !(obs instanceof Array)) return;
         // @ts-ignore
         // eslint-disable-next-line no-underscore-dangle
         this.constructor.___attrPropMap___ = new Map();
@@ -190,8 +187,8 @@ export class BaseElement extends BaseBase {
      */
     constructor(
         // eslint-disable-next-line no-unused-vars
-        useBootstrap = true,
-        useShadow = true,
+        useBootstrap = false,
+        useShadow = false,
         shadowOption = undefined,
     ) {
         super();
@@ -225,10 +222,7 @@ export class BaseElement extends BaseBase {
         if (this.#attrPropMapRef === undefined) this.#initAttrPropMap();
         this.update();
         this.#isConnected = true;
-        this.shadowRoot?.addEventListener(
-            'slotchange',
-            this.onSlotChange.bind(this),
-        );
+        this.shadowRoot?.addEventListener('slotchange', this.onSlotChange.bind(this));
         BaseElement.#colorModePubSub.addEventListener(
             BaseElement.#colorModeEvent,
             this.#changeColorMode.bind(this),
@@ -241,10 +235,7 @@ export class BaseElement extends BaseBase {
         if (this.#templ) {
             this.#templ.unMountMe();
         }
-        this.shadowRoot?.removeEventListener(
-            'slotchange',
-            this.onSlotChange.bind(this),
-        );
+        this.shadowRoot?.removeEventListener('slotchange', this.onSlotChange.bind(this));
 
         BaseElement.#colorModePubSub.removeEventListener(
             BaseElement.#colorModeEvent,
@@ -286,8 +277,5 @@ export class BaseElement extends BaseBase {
     static toCamel = (s) => s.replace(/-./g, (x) => x[1].toUpperCase());
 
     static toKebap = (s) =>
-        s.replace(
-            /[A-Z]+(?![a-z])|[A-Z]/g,
-            ($, ofs) => (ofs ? '-' : '') + $.toLowerCase(),
-        );
+        s.replace(/[A-Z]+(?![a-z])|[A-Z]/g, ($, ofs) => (ofs ? '-' : '') + $.toLowerCase());
 }

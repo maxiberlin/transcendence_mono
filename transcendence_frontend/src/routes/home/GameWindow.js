@@ -1,9 +1,5 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import {
-    renderListCard,
-    rendListItem,
-    renderCardInfo,
-} from '../../components/bootstrap/BsCard.js';
+import { renderListCard, rendListItem, renderCardInfo } from '../../components/bootstrap/BsCard.js';
 
 import { actions } from '../../components/ActionButtons.js';
 import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
@@ -23,64 +19,64 @@ export default class GameWindow extends BaseElement {
             id: '6',
             avatar: 'https://picsum.photos/200/300?random=1',
             username: 'peterjo',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '7',
             avatar: 'https://picsum.photos/200/300?random=2',
             username: 'dedr werber',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '8',
             avatar: 'https://picsum.photos/200/300?random=3',
             username: 'hayloo',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '9',
             avatar: 'https://picsum.photos/200/300?random=4',
             username: 'dewdw',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '2',
             avatar: 'https://picsum.photos/200/300?random=5',
             username: 'petdewh5erjo',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '1',
             avatar: 'https://picsum.photos/200/300?random=6',
             username: 'giorghinho',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '10',
             avatar: 'https://picsum.photos/200/300?random=7',
             username: 'marmelade',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
         {
             invite_id: 1,
             id: '34',
             avatar: 'https://picsum.photos/200/300?random=8',
             username: 'xoxoxP',
-            game: 'pong',
-            mode: '1v1',
+            game_id: 'pong',
+            game_mode: '1v1',
         },
     ];
 
@@ -88,7 +84,8 @@ export default class GameWindow extends BaseElement {
     render() {
         /** @type {APITypes.UserData | undefined} */
         const userData = this.sessionUser.value;
-        const gameInvitationsReceived = userData?.gameInvitationsReceived;
+        // const gameInvitationsReceived = userData?.gameInvitationsReceived;
+        const gameInvitationsReceived = this.userInvitations;
         const gameInvitationsSent = userData?.gameInvitationsSent;
         const gameSchedule = userData?.gameSchedule;
 
@@ -103,58 +100,37 @@ export default class GameWindow extends BaseElement {
                         ${renderListCard(
                             'Invitations Received',
                             'scroll',
-                            (
-                                !gameInvitationsReceived ||
-                                    gameInvitationsReceived.length === 0
-                            ) ?
-                                rendListItem(
-                                    html`<p class="text-center m-0">
-                                        No Invitations received
-                                    </p>`,
-                                )
+                            !gameInvitationsReceived || gameInvitationsReceived.length === 0 ?
+                                rendListItem(html`<p class="text-center m-0">No Invitations received</p>`)
                             :   gameInvitationsReceived.map((data) =>
                                     rendListItem(html`
                                         ${renderAvatar(
-                                            data.id,
+                                            Number(data.id),
                                             data.username,
                                             data.avatar,
-                                            '',
                                             'after',
+                                            '',
                                             'col-6 col-sm-4 text-center ',
                                         )}
                                         <div class="col-3 col-sm-2 text-center">
-                                            ${renderCardInfo(
-                                                'Game',
-                                                data.game_id,
-                                            )}
+                                            ${renderCardInfo('Game', data.game_id)}
                                         </div>
                                         <div class="col-3 col-sm-2 text-center">
-                                            ${renderCardInfo(
-                                                'Mode',
-                                                data.game_mode,
-                                            )}
+                                            ${renderCardInfo('Mode', data.game_mode)}
                                         </div>
-                                        <div
-                                            class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
-                                        >
+                                        <div class="col-12 col-sm-auto text-end mt-2 mt-sm-0">
                                             <div class="row">
                                                 <div class="col-6 col-sm-auto">
-                                                    ${actions.acceptGameInvitation(
-                                                        data.invite_id,
-                                                        {
-                                                            showText: false,
-                                                            stretch: true,
-                                                        },
-                                                    )}
+                                                    ${actions.acceptGameInvitation(data.invite_id, {
+                                                        showText: false,
+                                                        stretch: true,
+                                                    })}
                                                 </div>
                                                 <div class="col-6 col-sm-auto">
-                                                    ${actions.rejectGameInvitation(
-                                                        data.invite_id,
-                                                        {
-                                                            showText: false,
-                                                            stretch: true,
-                                                        },
-                                                    )}
+                                                    ${actions.rejectGameInvitation(data.invite_id, {
+                                                        showText: false,
+                                                        stretch: true,
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>
@@ -166,46 +142,28 @@ export default class GameWindow extends BaseElement {
                         ${renderListCard(
                             'Invitations Sent',
                             'scroll',
-                            (
-                                !gameInvitationsSent ||
-                                    gameInvitationsSent.length === 0
-                            ) ?
-                                rendListItem(
-                                    html`<p class="text-center m-0">
-                                        No Invitations sent
-                                    </p>`,
-                                )
+                            !gameInvitationsSent || gameInvitationsSent.length === 0 ?
+                                rendListItem(html`<p class="text-center m-0">No Invitations sent</p>`)
                             :   gameInvitationsSent.map((data) =>
                                     rendListItem(html`
                                         ${renderAvatar(
                                             data.id,
                                             data.username,
                                             data.avatar,
-                                            '',
                                             'after',
+                                            '',
                                             'col-6 col-sm-4 text-center ',
                                         )}
                                         <div class="col-3 col-sm-2 text-center">
-                                            ${renderCardInfo(
-                                                'Game',
-                                                data.game_id,
-                                            )}
+                                            ${renderCardInfo('Game', data.game_id)}
                                         </div>
                                         <div class="col-3 col-sm-2 text-center">
-                                            ${renderCardInfo(
-                                                'Mode',
-                                                data.game_mode,
-                                            )}
+                                            ${renderCardInfo('Mode', data.game_mode)}
                                         </div>
-                                        <div
-                                            class="col-12 col-sm-auto text-end mt-2 mt-sm-0"
-                                        >
+                                        <div class="col-12 col-sm-auto text-end mt-2 mt-sm-0">
                                             <div class="row">
                                                 <div class="col-6 col-sm-auto">
-                                                    ${actions.cancelGameInvitation(
-                                                        data.invite_id,
-                                                        {},
-                                                    )}
+                                                    ${actions.cancelGameInvitation(data.invite_id, {})}
                                                 </div>
                                             </div>
                                         </div>
@@ -217,59 +175,50 @@ export default class GameWindow extends BaseElement {
                         ${renderListCard(
                             'New Matches',
                             'gamepad',
-                            gameSchedule.map((data) =>
-                                rendListItem(html`
-                                    <div
-                                        class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center"
-                                    >
-                                        ${renderAvatar(
-                                            data.player_one.id,
-                                            data.player_one.username,
-                                            data.player_one.avatar,
-                                            '',
-                                            'before',
-                                        )}
-                                        ${renderCardInfo('VS', '')}
-                                        ${renderAvatar(
-                                            data.player_two.id,
-                                            data.player_two.username,
-                                            data.player_two.avatar,
-                                            '',
-                                            'after',
-                                        )}
-                                    </div>
-                                    <div class="col-3 col-md-2">
-                                        ${renderCardInfo('Game', 'pong')}
-                                    </div>
-                                    <div class="col-3 col-md-2">
-                                        ${renderCardInfo('Mode', '1v1')}
-                                    </div>
-                                    <div
-                                        class="col-6 col-sm-auto text-end mt-2 mt-sm-0"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline-primary"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#gameModal-id"
-                                            @click=${(e) => {
-                                                this.selectedGame = data;
-                                                super.requestUpdate();
-                                            }}
+                            !gameSchedule || gameSchedule.length === 0 ?
+                                rendListItem(html`<p class="text-center m-0">No Invitations received</p>`)
+                            :   gameSchedule.map((data) =>
+                                    rendListItem(html`
+                                        <div
+                                            class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center"
                                         >
-                                            <i class="fa-solid fa-gamepad"></i>
-                                            start Match
-                                        </button>
-                                    </div>
-                                `),
-                            ),
+                                            ${renderAvatar(
+                                                data.player_one.id,
+                                                data.player_one.username,
+                                                data.player_one.avatar,
+                                                'before',
+                                            )}
+                                            ${renderCardInfo('VS', '')}
+                                            ${renderAvatar(
+                                                data.player_two.id,
+                                                data.player_two.username,
+                                                data.player_two.avatar,
+                                                'after',
+                                            )}
+                                        </div>
+                                        <div class="col-3 col-md-2">${renderCardInfo('Game', 'pong')}</div>
+                                        <div class="col-3 col-md-2">${renderCardInfo('Mode', '1v1')}</div>
+                                        <div class="col-6 col-sm-auto text-end mt-2 mt-sm-0">
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#gameModal-id"
+                                                @click=${() => {
+                                                    this.selectedGame = data;
+                                                    super.requestUpdate();
+                                                }}
+                                            >
+                                                <i class="fa-solid fa-gamepad"></i>
+                                                start Match
+                                            </button>
+                                        </div>
+                                    `),
+                                ),
                         )}
                     </div>
                 </div>
-                <game-modal-remote
-                    id="gameModal"
-                    .game_data=${this.selectedGame}
-                ></game-modal-remote>
+                <game-modal id="gameModal" .game_data=${this.selectedGame}></game-modal>
             </div>
         `;
     }

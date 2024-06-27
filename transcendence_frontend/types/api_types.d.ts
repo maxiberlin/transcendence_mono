@@ -48,6 +48,8 @@ declare namespace APITypes {
         username: string;
         alias: string;
         avatar: string;
+        game_id: number;
+        game_mode: string;
     }
 
     export interface GameScheduleItem {

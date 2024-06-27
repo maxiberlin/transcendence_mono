@@ -10,7 +10,7 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/
 import os
 from django.core.asgi import get_asgi_application
 from channels.auth import AuthMiddlewareStack
-from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.routing import ProtocolTypeRouter, URLRouter, ChannelNameRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 # from public_chat.consumers import *
 
@@ -21,6 +21,13 @@ django_asgi_app = get_asgi_application()
 
 # from public_chat import routing as pb_routing
 from pong_server import routing as ps_routing
+from pong_server.pong_threading_new_layout.consumer_game import GameConsumer
+
+# application = ProtocolTypeRouter({
+#     "channel": ChannelNameRouter({
+#         "game_engine": GameConsumer.as_asgi(),
+#     })
+# })
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
@@ -29,6 +36,9 @@ application = ProtocolTypeRouter({
             # URLRouter(pb_routing.websocket_urlpatterns + ps_routing.websocket_urlpatterns)
             URLRouter(ps_routing.websocket_urlpatterns)
         )
-    )
+    ),
+    'channel': ChannelNameRouter({
+        'game_engine': GameConsumer.as_asgi(),
+    })
 })
 

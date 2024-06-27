@@ -2,11 +2,7 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
 export const rendListItem = (content) => {
     return html`
-        <li
-            class="row list-group-item d-flex justify-content-between align-items-center"
-        >
-            ${content}
-        </li>
+        <li class="row list-group-item d-flex justify-content-between align-items-center">${content}</li>
     `;
 };
 
@@ -85,17 +81,12 @@ export class BsCard extends BaseElement {
                 ${this.header ?
                     html` <div class="card-header">
                         <h6 class="">
-                            ${this.icon ?
-                                html`<i class="fa-solid fa-${this.icon}"></i>`
-                            :   ''}
-                            ${this.header}
+                            ${this.icon ? html`<i class="fa-solid fa-${this.icon}"></i>` : ''} ${this.header}
                         </h6>
                     </div>`
                 :   ''}
                 <div class="card-body"></div>
-                ${this.footer ?
-                    html` <div class="card-footer">${this.footer}</div> `
-                :   ''}
+                ${this.footer ? html` <div class="card-footer">${this.footer}</div> ` : ''}
             </div>
 
             <div class="card text-start">

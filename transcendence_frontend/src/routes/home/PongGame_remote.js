@@ -1,5 +1,5 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import GameHubRemote from '../../gaming/manager/gameHub_remote.js';
+// import GameHubRemote from '../../gaming/manager/gameHub_remote.js';
 import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
 
 // import { GameHub } from '../../services/gameHub.js';
@@ -49,7 +49,7 @@ export default class GameModalRemote extends BaseElement {
     constructor() {
         super(false, false);
 
-        this.props.currentGameData = undefined;
+        this.props.game_data = undefined;
         this.currentGame = undefined;
     }
 
@@ -65,7 +65,7 @@ export default class GameModalRemote extends BaseElement {
 
     disconnectedCallback() {
         super.disconnectedCallback();
-        this.#closeObs();
+        if (typeof this.#closeObs === 'function') this.#closeObs();
         // this.currentGame?.terminateGame();
     }
 
@@ -76,9 +76,11 @@ export default class GameModalRemote extends BaseElement {
     #modalIsOpen = false;
 
     async onModalShown() {
-        // console.log("on modal shown");
+        console.log('on modal shown');
 
         if (!this.#canvas || !this.#wrapper) return;
+
+        console.log('Joo');
 
         this.#modalIsOpen = true;
         super.requestUpdate();
@@ -108,7 +110,7 @@ export default class GameModalRemote extends BaseElement {
     onModalHide() {
         this.#modalIsOpen = false;
         super.requestUpdate();
-        this.#closeObs();
+        if (typeof this.#closeObs === 'function') this.#closeObs();
         // this.currentGame?.terminateGame();
     }
 
@@ -237,22 +239,19 @@ export default class GameModalRemote extends BaseElement {
                     <div class="modal-content">
                         ${this.renderHeader(gameData)}
                         <div class="modal-body">
-                            ${!this.#modalIsOpen ?
-                                ''
-                            :   html`
-                                    <div
-                                        ${(elem) => {
-                                            this.#wrapper = elem;
-                                        }}
-                                        class="w-100 h-100"
-                                    >
-                                        <canvas
-                                            ${(elem) => {
-                                                this.#canvas = elem;
-                                            }}
-                                        ></canvas>
-                                    </div>
-                                `}
+                            <div
+                                ${(elem) => {
+                                    this.#wrapper = elem;
+                                }}
+                                class="w-100 h-100"
+                            >
+                                <canvas
+                                    ${(elem) => {
+                                        console.log('set canvss');
+                                        this.#canvas = elem;
+                                    }}
+                                ></canvas>
+                            </div>
                         </div>
                         ${GameModalRemote.renderFooter()}
                     </div>

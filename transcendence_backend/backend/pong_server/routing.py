@@ -2,10 +2,10 @@
 # chat/routing.py
 from django.urls import re_path
 
-from . import consumers
+from .pong_threading_new_layout.consumer_player import PlayerConsumer
 
 websocket_urlpatterns = [
-    re_path(r"ws/game/(?P<schedule_id>\w+)/$", consumers.PlayerConsumer.as_asgi()),
+    re_path(r"ws/game/(?P<schedule_id>\w+)/$", PlayerConsumer.as_asgi()),
 ]
 
 # # chat/routing.py

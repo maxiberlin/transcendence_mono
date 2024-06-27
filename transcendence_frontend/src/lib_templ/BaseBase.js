@@ -1,38 +1,52 @@
+/**
+ * @template T
+ * @param {T} object
+ * @param {BaseBase} host
+ * @returns {T}
+ */
+function getUpdateProxy(object, host) {
+  const setFunc = (obj, prop, value) => {
+    obj[prop] = value;
+    host.requestUpdate();
+    return true;
+  };
+  return new Proxy(object, { set: setFunc });
+}
+
 export default class BaseBase extends HTMLElement {
-    constructor() {
-        super();
+  constructor() {
+    super();
 
-        /** @type {import('./templ/TemplateAsLiteral').TemplateAsLiteral | Array<import('./templ/TemplateAsLiteral').TemplateAsLiteral> | string | number | boolean} */
-        this.propChildren = '';
-        this.#props = {
-            propChildren: '',
-        };
+    /** @type {import('./templ/TemplateAsLiteral').TemplateAsLiteral | Array<import('./templ/TemplateAsLiteral').TemplateAsLiteral> | string | number | boolean} */
+    this.propChildren = '';
 
-        const setFunc = (obj, prop, value) => {
-            obj[prop] = value;
-            this.requestUpdate();
-            return true;
-        };
-        this.props = new Proxy(this.#props, { set: setFunc });
-    }
+    this.#props = {
+      propChildren: '',
+    };
+    this.#state = {};
 
-    connectedCallback() {
-        Object.keys(this).forEach((prop) => {
-            const elem = this[prop];
-            if (elem && typeof elem.onConnected === 'function')
-                elem.onConnected();
-        });
-    }
+    this.props = getUpdateProxy(this.#props, this);
+    this.state = getUpdateProxy(this.#state, this);
+  }
 
-    disconnectedCallback() {
-        Object.keys(this).forEach((prop) => {
-            const elem = this[prop];
-            if (elem && typeof elem.onDisconnected === 'function')
-                elem.onDisconnected();
-        });
-    }
+  connectedCallback() {
+    Object.keys(this).forEach((prop) => {
+      const elem = this[prop];
+      if (elem && typeof elem.onConnected === 'function') elem.onConnected();
+    });
+  }
 
-    #props;
+  disconnectedCallback() {
+    Object.keys(this).forEach((prop) => {
+      const elem = this[prop];
+      if (elem && typeof elem.onDisconnected === 'function')
+        elem.onDisconnected();
+    });
+  }
 
-    requestUpdate() {}
+  #props;
+
+  #state;
+
+  requestUpdate() {}
 }

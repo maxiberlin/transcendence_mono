@@ -1,31 +1,15 @@
 from enum import Enum
-from .game_base import EnhancedJSONEncoder
-import json
-from typing import TypedDict, Literal, NotRequired
-from decimal import Decimal, DecimalTuple
+from typing import Literal
 import dataclasses
-from .game_base import EnhancedJSONEncoder
-import struct
-from .game_base import dict_factory_decimal, dict_factory_str
-
-
-class ServeMode(Enum):
-    WINNER = Literal['serve-winner']
-    LOSER = Literal['serve-loser']
-    RANDOM = Literal['serve-random']
-
-
-class InitialServe(Enum):
-    LEFT = Literal['initial-serve-left']
-    RIGHT = Literal['initial-serve-right']
+from .game_base import dict_factory_str
+from .messages_server import ServeMode, ServeSide
 
 
 @dataclasses.dataclass
 class PongSettings:
     width: int = dataclasses.field(default=40000)
     height: int = dataclasses.field(default=20000)
-    border_width: int = dataclasses.field(default=600)
-    border_height: int = dataclasses.field(default=600)
+    border_size: int = dataclasses.field(default=600)
     paddle_width: int = dataclasses.field(default=600)
     paddle_height: int = dataclasses.field(default=2600)
     paddle_speed: int = dataclasses.field(default=7000)
@@ -35,9 +19,8 @@ class PongSettings:
     ball_speed: int = dataclasses.field(default=9000)
 
     point_wait_time: float = dataclasses.field(default=1.0)
-    serve_mode: ServeMode = dataclasses.field(default=ServeMode.WINNER)
-    initial_serve_to: InitialServe = dataclasses.field(
-        default=InitialServe.LEFT)
+    serve_mode: ServeMode = dataclasses.field(default="serve-winner")
+    initial_serve_to: ServeSide = dataclasses.field(default="serve-left")
     max_score: int = dataclasses.field(default=10)
     tick_duration: float = dataclasses.field(default=0.05)
 

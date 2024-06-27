@@ -1,59 +1,320 @@
-// import { sessionService, msg_to_main, msg_to_worker } from '../../modules.js';
+/* eslint-disable prettier/prettier */
+/* eslint-disable no-nested-ternary */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable jsdoc/no-undefined-types */
+/* eslint-disable no-unused-vars */
+/* eslint-disable max-classes-per-file */
+/* eslint-disable no-console */
+import { sessionService } from '../../services/api/API.js';
+import { msg_to_main, msg_to_worker } from '../exchange/game_msg.js';
 
-// /**
-//  * @typedef {object} GameTwoCreateInfo
-//  * @property {number} initiator
-//  * @property {number} participant
-//  * @property {import('../exchange/game_msg.js').GameSettings} [settings]
-//  */
+// class WorkerEventTarget extends EventTarget {
+//     constructor(scriptURL, useModule) {
+//         super();
+//         this.worker = new Worker(
+//             scriptURL,
+//             useModule ? { type: 'module' } : undefined,
+//         );
+//         this.worker.onmessage = (ev) => {
+//             this.dispatchEvent( new CustomEvent("") )
+//         };
+//         // this.worker.onerror = (ev) => {
+//         // }
+//         // this.worker.onmessageerror = (ev) => {
+//         // }
+//     }
+// }
 
-// /**
-//  * @typedef {object} GameTournamentCreateInfo
-//  * @property {number} initiator
-//  * @property {number[]} participants
-//  * @property {import('./game_worker_messages.js').GameSettings} [settings]
-//  */
+class GameWorkerManager {
+    /**
+     * @param {string} scriptURL
+     * @param {boolean} useModule
+     * @param {(msg: FromWorkerGameMessageTypes.FromWorkerMessage) => void} onMessageCb
+     * @param {(ev: Event) => void} onErrorCb
+     * @param {(ev: MessageEvent) => void} onMessageErrorCb
+     */
+    constructor(
+        scriptURL,
+        useModule,
+        onMessageCb,
+        onMessageErrorCb,
+        onErrorCb,
+    ) {
+        this.worker = new Worker(
+            scriptURL,
+            useModule ? { type: 'module' } : undefined,
+        );
+        this.worker.onmessage = (ev) => {
+            if (typeof onMessageCb === 'function') onMessageCb(ev.data);
+        };
+        this.worker.onerror = (ev) => {
+            if (typeof onErrorCb === 'function') onErrorCb(ev);
+        };
+        this.worker.onmessageerror = (ev) => {
+            if (typeof onMessageErrorCb === 'function') onMessageErrorCb(ev);
+        };
+    }
 
-// export class GameHub {
+    terminate() {
+        this.worker.terminate();
+    }
+
+    /**
+     * @param {ToWorkerGameMessageTypes.GameWorkerMessage} message
+     * @param {Transferable[]} [transfer]
+     */
+    postMessage(message, transfer = []) {
+        this.worker.postMessage(message, transfer);
+    }
+}
+
+/** @type {WorkerOptions} */
+
+export default class GameHub {
+    static games = {
+        pong: 'pong',
+    };
+
+    static gamesWorker = {
+        pong: '/public/game_worker/worker.js',
+    };
+
+    static currentUser = sessionService.subscribe(null);
+
+    /**
+     * @param {string} game
+     * @param {HTMLCanvasElement} canvas
+     * @param {APITypes.GameScheduleItem} gameData
+     * @param {boolean} isRemote
+     * @param {import('./../exchange/game_msg.js').GameSettings} [gameSettings]
+     * @returns {Promise<GameHub | undefined>}
+     */
+    static async startGame(game, canvas, gameData, isRemote, gameSettings) {
+        if (GameHub.currentUser.value)
+            return new GameHub(game, canvas, gameData, isRemote, gameSettings);
+        return undefined;
+    }
+
+    /**
+     * @param {string} game
+     * @param {HTMLCanvasElement} canvas
+     * @param {APITypes.GameScheduleItem} gameData
+     * @param {boolean} isRemote
+     * @param {import('./../exchange/game_msg.js').GameSettings} [gameSettings]
+     */
+    constructor(game, canvas, gameData, isRemote, gameSettings) {
+        if (!GameHub.gamesWorker[game] || !(canvas instanceof HTMLCanvasElement))
+            throw new Error('No Canvas Element or no Worker Files');
+
+        this.gameData = gameData;
+        this.gameSettings = gameSettings;
+
+        this.worker = new GameWorkerManager(
+            GameHub.gamesWorker[game],
+            true,
+            (msg) => {
+                this.onWorkerMessage(msg);
+            },
+            (ev) => {
+                this.onWorkerMessageError(ev);
+            },
+            (ev) => {
+                this.onWorkerError(ev);
+            },
+        );
+
+        this.gameData.player_one.score = 0;
+        this.gameData.player_two.score = 0;
+        this.gameData.player_one.won = false;
+        this.gameData.player_two.won = false;
+
+        window.addEventListener('keydown', (e) => { this.handleKey(e); });
+        window.addEventListener('keyup', (e) => { this.handleKey(e); });
+
+        try {
+            const url = new URL(window.location.origin);
+            const socketUrl = `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`;
+            const offscreencanvas = canvas.transferControlToOffscreen();
+            this.worker.postMessage(
+                {
+                    message: isRemote ? 'game_worker_create_remote' : 'game_worker_create_local',
+                    offscreencanvas,
+                    socketUrl,
+                    data: this.gameData,
+                    userId: GameHub.currentUser.value.id,
+                },
+                [offscreencanvas],
+            );
+        } catch (error) {
+            console.log('unable to connect to game websocket: ', error);
+        }
+    }
+
+    onWorkerError(ev) {
+        console.log(ev);
+        this.terminateGame();
+        throw new Error('WORKER ERROR');
+    }
+
+    onWorkerMessageError(ev) {
+        this.terminateGame();
+        throw new Error('WORKER MESSAGE ERROR');
+    }
+
+    onWorkerMessage(msg) {}
+
+    /**
+     * @param {KeyboardEvent} e
+     */
+    handleKey(e) {
+        /** @type {PongClientTypes.ClientMoveDirection | undefined} */
+        let dir;
+        switch (e.key) {
+            case 'ArrowUp':
+                if (e.type === 'keydown') dir = 'up';
+                else if (e.type === 'keyup') dir = 'release_up';
+                break;
+            case 'ArrowDown':
+                if (e.type === 'keydown') dir = 'down';
+                else if (e.type === 'keyup') dir = 'release_down';
+                break;
+            case 'Escape':
+                break;
+            default:
+                break;
+        }
+        if (dir) {
+            this.worker.postMessage({
+                message: 'worker_game_move',
+                action: dir
+            });
+        }
+    }
+
+    terminateGame() {
+        this.worker.postMessage({ message: 'worker_game_terminate' });
+        this.worker.terminate();
+    }
+
+    startGame() {
+        this.worker.postMessage({ message: 'worker_game_start' });
+    }
+
+    quitGame() {
+        this.worker.postMessage({ message: 'worker_game_quit' });
+    }
+
+    pauseGame() {
+        this.worker.postMessage({ message: 'worker_game_pause' });
+    }
+
+    continueGame() {
+        this.worker.postMessage({ message: 'worker_game_resume' });
+    }
+
+    resizeCanvas(newCanvasWidth, newCanvasHeight, dpr) {
+        this.worker.postMessage({
+            message: 'worker_game_resize',
+            width: newCanvasWidth,
+            height: newCanvasHeight,
+            dpr,
+        });
+    }
+
+    get scorePlayerOne() {
+        return this.gameData.player_one.score;
+    }
+
+    get scorePlayerTwo() {
+        return this.gameData.player_two.score;
+    }
+
+    get playerOneWon() {
+        return this.gameData.player_one.won;
+    }
+
+    get playerTwoWon() {
+        return this.gameData.player_two.won;
+    }
+}
+
+// import { sessionService } from '../../services/api/API.js';
+// import { msg_to_main, msg_to_worker } from '../exchange/game_msg.js';
+
+// class GameWorkerManager {
+//     /**
+//      * @param {string} scriptURL
+//      * @param {boolean} useModule
+//      */
+//     constructor(scriptURL, useModule) {
+//         this.worker = new Worker(
+//             scriptURL,
+//             useModule ? { type: 'module' } : undefined,
+//         );
+//         this.worker.onmessage = this.onmessage;
+//         this.worker.onerror = this.onerror;
+//         this.worker.onmessageerror = this.onmessageerror;
+//     }
+
+//     terminate() {
+//         this.worker.terminate();
+//     }
+
+//     /**
+//      * @param {ToWorkerGameMessageTypes.GameWorkerMessage} message
+//      * @param {Transferable[]} [transfer]
+//      */
+//     postMessage(message, transfer = []) {
+//         this.worker.postMessage(message, transfer);
+//     }
+
+//     /**
+//      * @param {MessageEvent} ev
+//      */
+//     onmessage(ev) {}
+
+//     /**
+//      * @param {ErrorEvent} ev
+//      */
+//     onerror(ev) {}
+
+//     /**
+//      * @param {MessageEvent} ev
+//      */
+//     onmessageerror(ev) {}
+// }
+
+// /** @type {WorkerOptions} */
+
+// export default class GameHub {
 //     static games = {
 //         pong: 'pong',
-//         other: 'other',
 //     };
 
 //     static gamesWorker = {
-//         pong: '/src/games/pong/worker_new.js',
-//         other: '/src/games/pong/worker_new.js',
+//         pong: '/public/game_worker/worker.js',
 //     };
 
 //     static currentUser = sessionService.subscribe(null);
 
-//     /** @param {GameTournamentCreateInfo} conf  */
-//     static createTournament(conf) {}
-
-//     /** @param {GameTwoCreateInfo} conf  */
-//     static createTwoPlayerGame(conf) {}
-
 //     /**
-//      * @param {HTMLCanvasElement} canvas
 //      * @param {string} game
-//      * @param {import('../../../types/api_data.js').GameScheduleItem} gameData
-//      * @param {import('./game_worker_messages.js').GameSettings} gameSettings
+//      * @param {HTMLCanvasElement} canvas
+//      * @param {APITypes.GameScheduleItem} gameData
+//      * @param {import('./../exchange/game_msg.js').GameSettings} [gameSettings]
+//      * @returns {Promise<GameHub | undefined>}
 //      */
 //     static async startGame(game, canvas, gameData, gameSettings) {
-//         console.log('start game, user: ', GameHub.currentUser);
-//         if (!GameHub.currentUser.value) return;
-
-//         console.log('gameData: ', gameData);
-//         // const data = await fetcher.$post(`/game/play/${gameData.schedule_id}`, {});
-//         // console.log("start game, data: ", data);
-//         return new GameHub(game, canvas, gameData, gameSettings);
+//         if (GameHub.currentUser.value)
+//             return new GameHub(game, canvas, gameData, gameSettings);
+//         return undefined;
 //     }
 
 //     /**
-//      * @param {HTMLCanvasElement} canvas
 //      * @param {string} game
-//      * @param {import('../../../types/api_data.js').GameScheduleItem} gameData
-//      * @param {import('./game_worker_messages.js').GameSettings} gameSettings
+//      * @param {HTMLCanvasElement} canvas
+//      * @param {APITypes.GameScheduleItem} gameData
+//      * @param {import('./../exchange/game_msg.js').GameSettings} [gameSettings]
 //      */
 //     constructor(game, canvas, gameData, gameSettings) {
 //         if (
@@ -62,13 +323,10 @@
 //         )
 //             throw new Error('No Canvas Element or no Worker Files');
 
-//         console.log('gamehub constructor');
 //         this.gameData = gameData;
 //         this.gameSettings = gameSettings;
 
-//         this.worker = new Worker(GameHub.gamesWorker[game], {
-//             type: 'module',
-//         });
+//         this.worker = new GameWorkerManager(GameHub.gamesWorker[game], true);
 
 //         this.gameData.player_one.score = 0;
 //         this.gameData.player_two.score = 0;
@@ -99,23 +357,21 @@
 //             this.terminateGame();
 //             throw new Error('WORKER ERROR');
 //         };
-//         this.worker.onmessageerror = (ev) => {
+//         this.worker.onmessageerror = () => {
 //             this.terminateGame();
 //             throw new Error('WORKER MESSAGE ERROR');
 //         };
 
-//         window.addEventListener('keydown', (e) => {
+//         const pushKey = (e) => {
 //             this.worker.postMessage({
-//                 message: msg_to_worker.keyEvent,
-//                 data: { keyevent: e.type, key: e.key },
+//                 message: 'worker_game_keyevent',
+//                 keyevent: e.type,
+//                 key: e.key,
 //             });
-//         });
-//         window.addEventListener('keyup', (e) => {
-//             this.worker.postMessage({
-//                 message: msg_to_worker.keyEvent,
-//                 data: { keyevent: e.type, key: e.key },
-//             });
-//         });
+//         };
+
+//         window.addEventListener('keydown', pushKey);
+//         window.addEventListener('keyup', pushKey);
 //         // window.addEventListener("mousemove", (e) => {
 
 //         // })
@@ -123,62 +379,87 @@
 //         this.canvas = canvas;
 //     }
 
-//     #quitGameAndPushResult() {}
+//     //   #quitGameAndPushResult() {}
 
 //     #gameTerminated = false;
 
-//     #gameInited = false;
+//     //   #gameInited = false;
 
 //     #gameStarted = false;
 
 //     #gameQuited = false;
 
 //     initGame() {
-//         if (this.#gameInited || this.#gameTerminated) return;
-//         const offscreen = this.canvas.transferControlToOffscreen();
-//         this.worker.postMessage(
-//             { message: msg_to_worker.init, data: { canvas: offscreen } },
-//             [offscreen],
-//         );
-//         // this.worker.postMessage({ type: "canvas", canvas: offscreen }, [offscreen]);
-//         this.#gameInited = true;
+//         console.log('init game hub');
+//         // console.log('game inited: ', this.#gameInited);
+//         console.log('game started: ', this.#gameStarted);
+//         // if (this.#gameInited || this.#gameTerminated) return;
+//         console.log('init game hub yoo');
+//         // this.#gameInited = true;
+
+//         try {
+//             const url = new URL(window.location.origin);
+//             const socketUrl = `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`;
+//             console.log('socket url: ', socketUrl);
+//             const offscreencanvas = this.canvas.transferControlToOffscreen();
+//             this.worker.postMessage(
+//                 {
+//                     message: 'game_worker_create_remote',
+//                     // message: 'game_worker_create_local',
+//                     offscreencanvas,
+//                     socketUrl,
+//                 },
+//                 [offscreencanvas],
+//             );
+//         } catch (error) {
+//             console.log('unable to connect to game websocket: ', error);
+//         }
 //     }
 
 //     terminateGame() {
-//         if (!this.#gameInited) return;
-//         this.worker.postMessage({ message: msg_to_worker.terminate });
-//         this.#gameInited = false;
+//         console.log('terminate game');
+//         // console.log('game inited: ', this.#gameInited);
+//         console.log('game started: ', this.#gameStarted);
+//         // if (!this.#gameInited) return;
+//         console.log('terminate game yoo');
+//         this.worker.postMessage({ message: 'worker_game_terminate' });
+//         // this.#gameInited = false;
 //         this.worker.terminate();
 //     }
 
 //     startGame() {
-//         if (!this.#gameInited || this.#gameStarted) return;
-//         this.worker.postMessage({ message: msg_to_worker.start });
+//         console.log('start game');
+//         // console.log('game inited: ', this.#gameInited);
+//         console.log('game started: ', this.#gameStarted);
+//         // if (!this.#gameInited || this.#gameStarted) return;
+//         console.log('start game yoo');
+//         this.worker.postMessage({ message: 'worker_game_start' });
 //         this.#gameStarted = true;
 //     }
 
 //     quitGame() {
-//         if (!this.#gameInited || !this.#gameStarted) return;
-//         this.worker.postMessage({ message: msg_to_worker.quit });
+//         console.log('quit game');
+//         // if (!this.#gameInited || !this.#gameStarted) return;
+//         console.log('start game yoo');
+//         this.worker.postMessage({ message: 'worker_game_quit' });
 //         this.#gameStarted = false;
 //     }
 
 //     pauseGame() {
-//         this.worker.postMessage({ message: msg_to_worker.pause });
+//         this.worker.postMessage({ message: 'worker_game_pause' });
 //     }
 
 //     continueGame() {
-//         this.worker.postMessage({ message: msg_to_worker.continue });
+//         this.worker.postMessage({ message: 'worker_game_resume' });
 //     }
 
 //     resizeCanvas(newCanvasWidth, newCanvasHeight, dpr) {
+//         console.log('resize canvas');
 //         this.worker.postMessage({
-//             message: msg_to_worker.resize,
-//             data: {
-//                 width: newCanvasWidth,
-//                 height: newCanvasHeight,
-//                 dpr,
-//             },
+//             message: 'worker_game_resize',
+//             width: newCanvasWidth,
+//             height: newCanvasHeight,
+//             dpr,
 //         });
 //     }
 
@@ -197,215 +478,4 @@
 //     get playerTwoWon() {
 //         return this.gameData.player_two.won;
 //     }
-// }
-
-// /**
-//  * @typedef {Object} GameTwoCreateInfo
-//  * @property {number} initiator
-//  * @property {number} participant
-//  * @property {import('./game_worker_messages').GameSettings} [settings]
-//  */
-
-// /**
-//  * @typedef {Object} GameTournamentCreateInfo
-//  * @property {number} initiator
-//  * @property {number[]} participants
-//  * @property {import('./game_worker_messages').GameSettings} [settings]
-//  */
-
-// export class GameHub {
-
-//     static games = {
-//         pong: "pong",
-//         other: "other"
-//     }
-//     static gamesWorker = {
-//         pong: "/src/games/pong/worker.js",
-//         other: "/src/games/pong/worker.js"
-//     }
-
-//     static currentUser = sessionService.subscribe(null);
-
-//     /** @param {GameTournamentCreateInfo} conf  */
-//     static createTournament(conf) {
-
-//     }
-
-//     /** @param {GameTwoCreateInfo} conf  */
-//     static createTwoPlayerGame(conf) {
-
-//     }
-
-//     /**
-//      * @param {HTMLCanvasElement} canvas
-//      * @param {string} game
-//      * @param {import('./types').GameScheduleItem} gameData
-//      * @param {import('./game_worker_messages').GameSettings} gameSettings
-//      */
-//     static async startTwoPlayerGame(game, canvas, gameData, gameSettings) {
-//         if (!GameHub.currentUser.value) return ;
-//         await fetcher.$post(`/game/play/${gameData.schedule_id}`, {});
-
-//         return new GameHub(game, canvas, gameData, gameSettings);
-//     }
-
-//     /**
-//      * @param {HTMLCanvasElement} canvas
-//      * @param {string} game
-//      * @param {import('./types').GameScheduleItem} gameData
-//      * @param {import('./game_worker_messages').GameSettings} gameSettings
-//      */
-//     constructor(game, canvas, gameData, gameSettings) {
-//         if (!GameHub.gamesWorker[game] || !(canvas instanceof HTMLCanvasElement))
-//             throw new Error("No Canvas Element or no Worker Files");
-
-//         this.gameData = gameData;
-//         this.gameSettings = gameSettings;
-
-//         this.worker = new Worker(GameHub.gamesWorker[game], {
-//             type: "module"
-//         });
-
-//         this.gameData.player_one.score = 0;
-//         this.gameData.player_two.score = 0;
-//         this.gameData.player_one.won = false;
-//         this.gameData.player_two.won = false;
-
-//         this.worker.onmessage = (ev) => {
-//             if (ev.data === msg_to_main.player_1_score && this.gameData.player_one.score) {
-//                 this.gameData.player_one.score++;
-//             } else if (ev.data === msg_to_main.player_2_score && this.gameData.player_two.score) {
-//                 this.gameData.player_two.score++;
-//             } else if (ev.data === msg_to_main.player_1_win) {
-//                 this.gameData.player_one.won = true;
-//             } else if (ev.data === msg_to_main.player_2_win) {
-//                 this.gameData.player_two.won = true;
-//             }
-//         };
-//         this.worker.onerror = (ev) => {
-//             this.terminateGame();
-//             throw new Error("WORKER ERROR");
-//         };
-//         this.worker.onmessageerror = (ev) => {
-//             this.terminateGame();
-//             throw new Error("WORKER MESSAGE ERROR");
-//         };
-
-//         window.addEventListener("keydown", (e) => {
-//             this.worker.postMessage({ type: "event", keyevent: e.type, key: e.key });
-//         });
-//         window.addEventListener("keyup", (e) => {
-//             this.worker.postMessage({ type: "event", keyevent: e.type, key: e.key });
-//         });
-//         // window.addEventListener("mousemove", (e) => {
-
-//         // })
-
-//         this.canvas = canvas;
-
-//     }
-
-//     #quitGameAndPushResult() {
-
-//     }
-
-//     #gameTerminated = false;
-//     #gameInited = false;
-//     #gameStarted = false;
-//     #gameQuited = false;
-//     initGame() {
-//         if (this.#gameInited || this.#gameTerminated) return ;
-//         const offscreen = this.canvas.transferControlToOffscreen();
-//         this.worker.postMessage({ type: "canvas", canvas: offscreen }, [offscreen]);
-//         this.#gameInited = true;
-//     }
-
-//     terminateGame() {
-//         if (!this.#gameInited ) return ;
-//         this.worker.postMessage({
-//             type: "message",
-//             message: msg_to_worker.terminate
-//         });
-//         this.#gameInited = false;
-//         this.worker.terminate();
-//     }
-
-//     startGame() {
-//         if (!this.#gameInited || this.#gameStarted) return ;
-//         this.worker.postMessage({
-//             type: "message",
-//             message: msg_to_worker.start
-//         });
-//         this.#gameStarted = true;
-//     }
-
-//     pauseGame() {
-//         this.worker.postMessage({
-//             type: "message",
-//             message: msg_to_worker.pause
-//         });
-//     }
-
-//     resizeCanvas(newCanvasWidth, newCanvasHeight, dpr) {
-//         this.worker.postMessage({
-//             type: "message",
-//             message: msg_to_worker.resize,
-//             data: {
-//                 w: newCanvasWidth,
-//                 h: newCanvasHeight,
-//                 dpr: dpr
-//             }
-//         });
-//     }
-
-//     get scorePlayerOne() {
-//         return (this.gameData.player_one.score);
-//     }
-//     get scorePlayerTwo() {
-//         return (this.gameData.player_two.score);
-//     }
-
-//     get playerOneWon() {
-//         return (this.gameData.player_one.won)
-//     }
-
-//     get playerTwoWon() {
-//         return (this.gameData.player_two.won)
-//     }
-
-// }
-
-//      // updateScales(event.data.data.w, event.data.data.h, event.data.data.dpr);
-//      const newWidth = event.data.data.w, newHeight = event.data.data.h, dpr = event.data.data.dpr;
-
-//      sizes.currW = newWidth;
-//      sizes.currH = newHeight;
-//      console.log("dpr: ", dpr)
-//      ctx.canvas.width = Math.floor(newWidth * dpr);
-//      ctx.canvas.height = Math.floor(newHeight * dpr);
-//      ctx.scale(dpr, dpr);
-//      gamePlane.setScale(newWidth, newHeight);
-//      ball.setScale(newWidth, newHeight);
-//      paddleL.setScale(newWidth, newHeight);
-//      paddleR.setScale(newWidth, newHeight);
-//      if (!pause)
-//          render(performance.now());
-
-//  }
-// }
-// };
-
-// function updateScales(newWidth, newHeight, dpr) {
-// sizes.currW = newWidth;
-// sizes.currH = newHeight;
-// console.log("dpr: ", dpr)
-// ctx.canvas.width = Math.floor(newWidth * dpr);
-// ctx.canvas.height = Math.floor(newHeight * dpr);
-// ctx.scale(dpr, dpr);
-// gamePlane.setScale(newWidth, newHeight);
-// ball.setScale(newWidth, newHeight);
-// paddleL.setScale(newWidth, newHeight);
-// paddleR.setScale(newWidth, newHeight);
-// if (!pause)
-//  render(performance.now());
 // }

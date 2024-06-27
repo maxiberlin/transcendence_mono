@@ -1,10 +1,7 @@
 /** @template T */
 export default class BaseReactive {
-    /** @type {import('../BaseBase.js').default | null} */
+    /** @type {import('../BaseBase.js').default | undefined} */
     #host;
-
-    /** @type {boolean} */
-    #force;
 
     /** @type {T} */
     #value;
@@ -14,14 +11,13 @@ export default class BaseReactive {
     }
 
     /**
-     * @param {import('../BaseBase.js').default} host - The host object.
      * @param {any} initialValue - The initial value.
-     * @param {boolean} force - Whether to force the update.
+     * @param {import('../BaseBase.js').default} [host] - The host object.
      */
-    constructor(host, initialValue, force = false) {
+    constructor(initialValue, host = undefined) {
         this.#host = host;
-        this.#force = force;
         this.#value = initialValue;
+        // console.log('BaseReactive: initial value: ', initialValue);
     }
 
     /**
@@ -29,6 +25,7 @@ export default class BaseReactive {
      * @param {boolean} force - Whether to force the update.
      */
     onNewValue(value, force) {
+        // console.log('update value');
         if (!Object.is(this.#value, value) || force) {
             this.#value = value;
             if (this.#host && typeof this.#host.requestUpdate === 'function')

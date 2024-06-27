@@ -18,10 +18,10 @@
 
 import { actions, renderDropdow } from '../../components/ActionButtons.js';
 import {
-    rendListItem,
-    renderCard,
-    renderCardInfo,
-    renderListCard,
+  rendListItem,
+  renderCard,
+  renderCardInfo,
+  renderListCard,
 } from '../../components/bootstrap/BsCard.js';
 import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
@@ -29,496 +29,466 @@ import { fetcher, sessionService } from '../../services/api/API.js';
 import router from '../../services/router.js';
 
 export class ProfileSettingsView extends BaseElement {
-    constructor() {
-        super(false, false);
-    }
+  constructor() {
+    super(false, false);
+  }
 
-    render() {
-        return html`
-            <div class="mb-3">
-                <label for="profile-edit-firstname" class="form-label"
-                    >First Name</label
-                >
-                <input
-                    type="text"
-                    class="form-control"
-                    name="first_name"
-                    id="profile-edit-firstname"
-                    placeholder="John"
-                    value="curr first name"
-                />
-            </div>
-            <div class="mb-3">
-                <label for="profile-edit-lastname" class="form-label"
-                    >Last Name</label
-                >
-                <input
-                    type="text"
-                    class="form-control"
-                    name="last_name"
-                    id="profile-edit-lastname"
-                    placeholder="Doe"
-                    value="curr last name"
-                />
-            </div>
-        `;
-    }
+  render() {
+    return html`
+      <div class="mb-3">
+        <label for="profile-edit-firstname" class="form-label"
+          >First Name</label
+        >
+        <input
+          type="text"
+          class="form-control"
+          name="first_name"
+          id="profile-edit-firstname"
+          placeholder="John"
+          value="curr first name"
+        />
+      </div>
+      <div class="mb-3">
+        <label for="profile-edit-lastname" class="form-label">Last Name</label>
+        <input
+          type="text"
+          class="form-control"
+          name="last_name"
+          id="profile-edit-lastname"
+          placeholder="Doe"
+          value="curr last name"
+        />
+      </div>
+    `;
+  }
 }
 window.customElements.define('profile-settings-view', ProfileSettingsView);
 
 export class ProfileView extends BaseElement {
-    constructor() {
-        super(false, false);
-        this.profileUserData = {
-            avatar: '',
-            username: '',
-            first_name: '',
-            last_name: '',
-            last_login: '',
-            date_joined: '',
-            total_games: 8,
-            total_wins: 5,
-            total_draw: 1,
-            total_losses: 2,
-            ranking: 14,
-            is_self: false,
-            is_friend: false,
-        };
-        this.sessionUser = sessionService.subscribe(this, true);
-    }
-
-    /**
-     * @param {string} route
-     * @param {object} params
-     * @returns {Promise<symbol | void>}
-     */
-    async onBeforeMount(route, params) {
-        if (!sessionService.isLoggedIn) {
-            return router.redirect('/');
-        }
-
-        if (
-            (this.sessionUser.value && !params.pk) ||
-            this.sessionUser.value.pk === params.pk
-        ) {
-            this.profileUserData = this.sessionUser.value;
-            return undefined;
-        }
-        if (params.pk) {
-            try {
-                this.profileUserData = await fetcher.$get(
-                    `/profile/${params.pk}`,
-                );
-            } catch (error) {
-                // console.log(error);
-                this.#isError = error;
-                this.#isError.pk = params.pk;
-                if (error instanceof Error) {
-                    // console.log('dispatch notify event');
-                    this.#isError.data = { message: error.message };
-                    document.dispatchEvent(
-                        new CustomEvent('render-notification', {
-                            detail: { message: this.#isError.data.message },
-                            bubbles: true,
-                        }),
-                    );
-                    return router.redirect('/');
-                }
-            }
-        }
-        return undefined;
-    }
-
-    #isError;
-
-    /**
-     * @param {APITypes.UserData} userData
-     * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
-     */
-    getActionButtons = (userData) => {
-        if (userData.is_self)
-            return html`
-                <a
-                    href="/settings"
-                    class="btn btn-outline-primary px-4 p-2 m-2 rounded-4"
-                >
-                    <i class="fa-solid fa-pen-to-square pe-2"></i>Edit Profile
-                </a>
-                <a href="/logout" class="btn btn-danger px-4 p-2 m-2 rounded-4">
-                    <i class="fa-solid fa-right-from-bracket pe-2"></i>Logout
-                </a>
-            `;
-        let data;
-        // console.log("render new Profile Data -> render new Button");
-        // console.log(this.sessionUser.value)
-
-        data = sessionService.getFriend(userData.id);
-        if (data !== undefined) {
-            return html`
-                <button disabled class="btn btn-dark me-2">
-                    <i class="fa-solid fa-user-check"></i>
-                </button>
-                ${renderDropdow(
-                    { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-                    [
-                        actions.removeFriend(userData.id, {
-                            host: this,
-                            dropdownitem: true,
-                        }),
-                        actions.blockUser(userData.id, {
-                            cb: () => {
-                                router.redirect(`/profile/${userData.id}`);
-                            },
-                            dropdownitem: true,
-                        }),
-                    ],
-                )}
-            `;
-        }
-        data = sessionService.getReceivedRequest(userData.id);
-        if (data !== undefined) {
-            return html`
-                ${actions.acceptFriendRequest(data.request_id, {
-                    cb: () => {
-                        super.requestUpdate();
-                    },
-                })}
-                ${actions.rejectFriendRequest(data.request_id, {
-                    cb: () => {
-                        super.requestUpdate();
-                    },
-                })}
-                ${renderDropdow(
-                    { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-                    [
-                        actions.blockUser(userData.id, {
-                            cb: () => {
-                                router.redirect(`/profile/${userData.id}`);
-                            },
-                            dropdownitem: true,
-                        }),
-                    ],
-                )}
-            `;
-        }
-        data = sessionService.getSentRequest(userData.id);
-        if (data !== undefined) {
-            return html`
-                <button disabled class="btn btn-dark me-2">
-                    <i class="fa-solid fa-user-clock"></i>
-                </button>
-                ${actions.cancelFriendRequest(userData.id, {
-                    cb: () => {
-                        super.requestUpdate();
-                    },
-                })}
-                ${renderDropdow(
-                    { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-                    [
-                        actions.blockUser(userData.id, {
-                            cb: () => {
-                                router.redirect(`/profile/${userData.id}`);
-                            },
-                            dropdownitem: true,
-                        }),
-                    ],
-                )}
-            `;
-        }
-        return html`
-            ${actions.sendFriendRequest(userData.id, {
-                cb: () => {
-                    super.requestUpdate();
-                },
-            })}
-            ${renderDropdow(
-                { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-                [
-                    actions.blockUser(userData.id, {
-                        cb: () => {
-                            router.redirect(`/profile/${userData.id}`);
-                        },
-                        dropdownitem: true,
-                    }),
-                ],
-            )}
-        `;
+  constructor() {
+    super(false, false);
+    this.profileUserData = {
+      avatar: '',
+      username: '',
+      first_name: '',
+      last_name: '',
+      last_login: '',
+      date_joined: '',
+      total_games: 8,
+      total_wins: 5,
+      total_draw: 1,
+      total_losses: 2,
+      ranking: 14,
+      is_self: false,
+      is_friend: false,
     };
+    this.sessionUser = sessionService.subscribe(this, true);
+  }
 
-    render() {
-        if (
-            this.#isError &&
-            this.#isError.data.message !==
-                'Blocked: You cannot view this account'
-        ) {
-            this.dispatchEvent(
-                new CustomEvent('render-notification', {
-                    detail: { message: this.#isError.data.message },
-                    bubbles: true,
-                }),
-            );
-            router.go('/');
-        }
-
-        return html`
-            ${this.#isError ?
-                html`
-                    <div class="alert alert-danger" role="alert">
-                        <h4 class="alert-heading">
-                            ${this.#isError.data.message}
-                        </h4>
-                        <hr />
-                    </div>
-                `
-            :   html`
-                    <div class="card border-0 rounded-0">
-                        <div class="card-body">
-                            <div class="row">
-                                <div
-                                    class="col-12 col-md-3  d-flex justify-content-center  align-items-center"
-                                >
-                                    <avatar-component
-                                        status="online"
-                                        statusborder
-                                        radius="5"
-                                        src="${this.profileUserData.avatar}"
-                                        size="150"
-                                    ></avatar-component>
-                                </div>
-                                <!-- mt-3 col-12 col-md-6 -->
-                                <div
-                                    class="col text-center text-md-start mt-3 mt-md-0"
-                                >
-                                    <div class="position-relative">
-                                        <div class="mb-2">
-                                            <h3 class="display-5 m-0">
-                                                ${this.profileUserData.username}
-                                            </h3>
-                                            <small class="text-body-secondary"
-                                                >${this.profileUserData
-                                                    .first_name}
-                                                ${this.profileUserData
-                                                    .last_name}</small
-                                            >
-                                        </div>
-
-                                        <p class="lead mb-3 fs-6 text-wrap">
-                                            This is a lead paragraph. It stands
-                                            out from regular paragraphs. This is
-                                            a lead paragraph. It stands out from
-                                            regular paragraphs. This is a lead
-                                            paragraph. It stands out from
-                                            regular paragraphs. This is a lead
-                                            paragraph. It stands out from
-                                            regular paragraphs.
-                                        </p>
-                                    </div>
-                                </div>
-                                <!-- container d-flex justify-content-center px-4 -->
-                                <!-- <div class="col-12 col-md-3 d-flex flex-md-column flex-row justify-content-center align-items-stretch"> -->
-                                <div class="col-12 ">
-                                    <div
-                                        class="h-100 d-flex flex-row align-items-center justify-content-center"
-                                    >
-                                        ${this.getActionButtons(
-                                            // @ts-ignore
-                                            this.profileUserData,
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-3 container-fluid text-center">
-                        <div class="row">
-                            <div class="col-12 col-md-6 mt-3">
-                                <div class="row g-3">
-                                    <div class="col-4">
-                                        ${renderCard(
-                                            '',
-                                            '',
-                                            renderCardInfo(
-                                                'Rank',
-                                                this.profileUserData.ranking ??
-                                                    '-',
-                                            ),
-                                        )}
-                                    </div>
-                                    <div class="col-8">
-                                        ${renderCard(
-                                            '',
-                                            '',
-                                            renderCardInfo(
-                                                'Member since',
-                                                new Date(
-                                                    this.profileUserData.date_joined,
-                                                ).toLocaleDateString(),
-                                            ),
-                                        )}
-                                    </div>
-
-                                    <div class="col-12">
-                                        ${renderCard(
-                                            'Game Stats',
-                                            'chart-simple',
-                                            html`
-                                                <div class="row gx-4">
-                                                    <div
-                                                        class="col-4 border-bottom border-3 border-success-subtle"
-                                                    >
-                                                        ${renderCardInfo(
-                                                            'Wins',
-                                                            this.profileUserData
-                                                                .total_wins ??
-                                                                '-',
-                                                        )}
-                                                    </div>
-                                                    <div
-                                                        class="col-4 border-bottom border-3"
-                                                    >
-                                                        ${renderCardInfo(
-                                                            'Total',
-                                                            this.profileUserData
-                                                                .total_games ??
-                                                                '-',
-                                                        )}
-                                                    </div>
-                                                    <div
-                                                        class="col-4 border-bottom border-3 border-danger-subtle"
-                                                    >
-                                                        ${renderCardInfo(
-                                                            'Losses',
-                                                            this.profileUserData
-                                                                .total_losses ??
-                                                                '-',
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            `,
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 mt-3">
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        ${renderListCard(
-                                            'Match History',
-                                            'scroll',
-                                            this.dataMatches.map((data) =>
-                                                rendListItem(html`
-                                                    <div
-                                                        class="d-flex w-100 px-2 align-items-center justify-content-between border-start border-4 ${(
-                                                            data.self_points >
-                                                            data.opp_points
-                                                        ) ?
-                                                            'border-success-subtle'
-                                                        :   'border-danger-subtle'}"
-                                                    >
-                                                        ${renderAvatar(
-                                                            data.id,
-                                                            data.username,
-                                                            data.avatar,
-                                                            '',
-                                                            'after',
-                                                        )}
-                                                        ${renderCardInfo(
-                                                            'Score',
-                                                            `${data.self_points} : ${data.opp_points}`,
-                                                        )}
-                                                        ${renderCardInfo(
-                                                            'Date',
-                                                            new Date(
-                                                                data.date,
-                                                            ).toLocaleDateString(
-                                                                'de-DE',
-                                                                {
-                                                                    dateStyle:
-                                                                        'short',
-                                                                },
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                `),
-                                            ),
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `}
-        `;
+  /**
+   * @param {string} route
+   * @param {object} params
+   * @returns {Promise<symbol | void>}
+   */
+  async onBeforeMount(route, params) {
+    if (!sessionService.isLoggedIn) {
+      return router.redirect('/');
     }
 
-    dataa = new Array(10).fill(0);
+    if (
+      (this.sessionUser.value && !params.pk) ||
+      this.sessionUser.value.pk === params.pk
+    ) {
+      this.profileUserData = this.sessionUser.value;
+      return undefined;
+    }
+    if (params.pk) {
+      try {
+        this.profileUserData = await fetcher.$get(`/profile/${params.pk}`);
+      } catch (error) {
+        // console.log(error);
+        this.#isError = error;
+        this.#isError.pk = params.pk;
+        if (error instanceof Error) {
+          // console.log('dispatch notify event');
+          this.#isError.data = { message: error.message };
+          document.dispatchEvent(
+            new CustomEvent('render-notification', {
+              detail: { message: this.#isError.data.message },
+              bubbles: true,
+            }),
+          );
+          return router.redirect('/');
+        }
+      }
+    }
+    return undefined;
+  }
 
-    dataMatches = [
-        {
-            id: '6',
-            avatar: 'https://picsum.photos/200/300?random=1',
-            username: 'peterjo',
-            self_points: '9',
-            opp_points: '2',
-            date: '2021-09-24T12:38:54.656Z',
+  #isError;
+
+  /**
+   * @param {APITypes.UserData} userData
+   * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
+   */
+  getActionButtons = (userData) => {
+    if (userData.is_self)
+      return html`
+        <a
+          href="/settings"
+          class="btn btn-outline-primary px-4 p-2 m-2 rounded-4"
+        >
+          <i class="fa-solid fa-pen-to-square pe-2"></i>Edit Profile
+        </a>
+        <a href="/logout" class="btn btn-danger px-4 p-2 m-2 rounded-4">
+          <i class="fa-solid fa-right-from-bracket pe-2"></i>Logout
+        </a>
+      `;
+    let data;
+    // console.log("render new Profile Data -> render new Button");
+    // console.log(this.sessionUser.value)
+
+    data = sessionService.getFriend(userData.id);
+    if (data !== undefined) {
+      return html`
+        <button disabled class="btn btn-dark me-2">
+          <i class="fa-solid fa-user-check"></i>
+        </button>
+        ${renderDropdow(
+          { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
+          [
+            actions.removeFriend(userData.id, {
+              host: this,
+              dropdownitem: true,
+            }),
+            actions.blockUser(userData.id, {
+              cb: () => {
+                router.redirect(`/profile/${userData.id}`);
+              },
+              dropdownitem: true,
+            }),
+          ],
+        )}
+      `;
+    }
+    data = sessionService.getReceivedRequest(userData.id);
+    if (data !== undefined) {
+      return html`
+        ${actions.acceptFriendRequest(data.request_id, {
+          cb: () => {
+            super.requestUpdate();
+          },
+        })}
+        ${actions.rejectFriendRequest(data.request_id, {
+          cb: () => {
+            super.requestUpdate();
+          },
+        })}
+        ${renderDropdow(
+          { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
+          [
+            actions.blockUser(userData.id, {
+              cb: () => {
+                router.redirect(`/profile/${userData.id}`);
+              },
+              dropdownitem: true,
+            }),
+          ],
+        )}
+      `;
+    }
+    data = sessionService.getSentRequest(userData.id);
+    if (data !== undefined) {
+      return html`
+        <button disabled class="btn btn-dark me-2">
+          <i class="fa-solid fa-user-clock"></i>
+        </button>
+        ${actions.cancelFriendRequest(userData.id, {
+          cb: () => {
+            super.requestUpdate();
+          },
+        })}
+        ${renderDropdow(
+          { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
+          [
+            actions.blockUser(userData.id, {
+              cb: () => {
+                router.redirect(`/profile/${userData.id}`);
+              },
+              dropdownitem: true,
+            }),
+          ],
+        )}
+      `;
+    }
+    return html`
+      ${actions.sendFriendRequest(userData.id, {
+        cb: () => {
+          super.requestUpdate();
         },
-        {
-            id: '7',
-            avatar: 'https://picsum.photos/200/300?random=2',
-            username: 'dedr werber',
-            self_points: '4',
-            opp_points: '7',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-        {
-            id: '8',
-            avatar: 'https://picsum.photos/200/300?random=3',
-            username: 'hayloo',
-            self_points: '9',
-            opp_points: '7',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-        {
-            id: '9',
-            avatar: 'https://picsum.photos/200/300?random=4',
-            username: 'dewdw',
-            self_points: '8',
-            opp_points: '1',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-        {
-            id: '2',
-            avatar: 'https://picsum.photos/200/300?random=5',
-            username: 'petdewh5erjo',
-            self_points: '1',
-            opp_points: '8',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-        {
-            id: '1',
-            avatar: 'https://picsum.photos/200/300?random=6',
-            username: 'giorghinho',
-            self_points: '8',
-            opp_points: '1',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-        {
-            id: '34',
-            avatar: 'https://picsum.photos/200/300?random=8',
-            username: 'xoxoxP',
-            self_points: '3',
-            opp_points: '9',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-        {
-            id: '10',
-            avatar: 'https://picsum.photos/200/300?random=7',
-            username: 'marmelade',
-            self_points: '5',
-            opp_points: '9',
-            date: '2021-09-24T12:38:54.656Z',
-        },
-    ];
+      })}
+      ${renderDropdow(
+        { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
+        [
+          actions.blockUser(userData.id, {
+            cb: () => {
+              router.redirect(`/profile/${userData.id}`);
+            },
+            dropdownitem: true,
+          }),
+        ],
+      )}
+    `;
+  };
+
+  render() {
+    if (
+      this.#isError &&
+      this.#isError.data.message !== 'Blocked: You cannot view this account'
+    ) {
+      this.dispatchEvent(
+        new CustomEvent('render-notification', {
+          detail: { message: this.#isError.data.message },
+          bubbles: true,
+        }),
+      );
+      router.go('/');
+    }
+
+    return html`
+      ${this.#isError ?
+        html`
+          <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">${this.#isError.data.message}</h4>
+            <hr />
+          </div>
+        `
+      : html`
+          <div class="card border-0 rounded-0">
+            <div class="card-body">
+              <div class="row">
+                <div
+                  class="col-12 col-md-3  d-flex justify-content-center  align-items-center"
+                >
+                  <avatar-component
+                    status="online"
+                    statusborder
+                    radius="5"
+                    src="${this.profileUserData.avatar}"
+                    size="150"
+                  ></avatar-component>
+                </div>
+                <!-- mt-3 col-12 col-md-6 -->
+                <div class="col text-center text-md-start mt-3 mt-md-0">
+                  <div class="position-relative">
+                    <div class="mb-2">
+                      <h3 class="display-5 m-0">
+                        ${this.profileUserData.username}
+                      </h3>
+                      <small class="text-body-secondary"
+                        >${this.profileUserData.first_name}
+                        ${this.profileUserData.last_name}</small
+                      >
+                    </div>
+
+                    <p class="lead mb-3 fs-6 text-wrap">
+                      This is a lead paragraph. It stands out from regular
+                      paragraphs. This is a lead paragraph. It stands out from
+                      regular paragraphs. This is a lead paragraph. It stands
+                      out from regular paragraphs. This is a lead paragraph. It
+                      stands out from regular paragraphs.
+                    </p>
+                  </div>
+                </div>
+                <!-- container d-flex justify-content-center px-4 -->
+                <!-- <div class="col-12 col-md-3 d-flex flex-md-column flex-row justify-content-center align-items-stretch"> -->
+                <div class="col-12 ">
+                  <div
+                    class="h-100 d-flex flex-row align-items-center justify-content-center"
+                  >
+                    ${this.getActionButtons(
+                      // @ts-ignore
+                      this.profileUserData,
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 container-fluid text-center">
+            <div class="row">
+              <div class="col-12 col-md-6 mt-3">
+                <div class="row g-3">
+                  <div class="col-4">
+                    ${renderCard(
+                      '',
+                      '',
+                      renderCardInfo(
+                        'Rank',
+                        this.profileUserData.ranking ?? '-',
+                      ),
+                    )}
+                  </div>
+                  <div class="col-8">
+                    ${renderCard(
+                      '',
+                      '',
+                      renderCardInfo(
+                        'Member since',
+                        new Date(
+                          this.profileUserData.date_joined,
+                        ).toLocaleDateString(),
+                      ),
+                    )}
+                  </div>
+
+                  <div class="col-12">
+                    ${renderCard(
+                      'Game Stats',
+                      'chart-simple',
+                      html`
+                        <div class="row gx-4">
+                          <div
+                            class="col-4 border-bottom border-3 border-success-subtle"
+                          >
+                            ${renderCardInfo(
+                              'Wins',
+                              this.profileUserData.total_wins ?? '-',
+                            )}
+                          </div>
+                          <div class="col-4 border-bottom border-3">
+                            ${renderCardInfo(
+                              'Total',
+                              this.profileUserData.total_games ?? '-',
+                            )}
+                          </div>
+                          <div
+                            class="col-4 border-bottom border-3 border-danger-subtle"
+                          >
+                            ${renderCardInfo(
+                              'Losses',
+                              this.profileUserData.total_losses ?? '-',
+                            )}
+                          </div>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6 mt-3">
+                <div class="row g-3">
+                  <div class="col-12">
+                    ${renderListCard(
+                      'Match History',
+                      'scroll',
+                      this.dataMatches.map((data) =>
+                        rendListItem(html`
+                          <div
+                            class="d-flex w-100 px-2 align-items-center justify-content-between border-start border-4 ${(
+                              data.self_points > data.opp_points
+                            ) ?
+                              'border-success-subtle'
+                            : 'border-danger-subtle'}"
+                          >
+                            ${renderAvatar(
+                              data.id,
+                              data.username,
+                              data.avatar,
+                              '',
+                              'after',
+                            )}
+                            ${renderCardInfo(
+                              'Score',
+                              `${data.self_points} : ${data.opp_points}`,
+                            )}
+                            ${renderCardInfo(
+                              'Date',
+                              new Date(data.date).toLocaleDateString('de-DE', {
+                                dateStyle: 'short',
+                              }),
+                            )}
+                          </div>
+                        `),
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `}
+    `;
+  }
+
+  dataa = new Array(10).fill(0);
+
+  dataMatches = [
+    {
+      id: '6',
+      avatar: 'https://picsum.photos/200/300?random=1',
+      username: 'peterjo',
+      self_points: '9',
+      opp_points: '2',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '7',
+      avatar: 'https://picsum.photos/200/300?random=2',
+      username: 'dedr werber',
+      self_points: '4',
+      opp_points: '7',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '8',
+      avatar: 'https://picsum.photos/200/300?random=3',
+      username: 'hayloo',
+      self_points: '9',
+      opp_points: '7',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '9',
+      avatar: 'https://picsum.photos/200/300?random=4',
+      username: 'dewdw',
+      self_points: '8',
+      opp_points: '1',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '2',
+      avatar: 'https://picsum.photos/200/300?random=5',
+      username: 'petdewh5erjo',
+      self_points: '1',
+      opp_points: '8',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '1',
+      avatar: 'https://picsum.photos/200/300?random=6',
+      username: 'giorghinho',
+      self_points: '8',
+      opp_points: '1',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '34',
+      avatar: 'https://picsum.photos/200/300?random=8',
+      username: 'xoxoxP',
+      self_points: '3',
+      opp_points: '9',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+    {
+      id: '10',
+      avatar: 'https://picsum.photos/200/300?random=7',
+      username: 'marmelade',
+      self_points: '5',
+      opp_points: '9',
+      date: '2021-09-24T12:38:54.656Z',
+    },
+  ];
 }
 customElements.define('profile-view', ProfileView);
 

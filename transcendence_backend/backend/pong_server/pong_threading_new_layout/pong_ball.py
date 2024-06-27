@@ -1,24 +1,28 @@
 import random
 import math
-from decimal import Decimal
 # from .pong_objs import PongObj, Collision
 from .game_base_class import GameObjDataClass, Collision
-from .pong_settings import InitialServe, PongSettings
+from .pong_settings import PongSettings
+from .messages_server import ServeSide, ServeMode
 from .pong_paddle import PongPaddle
 
 
-def calculate_random_direction(serve_to: InitialServe) -> tuple[Decimal, Decimal]:
+def calculate_random_direction(serve_to: ServeSide) -> tuple[float, float]:
     # Zufälliger Winkel im Bereich von -45 bis 45 Grad
     angle = random.uniform(-math.pi / 4, math.pi / 4)
     dx = math.cos(angle)
     dy = math.sin(angle)
 
-    if serve_to == InitialServe.LEFT and dx > 0:
+    # if serve_to == ServeSide.LEFT and dx > 0:
+    #     dx = -dx
+    # elif serve_to == ServeSide.RIGHT and dx < 0:
+    #     dx = -dx
+    if serve_to == "serve-left" and dx > 0:
         dx = -dx
-    elif serve_to == InitialServe.RIGHT and dx < 0:
+    elif serve_to == "serve-right" and dx < 0:
         dx = -dx
 
-    return Decimal(str(dx)), Decimal(str(dy))
+    return dx, dy
 
 
 class PongBall(GameObjDataClass):
@@ -27,34 +31,44 @@ class PongBall(GameObjDataClass):
         SCORE_PLAYER_LEFT = 1
         SCORE_PLAYER_RIGHT = 2
 
-    def __init__(self, settings: PongSettings) -> None:
+    def __init__(self, settings: PongSettings, court: GameObjDataClass) -> None:
         dx, dy = calculate_random_direction(settings.initial_serve_to)
 
-        self.inital_x = (settings.width // 2 - settings.ball_width // 2)
-        self.initial_y = (settings.height // 2 -
-                          settings.ball_height // 2)
+        self.initial_x = (settings.width // 2 - settings.ball_width // 2)
+        self.initial_y = (settings.height // 2 - settings.ball_height // 2)
+        self.initial_x_unscaled = self.initial_x / settings.width
+        self.initial_y_unscaled = self.initial_y / settings.height
         super().__init__(
             scaleX=settings.width,
             scaleY=settings.height,
-            xU=(settings.width // 2 - settings.ball_width // 2),
-            yU=(settings.height // 2 - settings.ball_height // 2),
-            wU=settings.width,
-            hU=settings.height,
+            xU=self.initial_x,
+            yU=self.initial_y,
+            wU=settings.ball_width,
+            hU=settings.ball_height,
             dx=dx,
             dy=dy,
             speedU=settings.ball_speed,
-
+            boundObj=court
         )
 
-    def reset_position(self, serve_to: InitialServe):
-        self.x = Decimal(self.inital_x)
-        self.y = Decimal(self.initial_y)
+
+    def _reset_position(self, score: int, serve_mode: ServeMode):
+        serve_to: ServeSide
+        if serve_mode == "serve-winner":
+            serve_to = "serve-left" if score == PongBall.Scored.SCORE_PLAYER_LEFT else "serve-right"
+        elif serve_mode == "serve-loser":
+            serve_to =  "serve-right" if score == PongBall.Scored.SCORE_PLAYER_LEFT else "serve-left"
+        elif serve_mode == "serve-random":
+            serve_to = random.choice(["serve-left", "serve-right"])
+        serve_to = "serve-left"
+        self.x = self.initial_x_unscaled
+        self.y = self.initial_y_unscaled
         self.dx, self.dy = calculate_random_direction(serve_to)
 
-    def update_pos(self, tick: float, paddle_left: "PongPaddle", paddle_right: "PongPaddle"):
-        self.x = self.x + Decimal(tick) * self.dx * self.speed_x
+    def update_pos(self, tick: float, paddle_left: "PongPaddle", paddle_right: "PongPaddle", serveMode: ServeMode):
+        self.x = self.x + tick * self.dx * self.speed_x
 
-        self.y = self.y + Decimal(tick) * self.dy * self.speed_y
+        self.y = self.y + tick * self.dy * self.speed_y
 
         # print("ball speed x: ", self.dx * self.speed_x)
         # print("ball speed y: ", self.dy * self.speed_y)
@@ -70,8 +84,10 @@ class PongBall(GameObjDataClass):
             return PongBall.Scored.SCORE_NONE
 
         if self.x <= 0:
+            self._reset_position(PongBall.Scored.SCORE_PLAYER_RIGHT, serveMode)
             return PongBall.Scored.SCORE_PLAYER_RIGHT
         elif self.x + self.w >= self.bound_right:
+            self._reset_position(PongBall.Scored.SCORE_PLAYER_LEFT, serveMode)
             return PongBall.Scored.SCORE_PLAYER_LEFT
 
         paddle = paddle_left if self.x <= paddle_left.x else paddle_right
@@ -94,8 +110,8 @@ class PongBall(GameObjDataClass):
             self.dy = self.dy * -1
             print("COLL_BOTTOM")
 
-        reduceDy = Decimal(0.5)
-        increaseDy = Decimal(1.5)
+        reduceDy = 0.5
+        increaseDy = 1.5
         if ((collision == Collision.COLL_LEFT or collision == Collision.COLL_RIGHT)
                 and paddle.dy == PongPaddle.Dir.UP):
             self.dy = self.dy * reduceDy if self.dy < 0 else increaseDy

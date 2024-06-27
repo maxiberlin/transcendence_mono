@@ -1,5 +1,5 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { sessionService, fetcher } from '../../services/api/API.js';
+import { sessionService } from '../../services/api/API.js';
 import router from '../../services/router.js';
 
 /**
@@ -121,11 +121,11 @@ export default class LoginRegisterRoute extends BaseElement {
                 formData.get('password'),
                 formData.get('confirmPassword'),
             );
-            console.log('login : login data received: ', loginData);
+            // console.log('login : login data received: ', loginData);
             if (loginData.success) router.redirect('/');
             else this.toggleErrorMessage(loginData.message);
         } catch (error) {
-            this.toggleErrorMessage(error.data.message);
+            this.toggleErrorMessage('error register');
         }
     }
 
@@ -145,14 +145,14 @@ export default class LoginRegisterRoute extends BaseElement {
                 formData.get('username'),
                 formData.get('currentPassword'),
             );
-            console.log('login : login data received: ', loginData);
+            // console.log('login : login data received: ', loginData);
             if (loginData.success) router.redirect('/');
             else this.toggleErrorMessage(loginData.message);
         } catch (error) {
             // console.log("login error: ", error);
             // console.log("login error name: ", error.name);
             // console.log("login error stack: ", error.stack);
-            this.toggleErrorMessage(error.data.message);
+            this.toggleErrorMessage('error login');
         }
     }
 

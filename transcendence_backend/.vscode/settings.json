@@ -2,8 +2,8 @@
     "python.analysis.typeCheckingMode": "basic",
     "[python]": {
         "diffEditor.ignoreTrimWhitespace": false,
-        "editor.formatOnType": true,
+        "editor.formatOnType": false,
         "editor.wordBasedSuggestions": "off",
-        "editor.formatOnSave": true,
+        "editor.formatOnSave": false,
     },
 }

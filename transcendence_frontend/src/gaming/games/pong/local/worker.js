@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // worker.js
 
 import { msg_to_worker } from '../../../exchange/game_msg.js';
@@ -39,49 +40,50 @@ let game;
 onmessage = (ev) => {
     /** @type {import('../../../exchange/game_msg.js').WorkerData} */
     const msg = ev.data;
-    // console.log('onmessage: ');
-    // console.dir(ev.data);
+    console.log('onmessage: ');
+    console.dir(ev.data);
     switch (msg.message) {
         case msg_to_worker.init:
+            console.log('create new Pong instance');
             game = new Pong(msg.data);
-            // console.log('create new Pong instance');
+            console.log('instance: ', game);
             break;
         case msg_to_worker.start:
+            console.log('msg start game: ', game);
             game?.startGame();
-            // console.log('msg start game');
             break;
         case msg_to_worker.quit:
+            console.log('msg quit game');
             game?.quitGame();
-            // console.log('msg quit game');
             break;
         case msg_to_worker.terminate:
-            // console.log('msg terminate game');
+            console.log('msg terminate game');
             break;
         case msg_to_worker.pause:
+            console.log('msg pause game');
             game?.pauseGame();
-            // console.log('msg pause game');
             break;
         case msg_to_worker.continue:
             game?.continueGame();
-            // console.log('msg continue game');
+            console.log('msg continue game');
             break;
         case msg_to_worker.resize:
+            console.log('msg set canvas sizes');
             game?.setCanvasSizes(msg.data);
-            // console.log('msg set canvas sizes');
             break;
         case msg_to_worker.changeColor:
             game?.changeColor(msg.data);
-            // console.log('msg change color');
+            console.log('msg change color');
             break;
         case msg_to_worker.keyEvent:
             game?.handleKey(msg.data);
-            // console.log('msg handle key');
+            console.log('msg handle key');
             break;
         case msg_to_worker.mouseEvent:
-            // console.log('msg handle mouse');
+            console.log('msg handle mouse');
             break;
         default:
-            // // console.log('unknown message');
+            // console.log('unknown message');
             break;
     }
 };

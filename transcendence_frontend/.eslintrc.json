@@ -35,8 +35,9 @@
                 "@typescript-eslint"
             ],
             "extends": [
+                "eslint:recommended",
                 "plugin:@typescript-eslint/recommended",
-                "plugin:prettier/recommended"
+                "prettier"
             ],
             "rules": {
                 // Add TypeScript-specific rules here
@@ -47,6 +48,7 @@
         "prettier/prettier": [
             "error"
         ],
+        "max-len": "off",
         "jsdoc/require-property-description": "off",
         "jsdoc/require-param-description": "off",
         "jsdoc/require-returns-description": "off",

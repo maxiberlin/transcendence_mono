@@ -12,10 +12,11 @@ const useFrame = (callback) => {
     if (typeof callback !== 'function') throw new Error('invalid callback');
     let prevTimeStamp;
     let currFrame;
+    console.log('Use Frame!!: ');
     const renderFunc = (timeStamp) => {
-        // console.log('render! currFrame: ', currFrame);
+        console.log('render! currFrame: ', currFrame);
         if (prevTimeStamp === undefined) prevTimeStamp = timeStamp;
-        const elapsed = Math.floor(timeStamp - prevTimeStamp) / 1000;
+        const elapsed = (timeStamp - prevTimeStamp) / 1000;
         prevTimeStamp = timeStamp;
         if (callback(elapsed)) {
             currFrame = requestAnimationFrame(renderFunc);
@@ -25,7 +26,9 @@ const useFrame = (callback) => {
         }
     };
     const startRender = () => {
+        console.log('startRender!');
         if (currFrame) return;
+        console.log('startRender! yohhh');
         currFrame = requestAnimationFrame(renderFunc);
     };
     const stopRender = () => {
@@ -70,7 +73,7 @@ function useFps(time) {
 export default class Pong {
     /** @param {import('../../../../exchange/game_msg.js').WorkerDataInit} d */
     constructor(d) {
-        // console.log('constructor Pong!');
+        console.log('constructor Pong!');
 
         this.canvas = d.canvas;
         this.ctx = this.canvas.getContext('2d');
@@ -98,6 +101,8 @@ export default class Pong {
         this.paused = false;
         this.scoreBreak = false;
 
+        console.log('initGameObjects!');
+
         /** @type {GameCourt} */
         this.gamePlane = new GameCourt(5 / 300);
         this.gamePlane.setScale(this.width, this.height);
@@ -124,6 +129,9 @@ export default class Pong {
         /** @type {PongBall} */
         this.ball = new PongBall(5 / 300, 150 / 300, this.gamePlane);
         this.ball.setScale(this.width, this.height);
+
+        console.log('initGameObjects! done: ', this);
+        this.frame?.startRender();
     }
 
     startGame() {
@@ -141,9 +149,6 @@ export default class Pong {
         if (this.paused) return;
         this.paused = true;
         this.frame?.stopRender();
-        // if (this.currentFrame)
-        //     cancelAnimationFrame(this.currentFrame);
-        // this.currentFrame = undefined;
     }
 
     continueGame() {
@@ -151,8 +156,6 @@ export default class Pong {
         if (!this.paused) return;
         this.paused = false;
         this.frame?.startRender();
-        // this.prevTimestamp = undefined;
-        // this.currentFrame = requestAnimationFrame((t) => this.render(t));
     }
 
     /** @param {import('../../../../exchange/game_msg.js').WorkerDataChangeColors} d */
@@ -213,13 +216,13 @@ export default class Pong {
 
     /** @param {import('../../../../exchange/game_msg.js').WorkerDataResize} d */
     setCanvasSizes(d) {
-        // console.log('set canvas sizes');
+        console.log('set canvas sizes');
         if (!this.ctx) return;
-        // console.log('set canvas sizes joooo: ', d);
+        console.log('set canvas sizes joooo: ', d);
         this.width = d.width;
         this.height = d.height;
-        // console.log('this.width: ', this.width);
-        // console.log('this.height: ', this.height);
+        console.log('this.width: ', this.width);
+        console.log('this.height: ', this.height);
         this.ctx.canvas.width = Math.floor(this.width * d.dpr);
         this.ctx.canvas.height = Math.floor(this.height * d.dpr);
         this.ctx.scale(d.dpr, d.dpr);
@@ -229,8 +232,6 @@ export default class Pong {
         this.paddleR?.setScale(this.width, this.height);
 
         this.frame?.startRender();
-        // this.#cancelNextFrame();
-        // this.currentFrame = requestAnimationFrame((t)=>{this.render(t)});
     }
 
     // resetBall(side) {

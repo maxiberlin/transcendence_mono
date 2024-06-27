@@ -11,56 +11,50 @@ import PubSub from '../../lib_templ/reactivity/PubSub.js';
 
 // api at subdomain api.
 const url = new URL(window.location.origin);
-export const fetcher = new Fetcher(url.protocol + 'api.' + url.host, {
-    credentials: 'include',
-});
-
-// api at subdomain api.
-const url = new URL(window.location.origin);
 export const fetcher = new Fetcher(`${url.protocol}api.${url.host}`, {
     credentials: 'include',
 });
 
-const userAPI = {
-    getLogin: () => fetcher.$get('/login'),
-    postLogin: (username, password) =>
-        fetcher.$post('/login', { bodyData: { username, password } }),
-    postLogout: () => fetcher.$post('/logout', {}),
-    getProfile: (id) => fetcher.$get(`/profile/${id}`),
-};
+// const userAPI = {
+//     getLogin: () => fetcher.$get('/login'),
+//     postLogin: (username, password) =>
+//         fetcher.$post('/login', { bodyData: { username, password } }),
+//     postLogout: () => fetcher.$post('/logout', {}),
+//     getProfile: (id) => fetcher.$get(`/profile/${id}`),
+// };
 
-const friendAPI = {
-    getRequests: (id) => fetcher.$get(`/friend/requests/${id}`),
-    getRequestsSent: (id) => fetcher.$get(`/friend/requests-sent/${id}`),
-    sendRequest: (id) =>
-        fetcher.$post('/friend/request', { bodyData: { receiver_id: id } }),
-    cancelRequest: (id) => fetcher.$get(`/friend/request/cancel/${id}`),
-    acceptRequest: (id) => fetcher.$get(`/friend/request/accept/${id}`),
-    rejectRequest: (id) => fetcher.$get(`/friend/request/reject/${id}`),
-    blockUser: (id) => fetcher.$get(`/friend/block/${id}`),
-    unblockUser: (id) => fetcher.$get(`/friend/unblock/${id}`),
-    removeFriend: (id) =>
-        fetcher.$post('/friend/remove', { bodyData: { receiver_id: id } }),
-};
+// const friendAPI = {
+//     getRequests: (id) => fetcher.$get(`/friend/requests/${id}`),
+//     getRequestsSent: (id) => fetcher.$get(`/friend/requests-sent/${id}`),
+//     sendRequest: (id) =>
+//         fetcher.$post('/friend/request', { bodyData: { receiver_id: id } }),
+//     cancelRequest: (id) => fetcher.$get(`/friend/request/cancel/${id}`),
+//     acceptRequest: (id) => fetcher.$get(`/friend/request/accept/${id}`),
+//     rejectRequest: (id) => fetcher.$get(`/friend/request/reject/${id}`),
+//     blockUser: (id) => fetcher.$get(`/friend/block/${id}`),
+//     unblockUser: (id) => fetcher.$get(`/friend/unblock/${id}`),
+//     removeFriend: (id) =>
+//         fetcher.$post('/friend/remove', { bodyData: { receiver_id: id } }),
+// };
 
-const gameAPI = {
-    getInvitesReceived: () => fetcher.$get('/game/invites-recieved'),
-    getInvitesSent: () => fetcher.$get('/game/invites-sent'),
-    getSchedule: () => fetcher.$get('/game/schedule'),
-    sendInvite: (user_id) =>
-        fetcher.$post('/game/invite', {
-            bodyData: {
-                game_id: 0,
-                game_mode: '1vs1',
-                tournament: null,
-            },
-        }),
-    acceptInvite: (invitation_id) =>
-        fetcher.$post(`/game/invite/accept/${invitation_id}`, {}),
-    rejectInvite: (invitation_id) =>
-        fetcher.$post(`/game/invite/reject/${invitation_id}`, {}),
-    startGame: (schedule_id) => fetcher.$post(`/game/play/${schedule_id}`, {}),
-};
+// const gameAPI = {
+//     getInvitesReceived: () => fetcher.$get('/game/invites-recieved'),
+//     getInvitesSent: () => fetcher.$get('/game/invites-sent'),
+//     getSchedule: () => fetcher.$get('/game/schedule'),
+//     sendInvite: (user_id) =>
+//         fetcher.$post('/game/invite', {
+//             bodyData: {
+//                 game_id: 0,
+//                 game_mode: '1vs1',
+//                 tournament: null,
+//             },
+//         }),
+//     acceptInvite: (invitation_id) =>
+//         fetcher.$post(`/game/invite/accept/${invitation_id}`, {}),
+//     rejectInvite: (invitation_id) =>
+//         fetcher.$post(`/game/invite/reject/${invitation_id}`, {}),
+//     startGame: (schedule_id) => fetcher.$post(`/game/play/${schedule_id}`, {}),
+// };
 
 export class SessionStore {
     static loginStates = {
@@ -81,24 +75,25 @@ export class SessionStore {
     }
 
     async fetchActiveSession() {
-        console.log('initial fetch to check active session');
+        // console.log('initial fetch to check active session');
         try {
             const loginData = await fetcher.$get('/login');
-            console.log('inital data: ', loginData);
+            // // console.log('inital data: ', loginData);
             if (!loginData || !loginData.success) {
                 this.#pubsub.publish(this.#userData);
                 return false;
             }
             this.#isLoggedIn = true;
             await this.#fetchSessionUser(loginData.user_id);
+            // console.log('publish userData');
             this.#pubsub.publish(this.#userData);
             return true;
         } catch (error) {
-            console.log(error);
+            // // console.log(error);
         }
         return false;
         // catch (error) {
-        //     console.log(error)
+        // //     console.log(error)
         //     return false;
         // }
     }
@@ -108,7 +103,7 @@ export class SessionStore {
             bodyData: { username, email, password, confirmPassword },
         });
         if (registerData.success === true) {
-            const loginData = await this.login(username, password);
+            await this.login(username, password);
         }
         return registerData;
     }
@@ -117,12 +112,12 @@ export class SessionStore {
         const loginData = await fetcher.$post('/login', {
             bodyData: { username, password },
         });
-        // console.log("session: login: loginData: ", loginData);
+        // // console.log("session: login: loginData: ", loginData);
         if (loginData.success === true) {
-            console.log('login: after fetch user');
+            // // console.log('login: after fetch user');
             this.#isLoggedIn = true;
             await this.#fetchSessionUser(loginData.user_id);
-            // console.log("login: after fetch user");
+            // // console.log("login: after fetch user");
 
             this.#pubsub.publish(this.#userData);
         }
@@ -136,7 +131,7 @@ export class SessionStore {
             this.#userData = undefined;
             this.#pubsub.publish(this.#userData);
         } catch (error) {
-            console.log(error);
+            // // console.log(error);
         }
     }
 
@@ -180,19 +175,8 @@ export class SessionStore {
         return undefined;
     }
 
-
     getInvited(user_id) {
         if (this.#userData) {
-            const sent = this.#userData.gameInvitationsSent.find(
-                (friend) => friend.id === user_id,
-            );
-            const sent = this.#userData.gameInvitationsSent.find(
-                (friend) => friend.id === user_id,
-            );
-            if (sent) return sent;
-            return this.#userData.gameInvitationsReceived.find(
-                (friend) => friend.id === user_id,
-            );
             return this.#userData.gameInvitationsReceived.find(
                 (friend) => friend.id === user_id,
             );
@@ -201,7 +185,6 @@ export class SessionStore {
     }
 
     async refetchSessionUserData() {
-        if (!this.#isLoggedIn) return;
         if (!this.#isLoggedIn) return;
         await this.#fetchSessionUser(this.#userData?.id);
         this.#pubsub.publish(this.#userData);
@@ -231,7 +214,7 @@ export class SessionStore {
                 this.#userData.gameInvitationsSent = data[4].data;
                 this.#userData.gameSchedule = data[5].data;
             }
-            // console.log("userData: ", this.#userData);
+            // // console.log("userData: ", this.#userData);
         });
     }
 
@@ -262,14 +245,12 @@ export class SessionStore {
 
     async blockUser(user_id) {
         if (!this.#isLoggedIn) return;
-        if (!this.#isLoggedIn) return;
         await fetcher.$get(`/friend/block/${user_id}`);
         await this.#fetchSessionUser(this.#userData?.id);
         this.#pubsub.publish(this.#userData);
     }
 
     async unblockUser(user_id) {
-        if (!this.#isLoggedIn) return;
         if (!this.#isLoggedIn) return;
         await fetcher.$get(`/friend/unblock/${user_id}`);
         await this.#fetchSessionUser(this.#userData?.id);
@@ -281,31 +262,25 @@ export class SessionStore {
         await fetcher.$post('/friend/remove', {
             bodyData: { receiver_id: id },
         });
-        if (!this.#isLoggedIn) return;
-        await fetcher.$post('/friend/remove', {
-            bodyData: { receiver_id: id },
-        });
         await this.#fetchSessionUser(this.#userData?.id);
         this.#pubsub.publish(this.#userData);
     }
 
     async sendFriendRequest(id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        // console.log('api - await send friend request');
+        // // console.log('api - await send friend request');
         await fetcher.$post('/friend/request', {
             bodyData: { receiver_id: id },
         });
-        // console.log('api - awaiting done send friend request');
+        // // console.log('api - awaiting done send friend request');
         const data = await this.#fetchRequestsSent(this.#userData?.id);
         this.#userData.requestsSent = data.data;
         this.#pubsub.publish(this.#userData);
     }
 
-
     async cancelFriendRequest(id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        if (!this.#isLoggedIn || !this.#userData) return;
-        // console.log("cancel friend request: id: ", id);
+        // // console.log("cancel friend request: id: ", id);
         await fetcher.$get(`/friend/request/cancel/${id}`);
         // await fetcher.$post("/friend/request/cancel", {bodyData: {receiver_id: id}});
         const data = await this.#fetchRequestsSent(this.#userData.id);
@@ -315,8 +290,7 @@ export class SessionStore {
 
     async acceptFriendRequest(id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        if (!this.#isLoggedIn || !this.#userData) return;
-        // console.log("accept friend request: id: ", id);
+        // // console.log("accept friend request: id: ", id);
         await fetcher.$get(`/friend/request/accept/${id}`);
         const data = await this.#fetchRequestsReceived(this.#userData.id);
         this.#userData.requestsReceived = data.data;
@@ -324,7 +298,6 @@ export class SessionStore {
     }
 
     async rejectFriendRequest(id) {
-        if (!this.#isLoggedIn || !this.#userData) return;
         if (!this.#isLoggedIn || !this.#userData) return;
         await fetcher.$get(`/friend/request/reject/${id}`);
         const data = await this.#fetchRequestsReceived(this.#userData.id);
@@ -334,15 +307,7 @@ export class SessionStore {
 
     async sendGameInvitation(user_id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        if (!this.#isLoggedIn || !this.#userData) return;
         // await fetcher.$post(`/game/invite/${user_id}`, {});
-        await fetcher.$post(`/game/invite/${user_id}`, {
-            bodyData: {
-                game_id: 0,
-                game_mode: '1vs1',
-                tournament: null,
-            },
-        });
         await fetcher.$post(`/game/invite/${user_id}`, {
             bodyData: {
                 game_id: 0,
@@ -356,14 +321,12 @@ export class SessionStore {
 
     async acceptGameInvitation(invitation_id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        if (!this.#isLoggedIn || !this.#userData) return;
         await fetcher.$post(`/game/invite/accept/${invitation_id}`, {});
         const data = await this.#fetchGameInvitationsReceived();
         this.#userData.gameInvitationsReceived = data.data;
     }
 
     async rejectGameInvitation(invitation_id) {
-        if (!this.#isLoggedIn || !this.#userData) return;
         if (!this.#isLoggedIn || !this.#userData) return;
         await fetcher.$post(`/game/invite/reject/${invitation_id}`, {});
         const data = await this.#fetchGameInvitationsReceived();
@@ -372,13 +335,12 @@ export class SessionStore {
 
     async startGameByScheduleId(schedule_id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        if (!this.#isLoggedIn || !this.#userData) return;
         await fetcher.$post(`/game/play/${schedule_id}`, {});
     }
 
     subscribe(host, force = false) {
-    subscribe(host, force = false) {
-        return this.#pubsub.subscribe(host, this.#userData, force);
+        // console.log('subscribe to sessionService');
+        return this.#pubsub.subscribe(this.#userData, host, force);
     }
 
     #pubsub = new PubSub();
@@ -404,7 +366,7 @@ export const sessionService = new SessionStore();
 //         return (this.#isLoggedIn);
 //     }
 //     async fetchActiveSession() {
-//         // console.log("initial fetch to check active session");
+// //         // console.log("initial fetch to check active session");
 //         try {
 //             const loginData = await fetcher.$get("/login");
 //             if (!loginData || !loginData.success) {
@@ -416,11 +378,11 @@ export const sessionService = new SessionStore();
 //             }
 //         }
 //         catch {
-//             // console.log(error)
+// //             // console.log(error)
 //             return false;
 //         }
 //         // catch (error) {
-//         //     console.log(error)
+// //         //     console.log(error)
 //         //     return false;
 //         // }
 
@@ -428,10 +390,10 @@ export const sessionService = new SessionStore();
 
 //     async login(username, password) {
 //         const loginData = await fetcher.$post("/login", { bodyData: { username, password } } );
-//         // console.log("session: login: loginData: ", loginData);
+// //         // console.log("session: login: loginData: ", loginData);
 //         if (loginData.success === true) {
 //             await this.#fetchSessionUser(loginData.user_id);
-//             // console.log("login: after fetch user");
+// //             // console.log("login: after fetch user");
 
 //             this.#pubsub.publish(this.#userData);
 //         }
@@ -447,7 +409,7 @@ export const sessionService = new SessionStore();
 //             this.#pubsub.publish(this.#userData);
 
 //         } catch (error) {
-//             console.log(error)
+// //             console.log(error)
 //         }
 //     }
 
@@ -508,7 +470,7 @@ export const sessionService = new SessionStore();
 //                 Promise.reject(data[4].message);
 //             if (data[5] && data[5].success === false)
 //                 Promise.reject(data[5].message);
-//             // console.log("fetch session user data:" , data);
+// //             // console.log("fetch session user data:" , data);
 //             this.#isLoggedIn = true;
 //             this.#userData = data[0];
 //             if (this.#userData) {
@@ -518,7 +480,7 @@ export const sessionService = new SessionStore();
 //                 this.#userData.gameInvitationsSent = data[4].data;
 //                 this.#userData.gameSchedule = data[5].data;
 //             }
-//             // console.log("userData: ", this.#userData);
+// //             // console.log("userData: ", this.#userData);
 //         })
 //     }
 //     #fetchRequestsReceived(id) {
@@ -559,9 +521,9 @@ export const sessionService = new SessionStore();
 
 //     async sendFriendRequest(id) {
 //         if (!this.#isLoggedIn || !this.#userData) return ;
-//         console.log("api - await send friend request");
+// //         console.log("api - await send friend request");
 //         await fetcher.$post("/friend/request", {bodyData: {receiver_id: id}});
-//         console.log("api - awaiting done send friend request");
+// //         console.log("api - awaiting done send friend request");
 //         const data = await this.#fetchRequestsSent(this.#userData?.id);
 //         this.#userData.requestsSent = data.data;
 //         this.#pubsub.publish(this.#userData);
@@ -569,7 +531,7 @@ export const sessionService = new SessionStore();
 
 //     async cancelFriendRequest(id) {
 //         if (!this.#isLoggedIn || !this.#userData) return ;
-//         // console.log("cancel friend request: id: ", id);
+// //         // console.log("cancel friend request: id: ", id);
 //         await fetcher.$get(`/friend/request/cancel/${id}`);
 //         // await fetcher.$post("/friend/request/cancel", {bodyData: {receiver_id: id}});
 //         const data = await this.#fetchRequestsSent(this.#userData.id);
@@ -579,7 +541,7 @@ export const sessionService = new SessionStore();
 
 //     async acceptFriendRequest(id) {
 //         if (!this.#isLoggedIn || !this.#userData) return ;
-//         // console.log("accept friend request: id: ", id);
+// //         // console.log("accept friend request: id: ", id);
 //         await fetcher.$get(`/friend/request/accept/${id}`);
 //         const data = await this.#fetchRequestsReceived(this.#userData.id);
 //         this.#userData.requestsReceived = data.data;
@@ -674,7 +636,7 @@ export const sessionService = new SessionStore();
 //     }
 
 //     #handleError(error) {
-// //         console.log(error);
+// // //         console.log(error);
 //     }
 
 //     constructor() {}
@@ -684,20 +646,20 @@ export const sessionService = new SessionStore();
 //         return (this.#isLoggedIn);
 //     }
 //     async fetchActiveSession() {
-// //         console.log("initial fetch to check active session");
+// // //         console.log("initial fetch to check active session");
 //         try {
 //             /** @type {import('./types.ts').LoginData} */
 //             const loginData = await fetcher.$get("/login");
 //             if (!loginData || !loginData.success) {
-// //                 console.log("NO ACTIVE SESSION")
+// // //                 console.log("NO ACTIVE SESSION")
 //                 this.#pubsub.publish(this.#userData);
 //                 return false;
 //             }
-// //             console.log("joooo ACTIVE SESSION")
+// // //             console.log("joooo ACTIVE SESSION")
 //             await this.#setloggedUser(loginData);
 //         } catch (error) {
-// //             console.log("error trying to fetch active session: ");
-// //             console.log(error)
+// // //             console.log("error trying to fetch active session: ");
+// // //             console.log(error)
 //             return false;
 //         }
 
@@ -707,13 +669,13 @@ export const sessionService = new SessionStore();
 
 //     /** @param {import('./types.ts').LoginData} loginData  */
 //     async #setloggedUser(loginData) {
-// //         console.log("sessionStore: set logged user, loginData: ", loginData);
+// // //         console.log("sessionStore: set logged user, loginData: ", loginData);
 //         /** @type {import('./types.ts').UserData} */
 //         const data = await getUserData(loginData.user_id);
-// //         console.log("userData: ", data);
+// // //         console.log("userData: ", data);
 //         this.#userData = data;
 //         this.#isLoggedIn = true;
-// //         console.log("user logged in, user to publish: ", this.#userData);
+// // //         console.log("user logged in, user to publish: ", this.#userData);
 //         this.#pubsub.publish(this.#userData);
 //         // // return new Promise((resolve, reject)=> {
 //         // //     if (!loginData.user_id || typeof loginData.user_id !== "number")
@@ -721,7 +683,7 @@ export const sessionService = new SessionStore();
 //         // // })
 //         // fetcher.$get(`/profile/${loginData.user_id}`)
 //         // .then((data) => {
-// //         //     console.log("my user data: ", data);
+// // //         //     console.log("my user data: ", data);
 //         //     this.#userData = data;
 //         //     this.#isLoggedIn = true;
 //         //     this.#pubsub.publish(this.#userData);
@@ -731,9 +693,9 @@ export const sessionService = new SessionStore();
 //     }
 
 //     async login(username, password) {
-// //         console.log("SessionStore: login");
+// // //         console.log("SessionStore: login");
 //         const loginData = await fetcher.$post("/login", { bodyData: { username, password } } );
-// //         console.log("LOGIN::!!!!: data: ", loginData);
+// // //         console.log("LOGIN::!!!!: data: ", loginData);
 //         if (loginData.success === true)
 //             await this.#setloggedUser(loginData);
 //         return (loginData);
@@ -750,7 +712,7 @@ export const sessionService = new SessionStore();
 //     }
 
 //     async logout() {
-// //         console.log("SessionStore: logout");
+// // //         console.log("SessionStore: logout");
 //         try {
 //             await fetcher.$post("/logout", {})
 //             this.#isLoggedIn = false;
@@ -777,7 +739,7 @@ export const sessionService = new SessionStore();
 // class SessionStore {
 
 //     #handleError(error) {
-// //         console.log(error);
+// // //         console.log(error);
 //     }
 
 //     constructor() {
@@ -789,7 +751,7 @@ export const sessionService = new SessionStore();
 //         return (this.#isLoggedIn);
 //     }
 //     async fetchActiveSession() {
-// //         console.log("initial fetch to check active session");
+// // //         console.log("initial fetch to check active session");
 //         fetcher.$get("/login")
 //         .then(this.setloggedUser.bind(this))
 //         .catch(this.#handleError)
@@ -797,11 +759,11 @@ export const sessionService = new SessionStore();
 
 //     /** @param {LoginData} loginData  */
 //     setloggedUser(loginData) {
-// //         console.log("sessionStore: set logged user");
+// // //         console.log("sessionStore: set logged user");
 //         if (!loginData.user_id || typeof loginData.user_id !== "number") throw new Error("unable!");
 //         fetcher.$get(`/profile/${loginData.user_id}`)
 //         .then((data) => {
-// //             console.log("my user data: ", data);
+// // //             console.log("my user data: ", data);
 //             this.#userData = data;
 //             this.#isLoggedIn = true;
 //             this.#pubsub.publish(this.#userData);
@@ -811,7 +773,7 @@ export const sessionService = new SessionStore();
 //     }
 
 //     login(username, password) {
-// //         console.log("SessionStore: login");
+// // //         console.log("SessionStore: login");
 //         fetcher.$post("/login", { bodyData: { username, password } } )
 //             .then((data)=> {
 //                 this.setloggedUser.bind(this);
@@ -821,7 +783,7 @@ export const sessionService = new SessionStore();
 //     }
 
 //     logout() {
-// //         console.log("SessionStore: logout");
+// // //         console.log("SessionStore: logout");
 //         fetcher.$post("/logout", {})
 //         .then((data) => {
 //             this.#isLoggedIn = false;
