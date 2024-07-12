@@ -1,62 +1,30 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { sessionService } from '../../services/api/API.js';
-import { actions, renderDropdow } from '../../components/ActionButtons.js';
+import { sessionService } from '../../services/api/API_new.js';
+import { actions, actionButtonDropdowns } from '../../components/ActionButtons.js';
 import router from '../../services/router.js';
+import { renderAvatar, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
+
+/**
+ * @typedef {"fv$friends" | "fv$rec" | "fv$sent" | "fv$blocked"} ListType
+ */
 
 export default class FriendsView extends BaseElement {
-    static get lAll() {
-        return 'fv$all';
-    }
 
-    static get lReceived() {
-        return 'fv$rec';
-    }
-
-    static get lSent() {
-        return 'fv$sent';
-    }
-
-    static get lBlocked() {
-        return 'fv$blocked';
-    }
-
-    isAll = (str) =>
-        str ? str === FriendsView.lAll : this.#lCurr === FriendsView.lAll;
-
-    isReceived = (str) =>
-        str ?
-            str === FriendsView.lReceived
-        :   this.#lCurr === FriendsView.lReceived;
-
-    isBlocked = (str) =>
-        str ?
-            str === FriendsView.lBlocked
-        :   this.#lCurr === FriendsView.lBlocked;
-
-    isSent = (str) =>
-        str ? str === FriendsView.lSent : this.#lCurr === FriendsView.lSent;
-
-    isRequest = (str) => this.isReceived(str) || this.isSent(str);
-
+    /** @type {Map<ListType, { title: string, getList: () => APITypes.BlockedUserData[] | APITypes.FriendUserData[] | APITypes.FriendRequestItem[] | undefined }>} */
     #listsMap = new Map([
-        [FriendsView.lAll, { title: 'All Friends', prop: 'friends' }],
-        [
-            FriendsView.lReceived,
-            { title: 'Incoming Requests', prop: 'requestsReceived' },
-        ],
-        [
-            FriendsView.lSent,
-            { title: 'Outgoing Requests', prop: 'requestsSent' },
-        ],
-        [FriendsView.lBlocked, { title: 'Blocked Users', prop: 'blocked' }],
+        [ "fv$friends", { title: 'All Friends', getList: () => this.sessionUser.value?.user?.friends } ],
+        [ "fv$rec", { title: 'Incoming Requests', getList: () => this.sessionUser.value?.friend_requests_received } ],
+        [ "fv$sent", { title: 'Outgoing Requests', getList: () => this.sessionUser.value?.friend_requests_sent } ],
+        [ "fv$blocked", { title: 'Blocked Users', getList: () => this.sessionUser.value?.user?.blocked } ],
     ]);
 
-    #lCurr;
+    /** @type {ListType} */
+    #lCurr = "fv$friends"
 
     constructor() {
         super(false, false);
-        /** @type {Array<APITypes.UserData> | string | undefined} */
-        this.userData = 'inptEmpty';
+        // /** @type {Array<APITypes.UserData> | string | undefined} */
+        // this.userData = 'inptEmpty';
 
         this.sessionUser = sessionService.subscribe(this, true);
     }
@@ -69,69 +37,62 @@ export default class FriendsView extends BaseElement {
         if (!sessionService.isLoggedIn) {
             return router.redirect('/');
         }
-        if (route === '/social') return router.redirect('/social/friends');
-        sessionService.refetchSessionUserData();
-        // this.#lCurr = FriendsView.lAll;
-        if (route === '/social/friends') this.#lCurr = FriendsView.lAll;
-        else if (route === '/social/requests-received')
-            this.#lCurr = FriendsView.lReceived;
-        else if (route === '/social/requests-sent')
-            this.#lCurr = FriendsView.lSent;
-        else if (route === '/social/blocked-users')
-            this.#lCurr = FriendsView.lBlocked;
+        if (route === '/social')
+            return router.redirect('/social/friends');
+        sessionService.updateData(["all"]);
+        this.selectRoute(route);
         return undefined;
-        // this.#currType = Symbol.for(FriendsView.#listTypes.all);
     }
 
     onRouteChange(route) {
-        if (route === '/social/friends') this.#lCurr = FriendsView.lAll;
-        else if (route === '/social/requests-received')
-            this.#lCurr = FriendsView.lReceived;
-        else if (route === '/social/requests-sent')
-            this.#lCurr = FriendsView.lSent;
-        else if (route === '/social/blocked-users')
-            this.#lCurr = FriendsView.lBlocked;
+        this.selectRoute(route);
         super.requestUpdate();
     }
 
+    selectRoute(route) {
+        if (route === '/social/friends')
+            this.#lCurr = "fv$friends";
+        else if (route === '/social/requests-received')
+            this.#lCurr = "fv$rec";
+        else if (route === '/social/requests-sent')
+            this.#lCurr = "fv$sent";
+        else if (route === '/social/blocked-users')
+            this.#lCurr = "fv$blocked";
+    }
+
+    /**
+     * @param {APITypes.FriendRequestItem} data 
+     * @returns 
+     */
+    getFriendRequestAction = (data) => {
+        
+    }
+
+
+    /**
+     * @param {APITypes.UserData} data 
+     * @returns 
+     */
     getUserBtn = (data) => {
-        if (this.isReceived())
+        if (this.#lCurr === "fv$friends" && 'request_id' in data)
             return html`
-                ${actions.acceptFriendRequest(data.request_id, {
-                    host: this,
-                    radius: 'circle',
-                    showText: false,
-                })}
-                ${actions.rejectFriendRequest(data.request_id, { host: this })}
+                <div class="d-flex">
+                    ${actions.acceptFriendRequest(data.request_id, { host: this, showText: false } ) }
+                    ${actions.rejectFriendRequest(data.request_id, { host: this, showText: false } ) }
+                </div>
             `;
-        if (this.isSent())
-            return actions.cancelFriendRequest(data.id, { host: this });
-        if (this.isBlocked())
+        if (this.#lCurr === "fv$sent"  && 'request_id' in data)
+            return actions.cancelFriendRequest(data.request_id, { host: this, showText: false } );
+        if (this.#lCurr === "fv$blocked")
             return actions.unBlockUser(data.id, { host: this });
-        return html`
-            ${sessionService.getInvited(data.id) !== undefined ?
-                ''
-            :   actions.sendGameInvitation(data.id, {
-                    host: this,
-                    radius: 'circle',
-                    showText: false,
-                })}
-            ${renderDropdow(
-                { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-                [
-                    actions.removeFriend(data.id, {
-                        host: this,
-                        dropdownitem: true,
-                    }),
-                    actions.blockUser(data.id, {
-                        cb: () => {
-                            router.redirect(`/profile/${data.id}`);
-                        },
-                        dropdownitem: true,
-                    }),
-                ],
-            )}
-        `;
+        if (this.#lCurr === "fv$friends")
+            return html`
+                <div class="d-flex" >
+                    ${sessionService.getGameInvitSent(data.id) !== undefined ? '' :
+                        actions.sendGameInvitation(data.id, { host: this, showText: false })}
+                    ${actionButtonDropdowns.friendActions(data.id)}
+                </div>
+            `;
     };
 
     buttonGroupSelectHandler(e) {
@@ -140,47 +101,30 @@ export default class FriendsView extends BaseElement {
         if (ct === t) return;
         if (t.tagName === 'I') t = t.parentElement;
         if (this.#lCurr === t.dataset.list) {
-            sessionService.refetchSessionUserData();
+            sessionService.updateData(["all"]);
         } else {
             this.#lCurr = t.dataset.list;
-            if (t.dataset.list === FriendsView.lAll)
+            if (this.#lCurr === "fv$friends")
                 router.go('/social/friends');
-            else if (t.dataset.list === FriendsView.lReceived)
+            else if (this.#lCurr === "fv$rec")
                 router.go('/social/requests-received');
-            else if (t.dataset.list === FriendsView.lSent)
+            else if (this.#lCurr === "fv$sent")
                 router.go('/social/requests-sent');
-            else if (t.dataset.list === FriendsView.lBlocked)
+            else if (this.#lCurr === "fv$blocked")
                 router.go('/social/blocked-users');
-
-            // super.requestUpdate();
         }
     }
 
     /**
-     * @param {object} userData
+     * @param {APITypes.UserData} userData
      * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
      */
     renderFriendlistEntry = (userData) => {
         return html`
             <li class="list-group-item text-body-secondary fs-6">
-                <div
-                    class="w-100 row text-center align-items-center justify-content-between"
-                >
+                <div class="w-100 row text-center align-items-center justify-content-between">
                     <div class=" col-5 d-block p-0 m-2">
-                        <a
-                            href="/profile/${userData.id}"
-                            class="pw-3 m-0 link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
-                        >
-                            <avatar-component
-                                radius="3"
-                                src="${userData.avatar}"
-                                size="40"
-                            >
-                                <span class="m-2 text-truncate" slot="after"
-                                    >${userData.username}</span
-                                >
-                            </avatar-component>
-                        </a>
+                        ${avatarLink(userData)}
                     </div>
                     <div class=" col-auto p-0">
                         ${this.getUserBtn(userData)}
@@ -190,43 +134,35 @@ export default class FriendsView extends BaseElement {
         `;
     };
 
-    renderFriendsList = () => {
-        const listO = this.#listsMap.get(this.#lCurr);
-        if (!listO) return '';
-        const list = this.sessionUser.value[listO.prop];
-
+    /**
+     * 
+     * @param {ListType} listType 
+     * @param {string} icon 
+     * @param {string} text 
+     * @param {boolean} [isActive] 
+     * @returns 
+     */
+    getTabBtn = (listType, icon, text, isActive) => {
         return html`
-            <h5 class="mt-3 mb-2">${listO.title}</h5>
-            ${!list || list.length === 0 ?
-                'Empty'
-            :   html`
-                    <ul class="list-group w-100">
-                        ${list.map((data) => this.renderFriendlistEntry(data))}
-                    </ul>
-                `}
-        `;
-    };
-
-    static getTabBtn = (listType, icon, text, activeCondition) =>
-        html` <button
-            data-list="${listType}"
-            type="button"
-            class="btn btn-outline-dark rounded-5 text-center mx-1
-                ${activeCondition ? 'active' : ''}"
-        >
-            <i class="fa-solid ${icon} me-2"></i>${text}
-        </button>`;
+            <button
+                data-list="${listType}"
+                type="button"
+                class="btn btn-outline-dark rounded-5 text-center mx-1
+                    ${(this.#lCurr === listType || isActive) ? 'active' : ''}"
+            >
+                <i class="fa-solid ${icon} me-2"></i>${text}
+            </button>
+    `};
 
     render() {
         // console.log('RENDER FRIENDSLIST MAINN');
 
         const listO = this.#listsMap.get(this.#lCurr);
-
-        const list = !listO ? undefined : this.sessionUser.value[listO.prop];
+        const list = listO?.getList();
 
         return html`
             <div class="container p-3 h-100">
-                <profile-search></profile-search>
+                <profile-search followlink ></profile-search>
                 <br />
                 <div
                     @click=${this.buttonGroupSelectHandler.bind(this)}
@@ -234,74 +170,35 @@ export default class FriendsView extends BaseElement {
                     role="group"
                     aria-label="Basic outlined example"
                 >
-                    ${FriendsView.getTabBtn(
-                        FriendsView.lAll,
-                        'fa-user-check',
-                        'Friends',
-                        this.isAll(),
-                    )}
-                    ${FriendsView.getTabBtn(
-                        FriendsView.lReceived,
-                        'fa-user-plus',
-                        'Requests',
-                        this.isRequest(),
-                    )}
-                    ${FriendsView.getTabBtn(
-                        FriendsView.lBlocked,
-                        'fa-ban',
-                        'Blocked',
-                        false,
-                    )}
+                    ${ this.getTabBtn( 'fv$friends', 'fa-user-check', 'Friends' ) }
+                    ${ this.getTabBtn( 'fv$rec', 'fa-user-plus', 'Requests', this.#lCurr === "fv$rec" || this.#lCurr === "fv$sent" ) }
+                    ${ this.getTabBtn( 'fv$blocked', 'fa-ban', 'Blocked' ) }
                 </div>
 
                 <div class="mt-3">
                     ${html`
                         <div>
-                            ${!this.isRequest() ?
-                                ''
-                            :   html`
-                                    <div
-                                        @click=${this.buttonGroupSelectHandler.bind(
-                                            this,
-                                        )}
-                                        class="btn-group w-100  z-2"
-                                        role="group"
-                                        aria-label="Basic outlined example"
-                                    >
-                                        ${FriendsView.getTabBtn(
-                                            FriendsView.lReceived,
-                                            'fa-envelope',
-                                            'received',
-                                            this.isReceived(),
-                                        )}
-                                        ${FriendsView.getTabBtn(
-                                            FriendsView.lSent,
-                                            'fa-paper-plane',
-                                            'sent',
-                                            this.isSent(),
-                                        )}
-                                    </div>
-                                `}
-                            ${!listO ? '' : (
-                                html`
-                                    <div>
-                                        <h5 class="mt-3 mb-2">
-                                            ${listO.title}
-                                        </h5>
-                                        ${!list || list.length === 0 ?
-                                            'Empty'
-                                        :   html`
-                                                <ul class="list-group w-100">
-                                                    ${list.map((data) =>
-                                                        this.renderFriendlistEntry(
-                                                            data,
-                                                        ),
-                                                    )}
-                                                </ul>
-                                            `}
-                                    </div>
-                                `
-                            )}
+                            ${!(this.#lCurr === "fv$rec" || this.#lCurr === "fv$sent") ? '' : html`
+                                <div
+                                    @click=${(e) => {this.buttonGroupSelectHandler(e)}}
+                                    class="btn-group w-100  z-2"
+                                    role="group"
+                                    aria-label="Basic outlined example"
+                                >
+                                    ${ this.getTabBtn( 'fv$rec', 'fa-envelope', 'received' ) }
+                                    ${ this.getTabBtn( 'fv$sent', 'fa-paper-plane', 'sent' ) }
+                                </div>
+                            `}
+                            ${!listO ? '' : html`
+                                <div>
+                                    <h5 class="mt-3 mb-2">${listO.title}</h5>
+                                    ${!list || list.length === 0 ? 'Empty' : html`
+                                            <ul class="list-group w-100">
+                                                ${ list.map( (data) => this.renderFriendlistEntry(data) ) }
+                                            </ul>
+                                    `}
+                                </div>
+                            `}
                         </div>
                     `}
                 </div>

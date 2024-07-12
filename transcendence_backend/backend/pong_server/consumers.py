@@ -1,2 +1,2 @@
-from pong_server.pong_threading_timesync.player_consumer import PlayerConsumer
-# from pong_server.pong_threading_new_layout.consumer_player import PlayerConsumer
+# from pong_server.pong_threading_timesync.player_consumer import PlayerConsumer
+from pong_server.pong_threading_new_layout.consumer_player import PlayerConsumer

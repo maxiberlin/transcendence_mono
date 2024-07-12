@@ -1,4 +1,6 @@
-/** @template T */
+/**
+ * @template T
+ */
 export default class BaseReactive {
     /** @type {import('../BaseBase.js').default | undefined} */
     #host;

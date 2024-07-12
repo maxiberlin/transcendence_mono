@@ -1,17 +1,19 @@
 /* eslint-disable jsdoc/require-returns */
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
-// export default class AvatarComponent extends BaseElement {
+// export class AvatarComponent2 extends BaseElement {
 //     static observedAttributes = ['size', 'src', 'status', 'radius', 'statusborder', 'statustext'];
 
 //     constructor() {
-//         super();
+//         super(false, false);
 //         this.size = 50;
 //         this.src = '';
 //         this.status = 'none';
 //         this.radius = 'circle';
 //         this.statusborder = false;
 //         this.statustext = false;
+//         this.props.text_after = '';
+//         this.props.text_before = '';
 //     }
 
 //     imgElem = (hasStatus, statusColor) => {
@@ -35,7 +37,7 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 //             border = `border border-${this.size > 100 ? '3' : '2'} border-${statusColor}`;
 //         return html`
 //             <svg
-//                 xmlns="http://www.w3.org/2000/svg"
+//                 xmlns="https://www.w3.org/2000/svg"
 //                 width="${this.size ?? '0'}"
 //                 height="${this.size ?? '0'}"
 //                 fill="currentColor"
@@ -83,7 +85,7 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 //         }
 //         return html`
 //             <span class="d-flex align-items-center">
-//                 <slot name="before"></slot>
+//                 ${this.props.text_before}
 //                 <span
 //                     class="position-relative d-flex flex-column"
 //                     style="width:${this.size ?? '0'}px; height:${this.size ?? '0'}px;"
@@ -91,12 +93,12 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 //                     ${this.src ? this.imgElem(hasStatus, statusColor) : this.svgElem(hasStatus, statusColor)}
 //                     ${this.renderStatus(hasStatus, statusColor)}
 //                 </span>
-//                 <slot name="after"></slot>
+//                 ${this.props.text_after}
 //             </span>
 //         `;
 //     }
 // }
-// customElements.define('avatar-component', AvatarComponent);
+// customElements.define('avatar-component-new', AvatarComponent2);
 
 export default class AvatarComponent extends BaseElement {
     static observedAttributes = ['size', 'src', 'status', 'radius', 'statusborder', 'statustext'];
@@ -228,6 +230,31 @@ export const renderAvatar = (id, username, avatar, side = 'after', status = 'off
         </avatar-component>
     </a>
 `;
+
+/**
+ *
+ * @param {APITypes.BasicUserData} userData
+ * @param {string} [linkClasses]
+ */
+export const avatarLink = (userData, linkClasses) => {
+    // let status = '';
+    // if userData.online
+    return html`
+    <a
+        href="/profile/${userData.id ?? 0}"
+        class="${linkClasses ?? ''} link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+    >
+        <avatar-component
+            size="35"
+            src="${userData.avatar ?? ''}"
+            statusborder
+            status="${userData.online == null ? '' : userData.online === true ? 'online' : 'offline'}"
+            radius="circle"
+            .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
+        >
+        </avatar-component>
+    </a>
+`};
 
 // export class AvatarLink extends BaseElem {
 //     static observedAttributes = [

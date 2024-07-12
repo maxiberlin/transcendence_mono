@@ -1,5 +1,9 @@
 import BaseReactive from './BaseReactive.js';
 
+/**
+ * @template T
+ * @extends {BaseReactive<T>}
+ */
 export default class PubSubConsumer extends BaseReactive {
     /** @type {import('./PubSub.js').default} */
     #pubSubInst;

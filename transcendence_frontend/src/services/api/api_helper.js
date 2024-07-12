@@ -17,6 +17,8 @@
 
 // /** @typedef {Json[]} JsonArray */
 
+
+
 /**
  * @typedef {object} RequestData
  * @property {URLSearchParams} [searchParams]
@@ -60,24 +62,25 @@ export class Fetcher {
 
     /**
      * @param {Response} response
-     * @returns {Promise<object>}
+     * @returns {Promise<APITypes.ApiResponse>}
      */
     static #handleResponse(response) {
-        return response.text().then((text) => {
-            // console.log("RESPONSE TEXT: ");
-            // console.log(text);
-            const data = text && JSON.parse(text);
-            if (!response.ok) {
-                // const error = (data && data.message) || response.statusText;
-                const error = {};
-                error.status = response.status;
-                error.statusText = response.statusText;
-                if (data) error.data = data;
-                // console.log('error: ', error);
-                return Promise.reject(error);
-            }
-            return data;
-        });
+        return response.text()
+            .then((text) => {
+                /** @type {APITypes.ApiResponse} */
+                const data = text && JSON.parse(text);
+                console.log('fetch response: ', data);
+                if (typeof data === "object") {
+                    data.statuscode = response.status
+                    return data;
+                }
+                return {
+                    success: false,
+                    message: data,
+                    data: null,
+                    statuscode: response.status
+                }
+            })
     }
 
     /**
@@ -125,7 +128,7 @@ export class Fetcher {
      * @param {string} url
      * @param {string} method
      * @param {RequestData | undefined} data
-     * @returns {Promise<object>}
+     * @returns {Promise<APITypes.ApiResponse>}
      */
     $request(url, method, data) {
         const searchParams = data?.searchParams;
@@ -169,16 +172,21 @@ export class Fetcher {
     /**
      * @param {string} url
      * @param {RequestData} [data]
-     * @returns {Promise<object>}
+     * @returns {Promise<APITypes.ApiResponse>}
      */
     $get(url, data) {
         return this.$request(url, 'GET', data);
     }
 
+    // /**
+    //  * @param {string} url
+    //  * @param {RequestData} data
+    //  * @returns {Promise<object>}
+    //  */
     /**
      * @param {string} url
-     * @param {RequestData} data
-     * @returns {Promise<object>}
+     * @param {RequestData} [data]
+     * @returns {Promise<APITypes.ApiResponse>}
      */
     $post(url, data) {
         return this.$request(url, 'POST', data);
@@ -187,7 +195,7 @@ export class Fetcher {
     /**
      * @param {string} url
      * @param {RequestData} data
-     * @returns {Promise<object>}
+     * @returns {Promise<APITypes.ApiResponse>}
      */
     $put(url, data) {
         return this.$request(url, 'PUT', data);
@@ -196,7 +204,7 @@ export class Fetcher {
     /**
      * @param {string} url
      * @param {RequestData} [data]
-     * @returns {Promise<object>}
+     * @returns {Promise<APITypes.ApiResponse>}
      */
     $delete(url, data) {
         return this.$request(url, 'DELETE', data);

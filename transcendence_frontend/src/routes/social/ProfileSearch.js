@@ -1,96 +1,139 @@
+import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { fetcher } from '../../services/api/API.js';
+import { fetcher, sessionService, userAPI } from '../../services/api/API_new.js';
+import router from '../../services/router.js';
 
+/**
+ * @param {number} min 
+ * @param {number} curr 
+ * @param {number} max 
+ * @returns {number}
+ */
+const clamp = (min, curr, max) => Math.min(Math.max(curr, min), max);
+
+
+export class SelectedSearchResult extends Event {
+    /** @param {APITypes.SearchResult | undefined} res */
+    constructor(res) {
+        super("profile_search_selected_result", {bubbles: true});
+        this.selectedSearchResult = res;
+    }
+}
+
+/**
+ * @prop todiscard
+ */
 export default class ProfileSearch extends BaseElement {
+    static observedAttributes = ["followlink", "discardprev"];
+
     constructor() {
         super(false, false);
         this.boundInputHandler = this.#handleSearchInputClick.bind(this);
         this.boundNavKeyHandler = this.#handleSearchResultKeyNav.bind(this);
+        this.followlink = false;
+        this.discardprev = false;
+        this.discarted = [];
+        this.props.todiscard = [];
     }
 
     connectedCallback() {
         super.connectedCallback();
-        document.addEventListener('click', this.boundInputHandler);
-        document.addEventListener('keydown', this.boundNavKeyHandler);
+        document.body.addEventListener('click', this.boundInputHandler);
+        document.body.addEventListener('keydown', this.boundNavKeyHandler);
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
-        document.removeEventListener('click', this.boundInputHandler);
-        document.removeEventListener('keydown', this.boundNavKeyHandler);
+        document.body.removeEventListener('click', this.boundInputHandler);
+        document.body.removeEventListener('keydown', this.boundNavKeyHandler);
     }
 
     async handleInput(e) {
         /** @type {HTMLInputElement} */
         const inpt = e.target;
-
         if (inpt.value === '') {
             this.#searchData = 'Type to search';
             super.requestUpdate();
-            return;
-        }
-        try {
-            const data = await fetcher.$get(`/search`, {
-                searchParams: new URLSearchParams({
-                    q: inpt.value,
-                }),
-            });
-            // console.log("searchData: ", data);
-            // console.log("data: ", data.data);
-            if (!(data.data instanceof Array))
-                this.#searchData = 'Nothing Found';
-            else this.#searchData = data.data;
-            // console.log("my new search data: ", this.#searchData);
-            super.requestUpdate();
-        } catch (error) {
-            // console.log('search error: ', error);
+        } else {
+            try {
+                const data = await userAPI.searchUser(inpt.value);
+                if (!(data.data instanceof Array) || data.data.length === 0)
+                    this.#searchData = 'Nothing Found';
+                else this.#searchData = data.data;
+                super.requestUpdate();
+            } catch (error) {
+                sessionService.handleFetchError(error);
+            }
         }
     }
 
-    #searchData;
-
+    /** @type {APITypes.SearchResult[] | string} */
+    #searchData = "Type to search";
+    /** @type {HTMLInputElement | undefined} */
+    #inptElem;
     #showRes = false;
-
     #currSearchRes;
-
     #searchSection;
-
-    #currNoSearchItems = -1;
-
     #currSearchNavPos = -1;
-
+    /** @type {HTMLDivElement | undefined} */
     #searchListGroupContainer;
+    /** @param {number} id  */
+    toggleActiveElement(id) {
+        if (!(this.#searchData instanceof Array) || this.#searchData.length === 0) return;
+        const currentEntries = this.#searchListGroupContainer?.querySelectorAll('div[data-search-result] > a.list-group-item');
+        const oldActive = this.#searchListGroupContainer?.querySelector('a.list-group-item.active');
+        oldActive?.classList.remove('active', 'link-light');
+        oldActive?.classList.add('link-body-emphasis')
+        const pos = clamp(0, id, this.#searchData.length-1);
+        const newActive = currentEntries ? currentEntries[pos] : undefined;
+        newActive?.classList.remove('link-body-emphasis');
+        newActive?.classList.add('active', 'link-light');
+    }
+
+    handleSelectedClicked(route) {
+        if (this.followlink) {
+            router.go(route);
+        } else {
+            console.log('jfewgwjrgjnwr');
+            this.#showRes = false;
+            this.#searchData = [];
+            this.#currSearchRes = "";
+            this.#currSearchNavPos = -1;
+            super.requestUpdate();
+            console.log('inpt: ', this.#inptElem);
+            const inpt = this.#searchSection.querySelector("input");
+            if (inpt) {
+                inpt.value = '';
+                inpt.blur();
+            }
+            
+        } 
+    }
 
     /** @param {KeyboardEvent} ev  */
     #handleSearchResultKeyNav(ev) {
-        // console.log('NAV KEY!: ', ev.key);
-        if (
-            this.#showRes &&
-            this.#currSearchRes instanceof Array &&
-            this.#searchListGroupContainer instanceof Element
-        ) {
-            // console.log('yes, we have results and want to show them');
-            if (this.#currNoSearchItems === -1)
-                this.#currNoSearchItems = this.#currSearchRes.length;
-            if (ev.key === 'ArrowUp')
-                this.#currSearchNavPos = Math.max(
-                    0,
-                    this.#currSearchNavPos - 1,
-                );
-            if (ev.key === 'ArrowDown')
-                this.#currSearchNavPos = Math.min(
-                    this.#currNoSearchItems - 1,
-                    this.#currSearchNavPos + 1,
-                );
-            this.#searchListGroupContainer
-                .querySelector('a.list-group-item.active')
-                ?.classList.remove('active');
-            this.#searchListGroupContainer
-                .querySelectorAll('a.list-group-item')
-                [this.#currSearchNavPos].classList.add('active');
+        if ( this.#showRes && this.#searchData instanceof Array && this.#searchListGroupContainer instanceof Element) {
+            if (ev.key === 'ArrowUp') {
+                this.#currSearchNavPos = clamp(0, this.#currSearchNavPos-1, this.#searchData.length-1)
+                this.toggleActiveElement(this.#currSearchNavPos);
+            } else if (ev.key === 'ArrowDown') {
+                this.#currSearchNavPos = clamp(0, this.#currSearchNavPos+1, this.#searchData.length-1)
+                this.toggleActiveElement(this.#currSearchNavPos);
+            } else if (ev.key === 'Enter' && this.#currSearchNavPos >= 0) {
+                const selectedRes = this.#searchData[this.#currSearchNavPos];
+                if (this.discardprev) this.discarted.push(selectedRes.id);
+                this.dispatchEvent(new SelectedSearchResult(selectedRes))
+                console.log('new item: ', selectedRes);
+                const currentEntry = this.#searchListGroupContainer?.querySelector('div[data-search-result] > a.active');
+                if (currentEntry instanceof HTMLAnchorElement) {
+                    console.log('href!!: ', currentEntry.href);
+                    this.handleSelectedClicked(currentEntry.href);
+                }
+            } else {
+                return;
+            }
         } else {
-            this.#currNoSearchItems = -1;
-            this.#currSearchNavPos = 0;
+            this.#currSearchNavPos = -1;
         }
     }
 
@@ -105,13 +148,27 @@ export default class ProfileSearch extends BaseElement {
         let makeUpDate = false;
         if (
             this.#searchSection &&
-            this.#searchSection instanceof Node &&
-            target instanceof Node
+            this.#searchSection instanceof HTMLElement &&
+            target instanceof HTMLElement
         ) {
             if (this.#searchSection.contains(target)) {
-                // console.log('jo inside section');
-                makeUpDate = this.#showRes !== true;
-                this.#showRes = true;
+                console.log('jo inside section!: entry: ', target);
+                const contDiv = target.closest('div[data-search-result]');
+                if (contDiv && contDiv instanceof HTMLElement && contDiv.dataset.searchResult && this.#searchData instanceof Array) {
+                    console.log('cont div: ', contDiv.dataset.searchResult);
+                    // ev.stopImmediatePropagation();
+                    ev.stopPropagation()
+                    ev.preventDefault();
+                    const selectedRes = this.#searchData[contDiv.dataset.searchResult];
+                    console.log('selected result: ', selectedRes);
+                    this.dispatchEvent(new SelectedSearchResult(selectedRes))
+                    this.handleSelectedClicked(target.closest('a')?.href ?? '');
+                    if (this.discardprev) this.discarted.push(selectedRes.id);
+                } else {
+                    makeUpDate = this.#showRes !== true;
+                    this.#showRes = true;
+                }
+                
             } else {
                 // console.log('NOT inside section');
                 makeUpDate = this.#showRes !== false;
@@ -121,24 +178,7 @@ export default class ProfileSearch extends BaseElement {
         if (makeUpDate) super.requestUpdate();
     }
 
-    /**
-     * @param {APITypes.SearchResult} userData
-     * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
-     */
-    static renderSearchEntry = (userData) => {
-        return html`
-            <a
-                class="list-group-item list-group-item-action text-body-secondary p-3"
-                href="/profile/${userData.id}"
-            >
-                <avatar-component radius="3" src="${userData.avatar}" size="40">
-                    <span class="m-2 text-truncate" slot="after"
-                        >${userData.username}</span
-                    >
-                </avatar-component>
-            </a>
-        `;
-    };
+    
 
     static renderOther = (str) =>
         html`<li class="list-group-item text-body-secondary fs-6 p-3">
@@ -146,12 +186,20 @@ export default class ProfileSearch extends BaseElement {
         </li>`;
 
     render() {
+
+        if (this.discardprev && this.#searchData instanceof Array)
+            this.#searchData = this.#searchData.filter((u)=>!this.discarted.includes(u.id))
+        else if (this.props.todiscard.length > 0 && this.#searchData instanceof Array)
+            this.#searchData = this.#searchData.filter((u)=>!this.props.todiscard.includes(u.id))
+
         if (typeof this.#searchData === 'string') {
             this.#currSearchRes = ProfileSearch.renderOther(this.#searchData);
         } else if (this.#searchData instanceof Array) {
-            this.#currSearchRes = this.#searchData.map((data) =>
-                ProfileSearch.renderSearchEntry(data),
-            );
+            this.#currSearchRes = this.#searchData.map((data, i) => html`
+                <div data-search-result="${i}" class="list-group-item list-group-item-action m-0 p-0" >
+                    ${avatarLink(data, "list-group-item list-group-item-action")}
+                </div>
+            `)
         } else {
             this.#currSearchRes = '';
         }
@@ -159,15 +207,14 @@ export default class ProfileSearch extends BaseElement {
         return html`
             <section
                 class=""
-                ${(el) => {
-                    this.#searchSection = el;
-                }}
+                ${(el) => { this.#searchSection = el; }}
             >
                 <div class="input-group input-group-lg">
                     <span class="input-group-text"
                         ><i class="fa-solid fa-magnifying-glass"></i
                     ></span>
                     <input
+                        ${(el) => { this.#inptElem = el; }}
                         @input=${this.handleInput.bind(this)}
                         id="user-search"
                         class="form-control"
@@ -187,9 +234,7 @@ export default class ProfileSearch extends BaseElement {
                             >
                                 <div
                                     class="list-group w-100"
-                                    ${(el) => {
-                                        this.#searchListGroupContainer = el;
-                                    }}
+                                    ${(el) => { this.#searchListGroupContainer = el; }}
                                 >
                                     ${this.#showRes ? this.#currSearchRes : ''}
                                 </div>

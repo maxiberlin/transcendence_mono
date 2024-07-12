@@ -38,13 +38,7 @@ class PongPaddle(GameObjDataClass):
         new_y = self.y + tick * self.dy * self.speed_y
         self.update_pos_direct(y=new_y)
 
-    def set_direction(self, dir: Dir, release: bool):
-        if release and self.dy == dir.value:
-            self.dy = PongPaddle.Dir.NONE.value
-        elif not release:
-            self.dy = dir.value
-
-    def set_direction2(self, action: ClientMoveDirection):
+    def set_direction(self, action: ClientMoveDirection):
         match action:
             case "up":
                 self.dy = PongPaddle.Dir.UP.value

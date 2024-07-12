@@ -5,7 +5,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable no-console */
-import { sessionService } from '../../services/api/API.js';
+import { sessionService } from '../../services/api/API_new.js';
 import { msg_to_main, msg_to_worker } from '../exchange/game_msg.js';
 
 // class WorkerEventTarget extends EventTarget {
@@ -161,7 +161,10 @@ export default class GameHub {
         throw new Error('WORKER MESSAGE ERROR');
     }
 
-    onWorkerMessage(msg) {}
+    onWorkerMessage(msg) {
+        console.log('worker message:');
+        console.dir(msg);
+    }
 
     /**
      * @param {KeyboardEvent} e

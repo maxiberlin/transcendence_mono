@@ -281,7 +281,7 @@ export class SessionStore {
     async cancelFriendRequest(id) {
         if (!this.#isLoggedIn || !this.#userData) return;
         // // console.log("cancel friend request: id: ", id);
-        await fetcher.$get(`/friend/request/cancel/${id}`);
+        await fetcher.$post(`/friend/request/cancel/${id}`, {});
         // await fetcher.$post("/friend/request/cancel", {bodyData: {receiver_id: id}});
         const data = await this.#fetchRequestsSent(this.#userData.id);
         this.#userData.requestsSent = data.data;
@@ -291,7 +291,7 @@ export class SessionStore {
     async acceptFriendRequest(id) {
         if (!this.#isLoggedIn || !this.#userData) return;
         // // console.log("accept friend request: id: ", id);
-        await fetcher.$get(`/friend/request/accept/${id}`);
+        await fetcher.$post(`/friend/request/accept/${id}`, {});
         const data = await this.#fetchRequestsReceived(this.#userData.id);
         this.#userData.requestsReceived = data.data;
         this.#pubsub.publish(this.#userData);
@@ -299,7 +299,7 @@ export class SessionStore {
 
     async rejectFriendRequest(id) {
         if (!this.#isLoggedIn || !this.#userData) return;
-        await fetcher.$get(`/friend/request/reject/${id}`);
+        await fetcher.$post(`/friend/request/reject/${id}`, {});
         const data = await this.#fetchRequestsReceived(this.#userData.id);
         this.#userData.requestsReceived = data.data;
         this.#pubsub.publish(this.#userData);

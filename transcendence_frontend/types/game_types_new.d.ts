@@ -7,11 +7,11 @@ declare namespace PongGameplayTypes {
 
     // TypedDict equivalents
     export interface GameSettings {
-        point_wait_time: number;
+        point_wait_time_ms: number;
         serve_mode: ServeMode;
         initial_serve_to: InitialServe;
         max_score: number;
-        tick_duration: number;
+        tick_rate: number;
     }
 
     export interface GameObjData {
@@ -73,6 +73,8 @@ declare namespace PongServerTypes {
     export interface GameUpdate {
         tag: 'server-game-update';
         timestamp: number;
+        tickno: number;
+        invalid_ticks: number;
         ball: PongGameplayTypes.GameObjPositionData;
         paddle_left: PongGameplayTypes.GameObjPositionData;
         paddle_right: PongGameplayTypes.GameObjPositionData;
@@ -148,6 +150,8 @@ declare namespace PongClientTypes {
 
     interface ClientMoveCommand extends ClientBaseCommand {
         cmd: 'client-move';
+        timestamp_sec: number;
+        timestamp_ms: number;
         action?: ClientMoveDirection;
         new_y?: number;
     }
@@ -275,7 +279,26 @@ declare namespace FromWorkerGameMessageTypes {
     export interface ClientDisconnected {
         message: 'from-worker-client-disconnected';
     }
-    export type FromWorkerMessage = GamePaused | GameResumed | ClientDisconnected;
+    export interface GameReady {
+        message: 'from-worker-game-ready';
+        startTime: number;
+    }
+    export interface GameError {
+        message: 'from-worker-error';
+        error: string;
+        errorCode: number;
+    }
+    export interface GameDone {
+        message: 'from-worker-game-done';
+        gameResults: object | undefined;
+    }
+    export type FromWorkerMessage =
+        | GameReady
+        | GamePaused
+        | GameResumed
+        | ClientDisconnected
+        | GameError
+        | GameDone;
 }
 
 declare namespace ToWorkerGameMessageTypes {

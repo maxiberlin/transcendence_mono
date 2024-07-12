@@ -71,6 +71,7 @@ function getErrorMessage(code) {
 
 /** @type {Pong | undefined} */
 let game;
+let gameResults;
 
 /** @type {WebSocket | undefined} */
 let socket;
@@ -136,7 +137,10 @@ function handleServerBroadCast(broadcast) {
 /** @type {Map<string, PongClientTypes.ClientCommand>} */
 const commandStack = new Map();
 let commandNbr = 1;
-
+/** @type {PongClientTypes.ClientCommand} */
+let lastCommand;
+/** @type {PongClientTypes.ClientMoveDirection | undefined} */
+let lastMove;
 /**
  *
  * @param {PongClientTypes.ClientCommand} command
@@ -146,6 +150,7 @@ function pushCommandToSocket(command) {
         command.id = commandNbr;
         commandStack.set(commandNbr.toString(), command);
         commandNbr += 1;
+        lastCommand = command
         socket?.send(JSON.stringify(command));
     } catch (error) {
         console.log('error sent to socket: ', error);
@@ -153,10 +158,17 @@ function pushCommandToSocket(command) {
 }
 
 /**
+ * @param {FromWorkerGameMessageTypes.FromWorkerMessage} message 
+ */
+function pushMessageToMainThread(message) {
+    self.postMessage(message);
+}
+
+/**
  * @param {PongClientTypes.ClientCommandResponse} response
  */
 function handleCommandResponse(response) {
-    printCommandResponse(response);
+    // printCommandResponse(response);
 }
 
 
@@ -176,6 +188,8 @@ function initSocket(socketUrl) {
 
         /** @param {MessageEvent} e */
         socket.onmessage = (e) => {
+
+
             /** @type {PongClientTypes.ClientCommandResponse | PongServerTypes.ServerMessage} */
             const message = JSON.parse(e.data);
             if ('tag' in message) {
@@ -200,47 +214,24 @@ function initSocket(socketUrl) {
             if (game) {
                 game.quitGame();
             }
+            if (e.code !== 1000) {
+                pushMessageToMainThread({message: "from-worker-error", error: "Server closed the connection", errorCode: e.code});
+            } else {
+                pushMessageToMainThread({message: "from-worker-game-done", gameResults});
+            }
+            self.close();
         };
     } catch (error) {
         console.log('error: ', error);
     }
 }
 
-
-function handleInit() {
-
-}
-
-function handleStart() {
-
-}
-
-function handlePause() {
-
-}
-
-function handleResume() {
-
-}
-
-function handleResize() {
-
-}
-
-function handleColorChange() {
-
-}
-
-function handleMove() {
-
-}
-
 /** @param {MessageEvent} ev */
 onmessage = (ev) => {
     /** @type {ToWorkerGameMessageTypes.GameWorkerMessage} */
     const msg = ev.data;
-    console.log('onmessage: ', msg.message);
-    console.dir(ev.data);
+    // console.log('onmessage: ', msg.message);
+    // console.dir(ev.data);
     switch (msg.message) {
         case 'game_worker_create_local':
             game = new Pong(msg);
@@ -252,10 +243,13 @@ onmessage = (ev) => {
             userId = msg.userId;
             break;
         case 'worker_game_move':
-            if (socket)
-                pushCommandToSocket({ cmd: 'client-move', new_y: msg.new_y, action: msg.action });
             try {
-                game?.movePaddle(msg.action, msg.new_y);
+                if (!game || (lastMove && lastMove == msg.action)) return;
+                const timestamp_ms = game.movePaddle(msg.action, msg.new_y);
+                if (!socket) return;
+                if (lastCommand.cmd == "client-move" && lastCommand.action == msg.action) return;
+                pushCommandToSocket({ cmd: 'client-move', new_y: msg.new_y, action: msg.action, timestamp_sec: timestamp_ms/1000, timestamp_ms: Math.round(timestamp_ms) });
+                lastMove = msg.action
             } catch (error) {
                 console.log(`error move paddle: ${error}`);
             }
@@ -269,12 +263,18 @@ onmessage = (ev) => {
             else game?.resumeGame();
             break;
         case 'worker_game_start':
-            if (socket) pushCommandToSocket({ cmd: 'client-ready' });
-            else game?.startGame();
+            console.log('worker_game_start! socket?: ', socket);
+            if (socket) {
+                console.log('push to socket: client ready');
+                pushCommandToSocket({ cmd: 'client-ready' });
+            }else {
+                game?.startGame();
+            }
             break;
         case 'worker_game_quit':
             if (socket) pushCommandToSocket({ cmd: 'client-leave-game' });
             else game?.quitGame();
+            self.close()
             break;
       
         case 'worker_game_resize':
@@ -287,3 +287,65 @@ onmessage = (ev) => {
             break;
     }
 };
+
+// /** @param {MessageEvent} ev */
+// onmessage = (ev) => {
+//     /** @type {ToWorkerGameMessageTypes.GameWorkerMessage} */
+//     const msg = ev.data;
+//     // console.log('onmessage: ', msg.message);
+//     // console.dir(ev.data);
+//     switch (msg.message) {
+//         case 'game_worker_create_local':
+//             game = new Pong(msg);
+//             userId = msg.userId;
+//             break;
+//         case 'game_worker_create_remote':
+//             game = new Pong(msg);
+//             if (msg.socketUrl) initSocket(msg.socketUrl);
+//             userId = msg.userId;
+//             break;
+//         case 'worker_game_move':
+//             try {
+//                 if (!game) return;
+//                 const timestamp_ms = game.movePaddle(msg.action, msg.new_y);
+//                 if (!socket) return;
+//                 if (lastCommand.cmd == "client-move" && lastCommand.action == msg.action) return;
+//                 pushCommandToSocket({ cmd: 'client-move', new_y: msg.new_y, action: msg.action, timestamp_sec: timestamp_ms/1000 });
+                
+//             } catch (error) {
+//                 console.log(`error move paddle: ${error}`);
+//             }
+//             break;
+//         case 'worker_game_pause':
+//             if (socket) pushCommandToSocket({ cmd: 'client-pause' });
+//             else game?.pauseGame();
+//             break;
+//         case 'worker_game_resume':
+//             if (socket) pushCommandToSocket({ cmd: 'client-resume' });
+//             else game?.resumeGame();
+//             break;
+//         case 'worker_game_start':
+//             console.log('worker_game_start! socket?: ', socket);
+//             if (socket) {
+//                 console.log('push to socket: client ready');
+//                 pushCommandToSocket({ cmd: 'client-ready' });
+//             }else {
+//                 game?.startGame();
+//             }
+//             break;
+//         case 'worker_game_quit':
+//             if (socket) pushCommandToSocket({ cmd: 'client-leave-game' });
+//             else game?.quitGame();
+//             self.close()
+//             break;
+      
+//         case 'worker_game_resize':
+//             game?.setCanvasSizes(msg);
+//             break;
+//         case 'worker_game_change_color':
+//             game?.changeColor(msg);
+//             break;
+//         default:
+//             break;
+//     }
+// };

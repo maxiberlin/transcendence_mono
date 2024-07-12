@@ -1,20 +1,18 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
-/**
- * @typedef {object} ToastNotificationData
- * @property {string | undefined} color
- * @property {string} message
- */
+export class ToastNotificationErrorEvent extends Event {
+    constructor(message) {
+        super("toast_notification_error", {bubbles: true});
+        this.message = message;
+    }
+}
 
-// const det = {
-//     color: '',
-//     message: '',
-// };
 
 export default class BsToasts extends BaseElement {
     constructor() {
         super(false, false);
         this.#onNotification = (event) => {
+            console.log('EVENTTTT toast');
             this.onNotification(event);
         };
     }
@@ -24,22 +22,20 @@ export default class BsToasts extends BaseElement {
     connectedCallback() {
         super.connectedCallback();
         document.addEventListener('render-notification', this.#onNotification);
+        document.addEventListener("toast_notification_error", this.#onNotification);
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
-        document.removeEventListener(
-            'render-notification',
-            this.#onNotification,
-        );
+        document.removeEventListener('render-notification', this.#onNotification );
+        document.removeEventListener('toast_notification_error', this.#onNotification );
     }
 
-    /** @param {CustomEvent} event  */
+    /** @param {ToastNotificationErrorEvent} event  */
     onNotification(event) {
-        // console.log('on notification!');
-        /** @type {ToastNotificationData} */
-        const data = event.detail;
-        this.renderToastErrorMessage(data.message);
+        if (event instanceof ToastNotificationErrorEvent) {
+            this.renderToastErrorMessage(event.message);
+        }
     }
 
     renderToastErrorMessage = (message) => {

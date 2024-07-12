@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .messages_client import ClientCommand, GameEngineMessage, GameEngineMessageResponse
 from channels_redis.core import RedisChannelLayer
@@ -29,15 +30,19 @@ class PlayerConsumer(AsyncWebsocketConsumer):
         self.messenger = msg_client.InternalMessenger(game_group_name=self.game_group_name, consumer_channel_name=self.channel_name)
         self.user: UserAccount | None = self.scope["user"] if "user" in self.scope else None
         self.channel_layer: RedisChannelLayer | None = get_channel_layer()
+        self.self_closed = False
+        self.last_update = time.perf_counter()
 
         if not self.channel_layer:
             logger.error("Channel layer not found")
+            self.self_closed = True
             await self.close()
             return
 
         
         if not self.user or not self.user.is_authenticated:
             logger.error("User not authenticated")
+            self.self_closed = True
             await self.close(code=msg_server.WebsocketErrorCode.NOT_AUTHENTICATED.value, reason="Not authenticated")
             return
 
@@ -53,34 +58,40 @@ class PlayerConsumer(AsyncWebsocketConsumer):
         # print(f"send to game_engine:")
 
         msg = self.messenger.join_game(self.user.pk, self.schedule_id)
-        print(f"message sent: {msg}")
+        # print(f"message sent: {msg}")
         await self.messenger.push_to_game_engine(msg)
 
 
     async def disconnect(self, close_code):
-        if self.user:
-            await self.messenger.push_to_game_engine(self.messenger.user_disconnected(self.user.pk))
-        # if self.channel_layer:
-        #     await self.channel_layer.send("game_engine", self.get_game_engine_message(clientCommand))
-        await self.close()
+        # print("closeeeed...disconnected?!?")
+        if not self.self_closed:
+            if self.user:
+                await self.messenger.push_to_game_engine(self.messenger.user_disconnected(self.user.pk))
+            await self.close()
+        if self.channel_layer:
+            await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
 
 
 
     async def receive(self, text_data):
         try:
-            clientCommand: ClientCommand = await json.loads(text_data)
+            clientCommand: ClientCommand = json.loads(text_data)
+            curr = time.perf_counter()
+        # if curr - self.last_update > 0.066:
+            # print(f"websocket received: command: {clientCommand}")
             if self.user:
                 clientCommand["user_id"] = self.user.pk
             if self.channel_layer:
                 # await self.channel_layer.send("game_engine", self.get_game_engine_message(clientCommand))
                 await self.messenger.push_to_game_engine(clientCommand)
+            self.last_update = curr
         except Exception as e:
             logger.error(f"Error in receive: {e}")
 
 
     async def handle_command_response(self, event: GameEngineMessageResponse):
 
-        print(f"command response: ", event)
+        # print(f"command response: ", event)
         match event["response"]["status_code"]:
             case (msg_server.WebsocketErrorCode.INVALID_SCHEDULE_ID.value
                 | msg_server.WebsocketErrorCode.INVALID_USER_ID.value
@@ -97,10 +108,17 @@ class PlayerConsumer(AsyncWebsocketConsumer):
 
     async def handle_broadcast(self, event: msg_server.ConsumerMessage):
         try:
-            data: dict[str, str | int | float] | None = event["server_broadcast"]
+            data = event["server_broadcast"]
+            if data and data["tag"] == "server-game-error":
+                self.self_closed = True
+                await self.close(code=data["close_code"])
+                # print("closeeee!!")
+                return
+
             await self.send(text_data=json.dumps(data))
             if data and data["tag"] == "server-game-end":
-                print("game end -> close connection")
+                # print("game end -> close connection")
+                self.self_closed = True
                 await self.close()
         except Exception as e:
             logger.error(f"Error in handle_broadcast: {e}")

@@ -72,6 +72,11 @@ const routes = [
         component: 'profile-view',
         title: 'Profile ',
     },
+    {
+        path: '/games/:game',
+        component: 'game-invite',
+        title: 'Game View ',
+    },
 ];
 
 const router = new Router(routes);

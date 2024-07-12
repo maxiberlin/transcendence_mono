@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { sessionService } from './services/api/API.js';
+import { sessionService } from './services/api/API_new.js';
 import router from './services/router.js';
 
 // Components
@@ -10,7 +10,6 @@ import BsDropDown from './components/bootstrap/BsDropDown.js';
 import BsModal from './components/bootstrap/BsModal.js';
 import BsToasts from './components/bootstrap/BsToasts.js';
 import AvatarComponent from './components/bootstrap/AvatarComponent.js';
-import { actions, renderDropdow } from './components/ActionButtons.js';
 import * as u from './components/utils.js';
 
 // Routes Web Components
@@ -24,10 +23,11 @@ import { ProfileView } from './routes/profile/ProfileView.js';
 import ProfileSearch from './routes/social/ProfileSearch.js';
 import FriendsView from './routes/social/FriendsView.js';
 import ChatView from './routes/social/ChatView.js';
+import GameInvite from './routes/home/GameInvite.js';
 
 const onDomLoaded = async () => {
-    await sessionService.fetchActiveSession();
-    // console.log('DOM LOADED');
+    await sessionService.login();
+    console.log('DOM LOADED');
     router.init('pong-app');
     // document.body.appendChild(document.createElement('pong-app'));
     // router.init("pong-app");

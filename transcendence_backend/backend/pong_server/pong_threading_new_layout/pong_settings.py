@@ -1,10 +1,10 @@
 from enum import Enum
 from typing import Literal
 import dataclasses
-from .game_base import dict_factory_str
 from .messages_server import ServeMode, ServeSide
 
-
+speeeeeed_ball = 20000
+speeeeeed_paddle = 18000
 @dataclasses.dataclass
 class PongSettings:
     width: int = dataclasses.field(default=40000)
@@ -12,17 +12,17 @@ class PongSettings:
     border_size: int = dataclasses.field(default=600)
     paddle_width: int = dataclasses.field(default=600)
     paddle_height: int = dataclasses.field(default=2600)
-    paddle_speed: int = dataclasses.field(default=7000)
+    paddle_speed: int = dataclasses.field(default=speeeeeed_paddle)
     wall_dist: int = dataclasses.field(default=600)
     ball_width: int = dataclasses.field(default=600)
     ball_height: int = dataclasses.field(default=600)
-    ball_speed: int = dataclasses.field(default=9000)
+    ball_speed: int = dataclasses.field(default=speeeeeed_ball)
 
-    point_wait_time: float = dataclasses.field(default=1.0)
-    serve_mode: ServeMode = dataclasses.field(default="serve-winner")
+    point_wait_time_sec: float = dataclasses.field(default=1.0)
+    serve_mode: ServeMode = dataclasses.field(default="serve-loser")
     initial_serve_to: ServeSide = dataclasses.field(default="serve-left")
     max_score: int = dataclasses.field(default=10)
-    tick_duration: float = dataclasses.field(default=0.05)
+    tick_rate: int = dataclasses.field(default=50)
 
 
 # class PongSettings:

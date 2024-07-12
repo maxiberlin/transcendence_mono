@@ -1,6 +1,24 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
+/**
+ * @customElement bs-button
+ */
 export default class BsButton extends BaseElement {
+    // static props = {
+    //     color: Boolean,
+    //     outline: Boolean,
+    //     small: Boolean,
+    //     large: Boolean,
+    //     disabled: Boolean,
+    //     dropdownitem: Boolean,
+    //     stretch: Boolean,
+    //     icon: String,
+    //     iconright: String,
+    //     radius: Number,
+    //     loadingtext: String,
+    //     text: String,
+    // }
+
     static observedAttributes = [
         'color',
         'outline',
@@ -29,8 +47,11 @@ export default class BsButton extends BaseElement {
         this.loadingtext = '';
         this.dropdownitem = false;
         this.stretch = false;
+        this.disabled = false;
 
-        this._async_handler = () => {};
+        this.props._async_handler = async () => {
+            await new Promise((res) => setTimeout(res, 1000));
+        };
 
         this._loading = false;
     }
@@ -38,190 +59,202 @@ export default class BsButton extends BaseElement {
     async onClick() {
         this._loading = true;
         super.requestUpdate();
-        await this._async_handler();
+        await this.props._async_handler();
         this._loading = false;
         super.requestUpdate();
     }
 
-    getIcon = () => {
+    getSpinner = () => html`<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>`
+
+    getIcon = (disable) => this.icon ? html`<i class="${disable ? 'd-none':''} fa-solid fa-${this.icon}"></i>` : ''
+
+    getIcono = () => {
         /** @type {string | import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral} */
-        let rend = '';
-        if (this._loading) {
-            rend = html`
-                <span
-                    class="spinner-border spinner-border-sm"
-                    aria-hidden="true"
-                ></span>
-            `;
-        } else if (this.icon) {
-            rend = html`<i class="fa-solid fa-${this.icon}"></i>`;
-        }
-        return html`
+        
+        console.log('icon  right: ', this.iconright);
+       
+        // let rend = this._loading ? this.getSpinner() : this.icon ? this.getIcon() : '';
+        let rend = html`
+            <span>
+                ${this._loading ? this.getSpinner() : ''}
+                ${this.getIcon(this._loading)}
+            </span>
+        `
+        const margin = `m${this.iconright ? 's' : 'e'}-1`
+        return !this.icon ? rend : html`
             <span
-                style="width: 1.25em;"
-                class=" ${this.text ? 'text-start' : ''} ${this.text ?
-                    `m${this.iconright ? 's' : 'e'}-1`
-                :   ``} "
+                style="${'width: 1.25em;'}"
+                class="${this.text ? 'text-start ${margin}' : ''}"
             >
                 ${rend}
             </span>
         `;
+
         // return html`<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>`;
         // <i class="fa-solid fa-fw fa-spinner fa-spin-pulse"></i>
     };
 
     render() {
         // console.log("render button");
+        // console.dir(this)
+        
         const color = `btn-${this.outline ? 'outline-' : ''}${this.color}`;
-        let size = '';
-        if (this.small) {
-            size = 'btn-sm';
-        } else if (this.large) {
-            size = 'btn-lg';
-        }
+        const size = this.small ? 'btn-sm' : this.large ? 'btn-lg' : '';
         const radius = this.radius ? `rounded-${this.radius}` : '';
+        
+        if (this.loadingtext.length == 0) this.loadingtext = this.text;
+        const text = this._loading ? this.loadingtext : this.text;
+        const stretch = this.stretch ? 'w-100':'';
+        const isDropdown = `justify-content-${this.dropdownitem ? 'start dropdown-item' : 'evenly'}`;
+        const isActive = this._loading ? 'active' : '';
+        const isPressedAria = this._loading ? "true" : 'false';
+        const isDisabledAria = this._loading || this.disabled ? "true" : 'false';
         return html`
             <button
                 @click=${this.onClick.bind(this)}
-                class="${this.stretch ? 'w-100' : (
-                    ''
-                )} d-inline-flex align-items-center justify-content-${(
-                    this.dropdownitem
-                ) ?
-                    'start'
-                :   'evenly'} ${radius} btn ${color} ${size} ${(
-                    this.dropdownitem
-                ) ?
-                    'dropdown-item'
-                :   ''} "
-                ?disabled=${this._loading}
+                class="${stretch} ${isActive} ${radius} btn ${color} ${size} d-inline-flex align-items-center ${isDropdown}"
+                ?disabled=${this._loading || this.disabled}
                 role="button"
+                aria-pressed="${isPressedAria}"
+                aria-disabled="${isDisabledAria}"
             >
-                ${this._loading && this.iconright ?
-                    html`<span role="status">${this.loadingtext}</span>`
-                :   ''}
-                ${!this._loading && this.iconright ? this.text : ''}
-                ${this.getIcon()}
-                ${this._loading && !this.iconright ?
-                    html`<span role="status">${this.loadingtext}</span>`
-                :   ''}
-                ${!this._loading && !this.iconright ? this.text : ''}
+                ${this.iconright ? html`
+                    <span role="status">${text}</span>
+                    ${this.getIcono()}
+                ` : html`
+                    ${this.getIcono()}
+                    <span role="status">${text}</span>
+                `}
+               
             </button>
         `;
     }
 }
 customElements.define('bs-button', BsButton);
 
-// ${this._loading ? this.getSpin() : this.icon ? html`<i class="fa-solid ${this.text === "" ? "" : "fa-fw"} fa-${this.icon}"></i>` : ""}
+// ${this._loading && this.iconright ?
+//     html`<span role="status">${text}</span>`
+// :   ''}
+// ${!this._loading && this.iconright ? this.text : ''}
+// ${(this.icon || this.iconright) ? this.getIcon() : ''}
+// ${this._loading && !this.iconright ?
+//     html`<span role="status">${this.loadingtext}</span>`
+// :   ''}
+// ${!this._loading && !this.iconright ? this.text : ''}
 
-// ${this._loading ? html`<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>` : this.icon ? html`<i class="fa-solid fa-${this.icon}"></i>` : ""}
 
-// getSpin = () => {
+// /**
+//  * @customElement bs-button
+//  */
+// export default class BsButton extends BaseElement {
+//     static observedAttributes = [
+//         'color',
+//         'outline',
+//         'small',
+//         'large',
+//         'disabled',
+//         'icon',
+//         'iconright',
+//         'radius',
+//         'loadingtext',
+//         'text',
+//         'dropdownitem',
+//         'stretch',
+//     ];
 
-//     return html`
-//         <span style="width: 1.25em; height: 1.25em">
-
-//         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-//         </span>
-
-//          `;
-// }
-
-// getSpin = () => {
-//     /** @type {Array<Keyframe>} */
-//     const frames =  [
-//         { transform: "rotate(0)" },
-//         { transform: "rotate(360deg)" },
-//     ]
-
-//     /** @type {KeyframeAnimationOptions} */
-//     const opt = {
-//         duration: 2000,
-//         iterations: Infinity,
-//     };
-
-//     /** @param {HTMLElement} el */
-//     const addAnim = (el) => {
-//         el.animate(frames, opt);
-//     }
-
-//     return html`<i ${(el)=>{addAnim(el)}} class="fa-solid fa-fw fa-spinner"></i>`;
-// }
-
-// export class BsButtonBs extends BaseElem {
-//     static observedAttributes = ["color", "outline", "small", "large", "disabled", "icon", "iconright", "radius", "loadingtext"];
 //     constructor() {
-//         super();
+//         super(false, false);
 //         this.outline = false;
-//         this.color = "primary";
+//         this.color = 'primary';
 //         this.small = false;
 //         this.large = false;
-//         this.icon = "";
+//         this.icon = '';
 //         this.iconright = false;
-//         this.radius = "";
-//         this.loadingtext = "";
+//         this.radius = '';
+//         this.text = '';
+//         this.loadingtext = '';
+//         this.dropdownitem = false;
+//         this.stretch = false;
 
-//         this._async_handler = () => {};
+//         this.props._async_handler = () => {};
 
 //         this._loading = false;
 //     }
 
-//     async onClick(ev) {
-//         console.log("onClick!");
+//     async onClick() {
 //         this._loading = true;
 //         super.requestUpdate();
-//         setTimeout(async () => {
-//             await this._async_handler();
-//             this._loading = false;
-//             super.requestUpdate();
-//         }, 1000);
+//         await this.props._async_handler();
+//         this._loading = false;
+//         super.requestUpdate();
 //     }
 
-//     getSpinner = () => html`
-//         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-//         <span role="status">${this.loadingtext}...</span>
-//     `
-
-//     getSpin = () => {
-//         /** @type {Array<Keyframe>} */
-//         const frames =  [
-//             { transform: "rotate(0)" },
-//             { transform: "rotate(360deg)" },
-//         ]
-
-//         /** @type {KeyframeAnimationOptions} */
-//         const opt = {
-//             duration: 2000,
-//             iterations: Infinity,
-//         };
-
-//         /** @param {HTMLElement} el */
-//         const addAnim = (el) => {
-//             el.animate(frames, opt);
+//     getIcon = () => {
+//         /** @type {string | import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral} */
+//         let rend = '';
+//         if (this._loading) {
+//             rend = html`
+//                 <span
+//                     class="spinner-border spinner-border-sm"
+//                     aria-hidden="true"
+//                 ></span>
+//             `;
+//         } else if (this.icon) {
+//             rend = html`<i class="fa-solid fa-${this.icon}"></i>`;
 //         }
-
-//         return html`<i class="fa-solid fa-fw fa-spinner fa-spin-pulse"></i>`;
-//     }
+//         return html`
+//             <span
+//                 style="${'width: 1.25em;'}"
+//                 class=" ${this.text ? 'text-start' : ''} ${this.text ?
+//                     `m${this.iconright ? 's' : 'e'}-1`
+//                 :   ``} "
+//             >
+//                 ${rend}
+//             </span>
+//         `;
+//         // return html`<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>`;
+//         // <i class="fa-solid fa-fw fa-spinner fa-spin-pulse"></i>
+//     };
 
 //     render() {
-//         const color = `btn-${this.outline ? "outline-" : ""}${this.color}`;
-//         const size = this.small ? "btn-sm" : this.large ? "btn-lg" : "";
-//         const radius = this.radius ? `rounded-${this.radius}` : "";
+//         console.log("render button");
+//         console.dir(this)
+//         const color = `btn-${this.outline ? 'outline-' : ''}${this.color}`;
+//         let size = '';
+//         if (this.small) {
+//             size = 'btn-sm';
+//         } else if (this.large) {
+//             size = 'btn-lg';
+//         }
+//         const radius = this.radius ? `rounded-${this.radius}` : '';
 //         return html`
-//             <button @click=${this.onClick.bind(this)} class="${radius} btn ${color} ${size}" ?disabled=${this._loading} role="button">
-//             ${(this._loading && this.iconright) ? html`<span role="status">${this.loadingtext}</span>` : ""}
-//             ${(!this._loading && this.iconright) ? html`<slot></slot>` : ""}
-
-//             ${this._loading ?
-//                     html`<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>`
-//                 : this.icon ?
-//                     html`<i class="fa-solid fa-fw fa-${this.icon}"></i>`
-//                 : ""}
-
-//             ${(this._loading && !this.iconright) ? html`<span role="status">${this.loadingtext}</span>` : ""}
-//             ${(!this._loading && !this.iconright) ? html`<slot></slot>` : ""}
+//             <button
+//                 @click=${this.onClick.bind(this)}
+//                 class="${this.stretch ? 'w-100' : (
+//                     ''
+//                 )} d-inline-flex align-items-center justify-content-${(
+//                     this.dropdownitem
+//                 ) ?
+//                     'start'
+//                 :   'evenly'} ${radius} btn ${color} ${size} ${(
+//                     this.dropdownitem
+//                 ) ?
+//                     'dropdown-item'
+//                 :   ''} "
+//                 ?disabled=${this._loading}
+//                 role="button"
+//             >
+//                 ${this._loading && this.iconright ?
+//                     html`<span role="status">${this.loadingtext}</span>`
+//                 :   ''}
+//                 ${!this._loading && this.iconright ? this.text : ''}
+//                 ${(this.icon || this.iconright) ? this.getIcon() : ''}
+//                 ${this._loading && !this.iconright ?
+//                     html`<span role="status">${this.loadingtext}</span>`
+//                 :   ''}
+//                 ${!this._loading && !this.iconright ? this.text : ''}
 //             </button>
-//         `
+//         `;
 //     }
 // }
-// customElements.define("bs-button-bs", BsButtonBs);
+// customElements.define('bs-button', BsButton);

@@ -23,8 +23,8 @@ import time
 
 
 GAME_CHANNEL_ALIAS = "default"
-JOIN_TIMEOUT = 20
-RECONNECT_TIMEOUT = 10
+JOIN_TIMEOUT = 15
+RECONNECT_TIMEOUT = 7
 IDLE_TIMEOUT = 20
 START_GAME_TIMEOUT = 10
 
@@ -79,7 +79,7 @@ class GameConsumer(AsyncConsumer):
             # if internal and internal == 1 and event["client_command"]["cmd"] != "client-join-game":
             #     raise msg_server.CommandError("Invalid command", msg_server.WebsocketErrorCode.INVALID_COMMAND)
 
-            print(f"GAME ENGINE MESSAGE: {event}")
+            # print(f"GAME ENGINE MESSAGE: {event}")
 
             match event["client_command"]["cmd"]:
 
@@ -269,6 +269,7 @@ class GameHandle:
 
 
     def player_ready(self, user_id: int):
+        logger.info(f"GameHandle: player_ready: ${user_id}")
         self.ready_user_ids.add(user_id)
 
     def all_players_ready(self):
@@ -291,6 +292,9 @@ class GameHandle:
             else:
                 logger.info(f"GameHandle: player_disconnected: user: {user_id}, game not started, don't trigger reconnect timeout and pause")
             self.connected_user_ids.remove(user_id)
+            if len(self.connected_user_ids) == 0:
+                logger.info("GameHandle: remove GameHandle, because all clients are gone")
+                await GameHandle.remove_game(game_handle=self)
         else:
             logger.error(f"GameHandle: player_disconnected: user: {user_id}, not in the game: {self.connected_user_ids}")
 
@@ -391,7 +395,7 @@ class GameHandle:
             self.q: queue.Queue[msg_client.GameEngineMessage] = queue.Queue()
             self.game = PongGame(self.settings, self.game_group_name, self.q, self.gameScheduleObj, self.channel_alias)
             jooda = self.game.get_initial_game_data(START_GAME_TIMEOUT)
-            print(f"jodaa", jooda.to_dict())
+            # print(f"jodaa", jooda.to_dict())
             await msg_server.async_send_to_consumer(jooda, group_name=self.game_group_name)
             # await self.__start_game()
         
@@ -455,7 +459,7 @@ async def join_game_thread(game: PongGame | None):
             try:
                 future = asyncio.get_running_loop().run_in_executor(executor, 
                 functools.partial(join_game_thread_executor, game))
-                future.add_done_callback(lambda future: print("future done: ", future))
+                # future.add_done_callback(lambda future: print("future done: ", future))
                 await future
                 
             except Exception as e:

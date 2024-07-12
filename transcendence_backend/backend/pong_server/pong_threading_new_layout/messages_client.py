@@ -56,6 +56,8 @@ class ClientReadyCommand(ClientBaseCommand):
 class ClientMoveCommand(ClientBaseCommand):
     cmd: ClientCommands.CLIENT_MOVE.value
     # payload: ClientMovePayload
+    timestamp_sec: float
+    timestamp_ms: int
     action: ClientMoveDirection
     new_y: float
 

@@ -2,9 +2,9 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { renderListCard, rendListItem, renderCardInfo } from '../../components/bootstrap/BsCard.js';
 
 import { actions } from '../../components/ActionButtons.js';
-import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
+import { renderAvatar, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 
-import { sessionService } from '../../services/api/API.js';
+import { sessionService } from '../../services/api/API_new.js';
 
 export default class GameWindow extends BaseElement {
     constructor() {
@@ -13,85 +13,96 @@ export default class GameWindow extends BaseElement {
         this.sessionUser = sessionService.subscribe(this);
     }
 
+    /** @type {APITypes.GameInvitationItem[]} */
     userInvitations = [
         {
             invite_id: 1,
-            id: '6',
+            id: 6,
             avatar: 'https://picsum.photos/200/300?random=1',
             username: 'peterjo',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '7',
+            id: 7,
             avatar: 'https://picsum.photos/200/300?random=2',
             username: 'dedr werber',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '8',
+            id: 8,
             avatar: 'https://picsum.photos/200/300?random=3',
             username: 'hayloo',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '9',
+            id: 9,
             avatar: 'https://picsum.photos/200/300?random=4',
             username: 'dewdw',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '2',
+            id: 2,
             avatar: 'https://picsum.photos/200/300?random=5',
             username: 'petdewh5erjo',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '1',
+            id: 1,
             avatar: 'https://picsum.photos/200/300?random=6',
             username: 'giorghinho',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '10',
+            id: 10,
             avatar: 'https://picsum.photos/200/300?random=7',
             username: 'marmelade',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: null,
         },
         {
             invite_id: 1,
-            id: '34',
+            id: 34,
             avatar: 'https://picsum.photos/200/300?random=8',
             username: 'xoxoxP',
-            game_id: 'pong',
+            game_id: 0,
             game_mode: '1v1',
+            alias: '',
+            online: true,
         },
     ];
 
-    // <div class="col-12 col-sm-auto text-end align-self-stretch">${actions.receivedGameInvitations(data.invite_id, false)}</div>
     render() {
         /** @type {APITypes.UserData | undefined} */
-        const userData = this.sessionUser.value;
-        // const gameInvitationsReceived = userData?.gameInvitationsReceived;
+        const userData = this.sessionUser.value?.user;
         const gameInvitationsReceived = this.userInvitations;
-        const gameInvitationsSent = userData?.gameInvitationsSent;
-        const gameSchedule = userData?.gameSchedule;
-
-        // const { gameInvitationsReceived } = userData;
-        // const { gameInvitationsSent } = userData;
-        // const { gameSchedule } = userData;
+        const gameInvitationsSent = this.sessionUser.value?.game_invitations_sent;
+        const gameSchedule = this.sessionUser.value?.game_schedule;
 
         return html`
             <div class="mt-3 container-fluid text-center">
@@ -104,14 +115,9 @@ export default class GameWindow extends BaseElement {
                                 rendListItem(html`<p class="text-center m-0">No Invitations received</p>`)
                             :   gameInvitationsReceived.map((data) =>
                                     rendListItem(html`
-                                        ${renderAvatar(
-                                            Number(data.id),
-                                            data.username,
-                                            data.avatar,
-                                            'after',
-                                            '',
-                                            'col-6 col-sm-4 text-center ',
-                                        )}
+                                        <div class="col-6 col-sm-4 text-center">
+                                            ${avatarLink(data)}
+                                        </div>
                                         <div class="col-3 col-sm-2 text-center">
                                             ${renderCardInfo('Game', data.game_id)}
                                         </div>
@@ -146,14 +152,7 @@ export default class GameWindow extends BaseElement {
                                 rendListItem(html`<p class="text-center m-0">No Invitations sent</p>`)
                             :   gameInvitationsSent.map((data) =>
                                     rendListItem(html`
-                                        ${renderAvatar(
-                                            data.id,
-                                            data.username,
-                                            data.avatar,
-                                            'after',
-                                            '',
-                                            'col-6 col-sm-4 text-center ',
-                                        )}
+                                        ${avatarLink(data)}
                                         <div class="col-3 col-sm-2 text-center">
                                             ${renderCardInfo('Game', data.game_id)}
                                         </div>
@@ -179,22 +178,10 @@ export default class GameWindow extends BaseElement {
                                 rendListItem(html`<p class="text-center m-0">No Invitations received</p>`)
                             :   gameSchedule.map((data) =>
                                     rendListItem(html`
-                                        <div
-                                            class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center"
-                                        >
-                                            ${renderAvatar(
-                                                data.player_one.id,
-                                                data.player_one.username,
-                                                data.player_one.avatar,
-                                                'before',
-                                            )}
+                                        <div class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center">
+                                            ${avatarLink(data.player_one)}
                                             ${renderCardInfo('VS', '')}
-                                            ${renderAvatar(
-                                                data.player_two.id,
-                                                data.player_two.username,
-                                                data.player_two.avatar,
-                                                'after',
-                                            )}
+                                            ${avatarLink(data.player_two)}
                                         </div>
                                         <div class="col-3 col-md-2">${renderCardInfo('Game', 'pong')}</div>
                                         <div class="col-3 col-md-2">${renderCardInfo('Mode', '1v1')}</div>

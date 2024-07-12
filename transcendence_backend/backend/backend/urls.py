@@ -19,6 +19,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from .errorhandler import error_404
+from django.views.defaults import page_not_found
+
+handler404 = error_404
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,6 +33,8 @@ urlpatterns = [
 
     # path('remote', include('pong_server.urls')),
 ]
+
+
 
 
 

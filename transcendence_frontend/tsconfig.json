@@ -14,8 +14,18 @@
         "types": [
             "vitest/globals"
         ],
+        "plugins": [
+            {
+                "name": "ts-lit-plugin",
+                "strict": true,
+                "rules": {
+                    "no-missing-import": "off"
+                }
+            }
+        ]
     },
     "include": [
+        "public/**/*",
         "src/**/*",
         "types/**/*",
     ],

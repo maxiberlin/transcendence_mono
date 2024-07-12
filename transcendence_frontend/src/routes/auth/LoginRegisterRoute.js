@@ -1,5 +1,5 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { sessionService } from '../../services/api/API.js';
+import { sessionService } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
 
 /**

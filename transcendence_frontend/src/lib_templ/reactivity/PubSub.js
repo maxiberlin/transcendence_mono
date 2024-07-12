@@ -1,6 +1,8 @@
 import BaseBase from '../BaseBase.js';
 import PubSubConsumer from './PubSubConsumer.js';
 
+
+
 export default class PubSub extends EventTarget {
     static #nbr = 0;
 
@@ -17,10 +19,11 @@ export default class PubSub extends EventTarget {
     }
 
     /**
+     * @template T
      * @param {any} initialValue initial value
      * @param {BaseBase} [host] host element, that triggers a rerender
      * @param {boolean} [force] force update, event if values are same
-     * @returns {PubSubConsumer} returns new PubSubConsumer instance
+     * @returns {PubSubConsumer<T>} returns new PubSubConsumer instance
      */
     subscribe(initialValue, host = undefined, force = false) {
         return new PubSubConsumer(this, initialValue, force, host);
@@ -31,8 +34,8 @@ export default class PubSub extends EventTarget {
      * @param {T} data data to publish
      */
     publish(data) {
-        // console.log('publish: data: ', data);
-        // console.log('eventType: ', this.eventType);
+        console.log('publish: data: ', data);
+        console.log('eventType: ', this.eventType);
         this.dispatchEvent(new CustomEvent(this.eventType, { detail: data }));
     }
 }

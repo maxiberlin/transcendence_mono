@@ -1,4 +1,5 @@
 import { BaseElement } from '../BaseElement.js';
+import { NotFoundComp, InvalidComp } from './routerDefaults.js';
 
 /**
  * Beschreibt ein Objekt, das eine Route in einer Anwendung darstellt.
@@ -195,13 +196,17 @@ export default class Router {
      * @param {boolean} replace
      */
     go(route, addToHistory = true, replace = false) {
-        // console.log('router go!, curr scroll: ', window.history.scrollRestoration);
+        console.log('router go!, curr scroll: ', window.history.scrollRestoration);
         if (!this.#isInit) this.#isInit = true;
+
+        const url = new URL(route, window.location.origin);
+        route = url.pathname;
 
         let component;
         const params = {};
         const urlSegments = route.split('/').slice(1);
         let matchObj = this.#findRoute(urlSegments, params);
+        console.log('matchObj Router: ', matchObj);
         if (!matchObj) matchObj = Router.componentDefault404;
         component = document.createElement(matchObj.component);
         if (!component) {

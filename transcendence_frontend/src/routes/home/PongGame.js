@@ -135,7 +135,7 @@ export default class GameModal extends BaseElement {
         super.requestUpdate();
 
         if (!this.#canvas || !this.#wrapper) return;
-        this.currentGame = await GameHub.startGame('pong', this.#canvas, this.props.game_data, false);
+        this.currentGame = await GameHub.startGame('pong', this.#canvas, this.props.game_data, true);
         this.#closeObs = useCanvasSizes(this.#wrapper, this.#aspectRatio, (newW, newH) => {
             if (!this.#canvas || !this.#wrapper) return;
             this.#canvas.style.width = `${newW}px`;
@@ -208,7 +208,11 @@ export default class GameModal extends BaseElement {
             <button type="button" class="btn btn-info" @click=${() => { this.currentGame?.continueGame(); }} >
                 continue game
             </button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                @click=${() => { this.currentGame?.quitGame(); }}
+            >
+                Close
+            </button>
         </div>
     `;
 

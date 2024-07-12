@@ -67,6 +67,10 @@ export default class PongPaddle extends DrawObj {
     }
 
     update(elapsed) {
+        // if (this.x < 0.5) {
+        //     console.log(`paddle left: top: ${this.top}`);
+        //     console.log(`paddle left: bottom: ${this.bottom}`);
+        // }
         const nY = this.y + this.speedY * elapsed * this.dy;
         if (nY === 0) throw new Error('nY === 0');
 

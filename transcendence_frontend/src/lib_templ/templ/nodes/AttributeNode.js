@@ -42,6 +42,32 @@ export default class AttributeMultiNode extends BaseNode {
 
     #initialInit = false;
 
+    #toCamel = (s) => s.replace(/-./g, (x) => x[1].toUpperCase());
+    /**
+     * @param {string} res 
+     */
+    #setStyleAttribute(res) {
+        const arr = res.split(';');
+        arr.forEach((style) => {
+            const [keydashed, val] = style.split(':')
+            // console.log(`try to set style: ${keydashed} to ${val}`);
+            if (keydashed && val) {
+                keydashed.trim()
+                val.trim()
+                const key = this.#toCamel(keydashed)
+                if (this.element instanceof HTMLElement) {
+                    // if (this.element.style.prototype.hasOwnProperty(key))
+                    // this.element.style[key] = val;
+                    try {
+                        this.element.style[key] = val;
+                    } catch (error) {
+                        console.error(`unable to set style: ${key} to ${val}`);
+                    }
+                }
+            }
+        });
+    }
+
     /**
      * @param {number} changeCount
      */
@@ -60,7 +86,10 @@ export default class AttributeMultiNode extends BaseNode {
         }
         res += this.strings[this.strings.length - 1];
         // // // console.log("res: ", res);
-        this.element.setAttribute(this.attrName, res);
+        if (this.attrName === 'style')
+            this.#setStyleAttribute(res);
+        else
+            this.element.setAttribute(this.attrName, res);
         this.#initialInit = true;
     }
 

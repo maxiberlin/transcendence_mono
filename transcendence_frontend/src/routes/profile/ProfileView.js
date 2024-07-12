@@ -16,25 +16,26 @@
 //     rendListItem,
 // } from '../../modules.js';
 
-import { actions, renderDropdow } from '../../components/ActionButtons.js';
+import { actions, actionButtonDropdowns, actionButtonGroups } from '../../components/ActionButtons.js';
 import {
-  rendListItem,
-  renderCard,
-  renderCardInfo,
-  renderListCard,
+    rendListItem,
+    renderCard,
+    renderCardInfo,
+    renderListCard,
 } from '../../components/bootstrap/BsCard.js';
 import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { fetcher, sessionService } from '../../services/api/API.js';
+import { fetcher, sessionService, userAPI } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
+import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
 
 export class ProfileSettingsView extends BaseElement {
-  constructor() {
-    super(false, false);
-  }
+    constructor() {
+        super(false, false);
+    }
 
-  render() {
-    return html`
+    render() {
+        return html`
       <div class="mb-3">
         <label for="profile-edit-firstname" class="form-label"
           >First Name</label
@@ -60,210 +61,132 @@ export class ProfileSettingsView extends BaseElement {
         />
       </div>
     `;
-  }
+    }
 }
 window.customElements.define('profile-settings-view', ProfileSettingsView);
 
 export class ProfileView extends BaseElement {
-  constructor() {
-    super(false, false);
-    this.profileUserData = {
-      avatar: '',
-      username: '',
-      first_name: '',
-      last_name: '',
-      last_login: '',
-      date_joined: '',
-      total_games: 8,
-      total_wins: 5,
-      total_draw: 1,
-      total_losses: 2,
-      ranking: 14,
-      is_self: false,
-      is_friend: false,
-    };
-    this.sessionUser = sessionService.subscribe(this, true);
-  }
-
-  /**
-   * @param {string} route
-   * @param {object} params
-   * @returns {Promise<symbol | void>}
-   */
-  async onBeforeMount(route, params) {
-    if (!sessionService.isLoggedIn) {
-      return router.redirect('/');
+    constructor() {
+        super(false, false);
+        this.sessionUser = sessionService.subscribe(this, true);
     }
+    /** @type {APITypes.ApiResponse<APITypes.UserData> | undefined} */
+    profileResponse;
+    /** @type {APITypes.UserData | undefined} */
+    profileUserData;
+    routerParams = {};
 
-    if (
-      (this.sessionUser.value && !params.pk) ||
-      this.sessionUser.value.pk === params.pk
-    ) {
-      this.profileUserData = this.sessionUser.value;
-      return undefined;
-    }
-    if (params.pk) {
-      try {
-        this.profileUserData = await fetcher.$get(`/profile/${params.pk}`);
-      } catch (error) {
-        // console.log(error);
-        this.#isError = error;
-        this.#isError.pk = params.pk;
-        if (error instanceof Error) {
-          // console.log('dispatch notify event');
-          this.#isError.data = { message: error.message };
-          document.dispatchEvent(
-            new CustomEvent('render-notification', {
-              detail: { message: this.#isError.data.message },
-              bubbles: true,
-            }),
-          );
-          return router.redirect('/');
+    /**
+     * @param {string} route
+     * @param {object} params
+     * @returns {Promise<symbol | void>}
+     */
+    async onBeforeMount(route, params) {
+        if (!sessionService.isLoggedIn) {
+            return router.redirect('/');
         }
-      }
-    }
-    return undefined;
-  }
-
-  #isError;
-
-  /**
-   * @param {APITypes.UserData} userData
-   * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
-   */
-  getActionButtons = (userData) => {
-    if (userData.is_self)
-      return html`
-        <a
-          href="/settings"
-          class="btn btn-outline-primary px-4 p-2 m-2 rounded-4"
-        >
-          <i class="fa-solid fa-pen-to-square pe-2"></i>Edit Profile
-        </a>
-        <a href="/logout" class="btn btn-danger px-4 p-2 m-2 rounded-4">
-          <i class="fa-solid fa-right-from-bracket pe-2"></i>Logout
-        </a>
-      `;
-    let data;
-    // console.log("render new Profile Data -> render new Button");
-    // console.log(this.sessionUser.value)
-
-    data = sessionService.getFriend(userData.id);
-    if (data !== undefined) {
-      return html`
-        <button disabled class="btn btn-dark me-2">
-          <i class="fa-solid fa-user-check"></i>
-        </button>
-        ${renderDropdow(
-          { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-          [
-            actions.removeFriend(userData.id, {
-              host: this,
-              dropdownitem: true,
-            }),
-            actions.blockUser(userData.id, {
-              cb: () => {
-                router.redirect(`/profile/${userData.id}`);
-              },
-              dropdownitem: true,
-            }),
-          ],
-        )}
-      `;
-    }
-    data = sessionService.getReceivedRequest(userData.id);
-    if (data !== undefined) {
-      return html`
-        ${actions.acceptFriendRequest(data.request_id, {
-          cb: () => {
-            super.requestUpdate();
-          },
-        })}
-        ${actions.rejectFriendRequest(data.request_id, {
-          cb: () => {
-            super.requestUpdate();
-          },
-        })}
-        ${renderDropdow(
-          { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-          [
-            actions.blockUser(userData.id, {
-              cb: () => {
-                router.redirect(`/profile/${userData.id}`);
-              },
-              dropdownitem: true,
-            }),
-          ],
-        )}
-      `;
-    }
-    data = sessionService.getSentRequest(userData.id);
-    if (data !== undefined) {
-      return html`
-        <button disabled class="btn btn-dark me-2">
-          <i class="fa-solid fa-user-clock"></i>
-        </button>
-        ${actions.cancelFriendRequest(userData.id, {
-          cb: () => {
-            super.requestUpdate();
-          },
-        })}
-        ${renderDropdow(
-          { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-          [
-            actions.blockUser(userData.id, {
-              cb: () => {
-                router.redirect(`/profile/${userData.id}`);
-              },
-              dropdownitem: true,
-            }),
-          ],
-        )}
-      `;
-    }
-    return html`
-      ${actions.sendFriendRequest(userData.id, {
-        cb: () => {
-          super.requestUpdate();
-        },
-      })}
-      ${renderDropdow(
-        { color: 'dark', outline: true, icon: 'ellipsis-vertical' },
-        [
-          actions.blockUser(userData.id, {
-            cb: () => {
-              router.redirect(`/profile/${userData.id}`);
-            },
-            dropdownitem: true,
-          }),
-        ],
-      )}
-    `;
-  };
-
-  render() {
-    if (
-      this.#isError &&
-      this.#isError.data.message !== 'Blocked: You cannot view this account'
-    ) {
-      this.dispatchEvent(
-        new CustomEvent('render-notification', {
-          detail: { message: this.#isError.data.message },
-          bubbles: true,
-        }),
-      );
-      router.go('/');
+        this.routerParams = params;
+        console.log("onbeforemount");
+        console.log(this.sessionUser.value);
+        console.log(params);
+        if ((this.sessionUser.value?.user !== undefined && !params.pk) || this.sessionUser.value?.user?.id === params.pk
+        ) {
+            this.profileUserData = this.sessionUser.value?.user;
+            return undefined;
+        }
+        if (params.pk) await this.fetchProfileData(params.pk, false);
+            
+        return undefined;
     }
 
-    return html`
-      ${this.#isError ?
-        html`
+    /**
+     * @param {number} userId 
+     * @param {boolean} shouldRerender 
+     */
+    async fetchProfileData(userId, shouldRerender) {
+        try {
+            this.profileResponse = await userAPI.getProfile(userId);
+            this.profileUserData = this.profileResponse.data;
+        } catch (error) {
+            sessionService.handleFetchError(error);
+        }
+        if (shouldRerender) super.requestUpdate();
+    }
+
+    /**
+     * @param {APITypes.UserData | undefined} userData
+     * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral | string}
+     */
+    getActionButtons = (userData) => {
+        console.log(userData);
+        if (!userData) return "";
+        if (userData.is_self)
+            return html`
+                <a
+                    href="/settings"
+                    class="btn btn-outline-primary px-4 p-2 m-2 rounded-4"
+                >
+                    <i class="fa-solid fa-pen-to-square pe-2"></i>Edit Profile
+                </a>
+                <a href="/logout" class="btn btn-danger px-4 p-2 m-2 rounded-4">
+                    <i class="fa-solid fa-right-from-bracket pe-2"></i>Logout
+                </a>
+            `;
+        let data;
+        console.log('profile view: userdata: ', userData);
+        if ((data = sessionService.getFriend(userData.id)) !== undefined)
+            return html`
+                <button disabled class="btn btn-dark me-2">
+                    <i class="fa-solid fa-user-check"></i>
+                </button>
+                ${actionButtonDropdowns.friendActions(userData.id, () => {this.fetchProfileData(userData.id, true)})}
+            `;
+        if ((data = sessionService.getFriendReqRec(userData.id)) !== undefined)
+            return html`
+                ${actionButtonGroups.receivedFriendInvitation(data.request_id, false)}
+                ${actionButtonDropdowns.userActions(data.id, () => {this.fetchProfileData(userData.id, true)})}
+            `;
+        if ((data = sessionService.getFriendReqSent(userData.id)) !== undefined)
+            return html`
+                ${actions.cancelFriendRequest(data.request_id)}
+                ${actionButtonDropdowns.userActions(userData.id, () => {this.fetchProfileData(userData.id, true)})}
+            `;
+        return html`
+            ${actions.sendFriendRequest(userData.id)}
+            ${actionButtonDropdowns.userActions(userData.id, () => {this.fetchProfileData(userData.id, true)})}
+        `;
+    };
+
+    render() {
+        console.log("render profile!!");
+        // if (
+        //     this.#isError &&
+        //     this.#isError.data.message !== 'Blocked: You cannot view this account'
+        // ) {
+        //     this.dispatchEvent(
+        //         new CustomEvent('render-notification', {
+        //             detail: { message: this.#isError.data.message },
+        //             bubbles: true,
+        //         }),
+        //     );
+        //     router.go('/');
+        // }
+
+        return html`
+      ${this.profileResponse?.statuscode === 403 ?
+                html`
           <div class="alert alert-danger" role="alert">
-            <h4 class="alert-heading">${this.#isError.data.message}</h4>
+            <h4 class="alert-heading">${this.profileResponse?.message ?? ""}</h4>
             <hr />
+            ${this.routerParams.pk ? 
+                actions.unBlockUser(this.routerParams.pk, { cb: () => {
+                    console.log("unblock clicked - redirect to same page");
+                    this.fetchProfileData(this.routerParams.pk, true);
+                }})
+                : ""}
           </div>
         `
-      : html`
+                : html`
           <div class="card border-0 rounded-0">
             <div class="card-body">
               <div class="row">
@@ -274,7 +197,7 @@ export class ProfileView extends BaseElement {
                     status="online"
                     statusborder
                     radius="5"
-                    src="${this.profileUserData.avatar}"
+                    src="${this.profileUserData?.avatar ?? ""}"
                     size="150"
                   ></avatar-component>
                 </div>
@@ -283,11 +206,11 @@ export class ProfileView extends BaseElement {
                   <div class="position-relative">
                     <div class="mb-2">
                       <h3 class="display-5 m-0">
-                        ${this.profileUserData.username}
+                        ${this.profileUserData?.username ?? ""}
                       </h3>
                       <small class="text-body-secondary"
-                        >${this.profileUserData.first_name}
-                        ${this.profileUserData.last_name}</small
+                        >${this.profileUserData?.first_name ?? ""}
+                        ${this.profileUserData?.last_name ?? ""}</small
                       >
                     </div>
 
@@ -307,9 +230,9 @@ export class ProfileView extends BaseElement {
                     class="h-100 d-flex flex-row align-items-center justify-content-center"
                   >
                     ${this.getActionButtons(
-                      // @ts-ignore
-                      this.profileUserData,
-                    )}
+                    // @ts-ignore
+                    this.profileUserData,
+                )}
                   </div>
                 </div>
               </div>
@@ -321,58 +244,58 @@ export class ProfileView extends BaseElement {
                 <div class="row g-3">
                   <div class="col-4">
                     ${renderCard(
-                      '',
-                      '',
-                      renderCardInfo(
+                    '',
+                    '',
+                    renderCardInfo(
                         'Rank',
-                        this.profileUserData.ranking ?? '-',
-                      ),
-                    )}
+                        this.profileUserData?.ranking ?? '-',
+                    ),
+                )}
                   </div>
                   <div class="col-8">
                     ${renderCard(
-                      '',
-                      '',
-                      renderCardInfo(
+                    '',
+                    '',
+                    renderCardInfo(
                         'Member since',
                         new Date(
-                          this.profileUserData.date_joined,
+                            this.profileUserData?.date_joined ?? "",
                         ).toLocaleDateString(),
-                      ),
-                    )}
+                    ),
+                )}
                   </div>
 
                   <div class="col-12">
                     ${renderCard(
-                      'Game Stats',
-                      'chart-simple',
-                      html`
+                    'Game Stats',
+                    'chart-simple',
+                    html`
                         <div class="row gx-4">
                           <div
                             class="col-4 border-bottom border-3 border-success-subtle"
                           >
                             ${renderCardInfo(
-                              'Wins',
-                              this.profileUserData.total_wins ?? '-',
-                            )}
+                        'Wins',
+                        this.profileUserData?.wins ?? '-',
+                    )}
                           </div>
                           <div class="col-4 border-bottom border-3">
                             ${renderCardInfo(
-                              'Total',
-                              this.profileUserData.total_games ?? '-',
-                            )}
+                        'Total',
+                        this.profileUserData?.games_played ?? '-',
+                    )}
                           </div>
                           <div
                             class="col-4 border-bottom border-3 border-danger-subtle"
                           >
                             ${renderCardInfo(
-                              'Losses',
-                              this.profileUserData.total_losses ?? '-',
-                            )}
+                        'Losses',
+                        this.profileUserData?.losses ?? '-',
+                    )}
                           </div>
                         </div>
                       `,
-                    )}
+                )}
                   </div>
                 </div>
               </div>
@@ -380,38 +303,38 @@ export class ProfileView extends BaseElement {
                 <div class="row g-3">
                   <div class="col-12">
                     ${renderListCard(
-                      'Match History',
-                      'scroll',
-                      this.dataMatches.map((data) =>
+                    'Match History',
+                    'scroll',
+                    this.dataMatches.map((data) =>
                         rendListItem(html`
                           <div
                             class="d-flex w-100 px-2 align-items-center justify-content-between border-start border-4 ${(
-                              data.self_points > data.opp_points
+                                data.self_points > data.opp_points
                             ) ?
-                              'border-success-subtle'
-                            : 'border-danger-subtle'}"
+                                'border-success-subtle'
+                                : 'border-danger-subtle'}"
                           >
                             ${renderAvatar(
-                              data.id,
-                              data.username,
-                              data.avatar,
-                              '',
-                              'after',
-                            )}
+                                    Number(data.id),
+                                    data.username,
+                                    data.avatar,
+                                    '',
+                                    'after',
+                                )}
                             ${renderCardInfo(
-                              'Score',
-                              `${data.self_points} : ${data.opp_points}`,
-                            )}
+                                    'Score',
+                                    `${data.self_points} : ${data.opp_points}`,
+                                )}
                             ${renderCardInfo(
-                              'Date',
-                              new Date(data.date).toLocaleDateString('de-DE', {
-                                dateStyle: 'short',
-                              }),
-                            )}
+                                    'Date',
+                                    new Date(data.date).toLocaleDateString('de-DE', {
+                                        dateStyle: 'short',
+                                    }),
+                                )}
                           </div>
                         `),
-                      ),
-                    )}
+                    ),
+                )}
                   </div>
                 </div>
               </div>
@@ -419,76 +342,76 @@ export class ProfileView extends BaseElement {
           </div>
         `}
     `;
-  }
+    }
 
-  dataa = new Array(10).fill(0);
+    dataa = new Array(10).fill(0);
 
-  dataMatches = [
-    {
-      id: '6',
-      avatar: 'https://picsum.photos/200/300?random=1',
-      username: 'peterjo',
-      self_points: '9',
-      opp_points: '2',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '7',
-      avatar: 'https://picsum.photos/200/300?random=2',
-      username: 'dedr werber',
-      self_points: '4',
-      opp_points: '7',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '8',
-      avatar: 'https://picsum.photos/200/300?random=3',
-      username: 'hayloo',
-      self_points: '9',
-      opp_points: '7',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '9',
-      avatar: 'https://picsum.photos/200/300?random=4',
-      username: 'dewdw',
-      self_points: '8',
-      opp_points: '1',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '2',
-      avatar: 'https://picsum.photos/200/300?random=5',
-      username: 'petdewh5erjo',
-      self_points: '1',
-      opp_points: '8',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '1',
-      avatar: 'https://picsum.photos/200/300?random=6',
-      username: 'giorghinho',
-      self_points: '8',
-      opp_points: '1',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '34',
-      avatar: 'https://picsum.photos/200/300?random=8',
-      username: 'xoxoxP',
-      self_points: '3',
-      opp_points: '9',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-    {
-      id: '10',
-      avatar: 'https://picsum.photos/200/300?random=7',
-      username: 'marmelade',
-      self_points: '5',
-      opp_points: '9',
-      date: '2021-09-24T12:38:54.656Z',
-    },
-  ];
+    dataMatches = [
+        {
+            id: '6',
+            avatar: 'https://picsum.photos/200/300?random=1',
+            username: 'peterjo',
+            self_points: '9',
+            opp_points: '2',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '7',
+            avatar: 'https://picsum.photos/200/300?random=2',
+            username: 'dedr werber',
+            self_points: '4',
+            opp_points: '7',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '8',
+            avatar: 'https://picsum.photos/200/300?random=3',
+            username: 'hayloo',
+            self_points: '9',
+            opp_points: '7',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '9',
+            avatar: 'https://picsum.photos/200/300?random=4',
+            username: 'dewdw',
+            self_points: '8',
+            opp_points: '1',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '2',
+            avatar: 'https://picsum.photos/200/300?random=5',
+            username: 'petdewh5erjo',
+            self_points: '1',
+            opp_points: '8',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '1',
+            avatar: 'https://picsum.photos/200/300?random=6',
+            username: 'giorghinho',
+            self_points: '8',
+            opp_points: '1',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '34',
+            avatar: 'https://picsum.photos/200/300?random=8',
+            username: 'xoxoxP',
+            self_points: '3',
+            opp_points: '9',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+        {
+            id: '10',
+            avatar: 'https://picsum.photos/200/300?random=7',
+            username: 'marmelade',
+            self_points: '5',
+            opp_points: '9',
+            date: '2021-09-24T12:38:54.656Z',
+        },
+    ];
 }
 customElements.define('profile-view', ProfileView);
 

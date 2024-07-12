@@ -45,11 +45,12 @@ ServeMode = Literal["serve-winner", "serve-loser", "serve-random"]
 ServeSide = Literal["serve-left", "serve-right"]
 
 class GameSettings(TypedDict):
-    point_wait_time: float
+    point_wait_time_ms: float
     serve_mode: ServeMode
     initial_serve_to: ServeSide
     max_score: int
-    tick_duration: float
+    tick_rate: int
+    tick_duration_ms: int
     border_height: float
     border_width: float
 
@@ -150,7 +151,9 @@ class GameReady(BaseBroadcast):
 @dataclass
 class GameUpdate(BaseBroadcast):
     tag = "server-game-update"
-    timestamp: int
+    timestamp: float
+    tickno: int
+    invalid_ticks: int
     ball: GameObjPositionData
     paddle_left: GameObjPositionData
     paddle_right: GameObjPositionData

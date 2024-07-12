@@ -1,7 +1,7 @@
 import struct
+import math
 from enum import Enum
 import dataclasses
-from .game_base import dict_factory_str
 from .messages_server import GameObjData, GameObjPositionData
 
 # @staticmethod
@@ -115,31 +115,60 @@ class Collision(Enum):
     COLL_LEFT = 4
 
     @staticmethod
-    def collision_detection(objA: "GameObjDataClass", objB: "GameObjDataClass") -> "Collision":
-        collision = Collision.COLL_NONE
-        diffTime = float('Infinity')
+    def collision_detection(objA: "GameObjDataClass", objB: "GameObjDataClass") -> "tuple[Collision, float]":
+        collision_x = Collision.COLL_NONE
+        collision_y = Collision.COLL_NONE
+        diffTime_x = float('Infinity')
+        diffTime_y = float('Infinity')
 
         relVeloX = objA.dx * objA.speed_x - objB.dx * objB.speed_x
         relVeloY = objA.dy * objA.speed_y - objB.dy * objB.speed_y
 
         if relVeloX != 0:
             reciRelVeloX = 1 / abs(relVeloX)
-            if (relVeloX > 0 and objA.right > objB.left and objA.right < objB.right):
-                diffTime = abs(objA.right - objB.left) * reciRelVeloX
-                collision = Collision.COLL_RIGHT
-            elif (relVeloX < 0 and objA.left < objB.right and objA.left > objB.left):
-                diffTime = abs(objB.right - objA.left) * reciRelVeloX
-                collision = Collision.COLL_LEFT
+            if (relVeloX > 0 and objA.right > objB.left and objA.left < objB.right):
+                diffTime_x = abs(objA.right - objB.left) * reciRelVeloX
+                collision_x = Collision.COLL_RIGHT
+            elif (relVeloX < 0 and objA.left < objB.right and objA.right > objB.left):
+                diffTime_x = abs(objB.right - objA.left) * reciRelVeloX
+                collision_x = Collision.COLL_LEFT
 
         if relVeloY != 0:
             reciRelVeloY = 1 / abs(relVeloY)
-            if (relVeloY > 0 and objA.bottom > objB.top and objA.bottom < objB.bottom):
-                if abs(objA.bottom - objB.top) * reciRelVeloY < diffTime:
-                    collision = Collision.COLL_BOTTOM
-            elif (relVeloY < 0 and objA.top < objB.bottom and objA.top > objB.top):
-                if abs(objB.bottom - objA.top) * reciRelVeloY < diffTime:
-                    collision = Collision.COLL_TOP
-        return collision
+            if (relVeloY > 0 and objA.bottom > objB.top and objA.top < objB.bottom):
+                diffTime_y = abs(objA.bottom - objB.top) * reciRelVeloY
+                collision_y = Collision.COLL_BOTTOM
+            elif (relVeloY < 0 and objA.top < objB.bottom and objA.bottom > objB.top):
+                diffTime_y = abs(objB.bottom - objA.top) * reciRelVeloY
+                collision_y = Collision.COLL_TOP
+        # print(f"paddle: left: {objB.left} , right: {objB.right}")
+        # print(f"ball: left: {objA.left} , right: {objA.right}")
+        # print(f"collision x: {'left' if collision_x == Collision.COLL_LEFT else 'right' if collision_x == Collision.COLL_RIGHT else 'none'}")
+        # print(f"collision y: {'top' if collision_y == Collision.COLL_TOP else 'bottom' if collision_y == Collision.COLL_BOTTOM else 'none'}")
+        if not math.isinf(diffTime_x) and not math.isinf(diffTime_y):
+            return (collision_x, diffTime_x) if diffTime_x < diffTime_y else (collision_y, diffTime_y)
+        return (Collision.COLL_NONE, float('Infinity'))
+
+        # if relVeloX != 0:
+        #     reciRelVeloX = 1 / abs(relVeloX)
+        #     if (relVeloX > 0 and objA.right > objB.left and objA.left < objB.right):
+        #         diffTime_x = abs(objA.right - objB.left) * reciRelVeloX
+        #         collision_x = Collision.COLL_RIGHT
+        #     elif (relVeloX < 0 and objA.left < objB.right and objA.right > objB.left):
+        #         diffTime_x = abs(objB.right - objA.left) * reciRelVeloX
+        #         collision_x = Collision.COLL_LEFT
+
+        # if relVeloY != 0:
+        #     reciRelVeloY = 1 / abs(relVeloY)
+        #     if (relVeloY > 0 and objA.bottom > objB.top and objA.top < objB.bottom):
+        #         diffTime_y = abs(objA.bottom - objB.top) * reciRelVeloY
+        #         collision_y = Collision.COLL_BOTTOM
+        #     elif (relVeloY < 0 and objA.top < objB.bottom and objA.bottom > objB.top):
+        #         diffTime_y = abs(objB.bottom - objA.top) * reciRelVeloY
+        #         collision_y = Collision.COLL_TOP
+        # if not math.isinf(diffTime_x) and not math.isinf(diffTime_y):
+        #     return (collision_x, diffTime_x) if diffTime_x < diffTime_y else (collision_y, diffTime_y)
+        # return (Collision.COLL_NONE, float('Infinity'))
 
         # return Collision.check_collision_y(
         #     objA, objB, relVeloY, collision, diffTime)
@@ -324,7 +353,7 @@ class GameObjDataClass:
         """
         return struct.pack('!ffff', self.x, self.y, self.dx, self.dy)
 
-    def check_collision(self, obj: "GameObjDataClass"):
+    def check_collision(self, obj: "GameObjDataClass") -> tuple[Collision, float]:
         """
         Checks if the object collides with another object.
 
