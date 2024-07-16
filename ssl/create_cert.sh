@@ -30,6 +30,7 @@ openssl req -new -noenc \
 cat > $MYCERT/$MYCERT.v3.ext << EOF
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
+extendedKeyUsage = serverAuth, clientAuth
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
 subjectAltName = @alt_names
 [alt_names]
@@ -38,7 +39,7 @@ DNS.2 = api.$MYCERT
 IP.1 = $IP
 EOF
 
-openssl x509 -req -days 730 -sha256 \
+openssl x509 -req -days 365 -sha256 \
     -in $MYCERT/$MYCERT.csr \
     -CAcreateserial \
     -CA $CANAME/$CANAME.crt \

@@ -47,19 +47,28 @@ export default class AttributeMultiNode extends BaseNode {
      * @param {string} res 
      */
     #setStyleAttribute(res) {
+        // console.log('before change: my width: ', this.element.style.width);
+        // console.log('before change: my height: ', this.element.style.height);
         const arr = res.split(';');
+        // console.log('splitted styles: ', arr);
+        // console.log('this elem: ', this.element);
         arr.forEach((style) => {
             const [keydashed, val] = style.split(':')
             // console.log(`try to set style: ${keydashed} to ${val}`);
             if (keydashed && val) {
-                keydashed.trim()
+                // console.log(`key beforetrim: $${keydashed}$`);
+                const trimmed = keydashed.trim()
+                // console.log(`key after trim: $${trimmed}$`);
                 val.trim()
-                const key = this.#toCamel(keydashed)
+                const key = this.#toCamel(trimmed)
+                // console.log(`key after toCamel: $${key}$`);
                 if (this.element instanceof HTMLElement) {
                     // if (this.element.style.prototype.hasOwnProperty(key))
                     // this.element.style[key] = val;
                     try {
                         this.element.style[key] = val;
+                        // console.log('my width: ', this.element.style.width);
+                        // console.log('my height: ', this.element.style.height);
                     } catch (error) {
                         console.error(`unable to set style: ${key} to ${val}`);
                     }
@@ -85,11 +94,17 @@ export default class AttributeMultiNode extends BaseNode {
             // // // console.log("res: ",res);
         }
         res += this.strings[this.strings.length - 1];
-        // // // console.log("res: ", res);
-        if (this.attrName === 'style')
+        // console.log("AttributeNode: res: ", res);
+        if (this.attrName === 'style') {
             this.#setStyleAttribute(res);
-        else
-            this.element.setAttribute(this.attrName, res);
+        } else {
+            if (res.length > 0) {
+                // console.log('set regular attribute: ', this.attrName, ' to: ', res);
+                this.element.setAttribute(this.attrName, res);
+            } else {
+                this.element.removeAttribute(this.attrName)
+            }
+        }
         this.#initialInit = true;
     }
 

@@ -189,8 +189,8 @@ def block_user(request, user_id: int):
 @csrf_exempt
 @login_required
 @require_POST
-def remove_friend(request, user_id: int):
-    receiver = get_object_or_404(UserAccount, pk=user_id)
+def remove_friend(request):
+    receiver = get_object_or_404(UserAccount, pk=json.loads(request.body).get('receiver_id'))
     friend_list = get_object_or_404(FriendList, user=request.user)
     friend_list.unfriend(receiver)
     return HttpSuccess200(f"friend {receiver.username} removed")

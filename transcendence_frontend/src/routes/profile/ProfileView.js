@@ -29,42 +29,6 @@ import { fetcher, sessionService, userAPI } from '../../services/api/API_new.js'
 import router from '../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
 
-export class ProfileSettingsView extends BaseElement {
-    constructor() {
-        super(false, false);
-    }
-
-    render() {
-        return html`
-      <div class="mb-3">
-        <label for="profile-edit-firstname" class="form-label"
-          >First Name</label
-        >
-        <input
-          type="text"
-          class="form-control"
-          name="first_name"
-          id="profile-edit-firstname"
-          placeholder="John"
-          value="curr first name"
-        />
-      </div>
-      <div class="mb-3">
-        <label for="profile-edit-lastname" class="form-label">Last Name</label>
-        <input
-          type="text"
-          class="form-control"
-          name="last_name"
-          id="profile-edit-lastname"
-          placeholder="Doe"
-          value="curr last name"
-        />
-      </div>
-    `;
-    }
-}
-window.customElements.define('profile-settings-view', ProfileSettingsView);
-
 export class ProfileView extends BaseElement {
     constructor() {
         super(false, false);
@@ -77,26 +41,41 @@ export class ProfileView extends BaseElement {
     routerParams = {};
 
     /**
+     * @param {object} params
+     * @param {boolean} shouldRerender
+     */
+    async handleUrlParams(params, shouldRerender) {
+        this.routerParams = params;
+
+        console.log('handle params');
+        console.log(this.sessionUser.value);
+        console.log(params);
+        if ((this.sessionUser.value !== undefined && params.pk === undefined)
+            || this.sessionUser.value?.user?.id === params.pk) {
+            this.profileUserData = this.sessionUser.value?.user;
+            if (shouldRerender) super.requestUpdate();
+        }
+        if (params.pk) await this.fetchProfileData(params.pk, shouldRerender);
+    }
+    /**
      * @param {string} route
      * @param {object} params
+     * @param {URL} url
      * @returns {Promise<symbol | void>}
      */
-    async onBeforeMount(route, params) {
+    async onBeforeMount(route, params, url) {
+        console.log("onBeforeMount");
         if (!sessionService.isLoggedIn) {
             return router.redirect('/');
         }
-        this.routerParams = params;
-        console.log("onbeforemount");
-        console.log(this.sessionUser.value);
-        console.log(params);
-        if ((this.sessionUser.value?.user !== undefined && !params.pk) || this.sessionUser.value?.user?.id === params.pk
-        ) {
-            this.profileUserData = this.sessionUser.value?.user;
-            return undefined;
-        }
-        if (params.pk) await this.fetchProfileData(params.pk, false);
-            
-        return undefined;
+        await this.handleUrlParams(params, true);
+    }
+
+    async onRouteChange(route, params, url) {
+        console.log("onRouteChange, params: ", params);
+        await this.handleUrlParams(params, false);
+        
+        super.requestUpdate();
     }
 
     /**
@@ -123,7 +102,7 @@ export class ProfileView extends BaseElement {
         if (userData.is_self)
             return html`
                 <a
-                    href="/settings"
+                    href="/profile/settings"
                     class="btn btn-outline-primary px-4 p-2 m-2 rounded-4"
                 >
                     <i class="fa-solid fa-pen-to-square pe-2"></i>Edit Profile
@@ -136,24 +115,30 @@ export class ProfileView extends BaseElement {
         console.log('profile view: userdata: ', userData);
         if ((data = sessionService.getFriend(userData.id)) !== undefined)
             return html`
-                <button disabled class="btn btn-dark me-2">
+                <button disabled class="btn btn-dark me-1">
                     <i class="fa-solid fa-user-check"></i>
                 </button>
-                ${actionButtonDropdowns.friendActions(userData.id, () => {this.fetchProfileData(userData.id, true)})}
+                ${actionButtonDropdowns.friendActions(userData.id, () => { this.fetchProfileData(userData.id, true); })}
             `;
         if ((data = sessionService.getFriendReqRec(userData.id)) !== undefined)
             return html`
-                ${actionButtonGroups.receivedFriendInvitation(data.request_id, false)}
-                ${actionButtonDropdowns.userActions(data.id, () => {this.fetchProfileData(userData.id, true)})}
+                <button disabled class="btn btn-dark me-1">
+                    <i class="fa-solid fa-user-clock"></i>
+                </button>
+                ${actionButtonGroups.receivedFriendInvitation(data.request_id, true)}
+                ${actionButtonDropdowns.userActions(data.id, () => { this.fetchProfileData(userData.id, true); })}
             `;
         if ((data = sessionService.getFriendReqSent(userData.id)) !== undefined)
             return html`
+                <button disabled class="btn btn-dark me-1">
+                    <i class="fa-solid fa-user-clock"></i>
+                </button>
                 ${actions.cancelFriendRequest(data.request_id)}
-                ${actionButtonDropdowns.userActions(userData.id, () => {this.fetchProfileData(userData.id, true)})}
+                ${actionButtonDropdowns.userActions(userData.id, () => { this.fetchProfileData(userData.id, true); })}
             `;
         return html`
             ${actions.sendFriendRequest(userData.id)}
-            ${actionButtonDropdowns.userActions(userData.id, () => {this.fetchProfileData(userData.id, true)})}
+            ${actionButtonDropdowns.userActions(userData.id, () => { this.fetchProfileData(userData.id, true); })}
         `;
     };
 
@@ -178,12 +163,14 @@ export class ProfileView extends BaseElement {
           <div class="alert alert-danger" role="alert">
             <h4 class="alert-heading">${this.profileResponse?.message ?? ""}</h4>
             <hr />
-            ${this.routerParams.pk ? 
-                actions.unBlockUser(this.routerParams.pk, { cb: () => {
-                    console.log("unblock clicked - redirect to same page");
-                    this.fetchProfileData(this.routerParams.pk, true);
-                }})
-                : ""}
+            ${this.routerParams.pk ?
+                        actions.unBlockUser(this.routerParams.pk, {
+                            cb: () => {
+                                console.log("unblock clicked - redirect to same page");
+                                this.fetchProfileData(this.routerParams.pk, true);
+                            }
+                        })
+                        : ""}
           </div>
         `
                 : html`
@@ -205,8 +192,11 @@ export class ProfileView extends BaseElement {
                 <div class="col text-center text-md-start mt-3 mt-md-0">
                   <div class="position-relative">
                     <div class="mb-2">
+                      <h6 class="text-body-secondary">
+                        @${this.profileUserData?.username ?? ""}
+                      </h6>
                       <h3 class="display-5 m-0">
-                        ${this.profileUserData?.username ?? ""}
+                        ${this.profileUserData?.alias ?? ""}
                       </h3>
                       <small class="text-body-secondary"
                         >${this.profileUserData?.first_name ?? ""}

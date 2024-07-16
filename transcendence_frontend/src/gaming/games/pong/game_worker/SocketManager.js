@@ -1,15 +1,3 @@
-/* eslint-disable prettier/prettier */
-/* eslint-disable jsdoc/require-jsdoc */
-/* eslint-disable no-unused-vars */
-/* eslint-disable jsdoc/no-undefined-types */
-/* eslint-disable no-console */
-/* eslint-disable import/prefer-default-export */
-/* eslint-disable no-bitwise */
-/* eslint-disable max-classes-per-file */
-/// <reference path="../../types.d.ts"/>
-
-import Pong from './main.js';
-// import { msg_to_worker } from '../../src/gaming/exchange/game_msg.js';
 
 const WebsocketErrorCode = {
     OK: 4000,
@@ -69,14 +57,8 @@ function getErrorMessage(code) {
     }
 }
 
-/** @type {Pong | undefined} */
-let game;
-let gameResults;
-
 /** @type {WebSocket | undefined} */
 let socket;
-
-let userId;
 
 /**
  * @param {PongClientTypes.ClientCommandResponse} msg
@@ -99,6 +81,9 @@ function handleServerBroadCast(broadcast) {
     if (!game)
         throw new Error(`server message before game initialized???: ${broadcast}`);
     switch (broadcast.tag) {
+        case 'pong':
+            // game.handeTimeSync(broadcast);
+            break;
         case 'server-game-ready':
             console.log('JOOO INITIALISIERE DATEN vom Server');
             game.initGameObjects(broadcast);
@@ -107,6 +92,7 @@ function handleServerBroadCast(broadcast) {
             game.startGame(broadcast.timestamp);
             break;
         case 'server-game-update':
+            if (socket) pushCommandToSocket({cmd: "ping", client_timestamp_ms: performance.timeOrigin + performance.now()})
             game.updateGameObjects(broadcast);
             break;
         case 'server-game-end':
@@ -148,7 +134,7 @@ let lastMove;
 function pushCommandToSocket(command) {
     try {
         command.id = commandNbr;
-        commandStack.set(commandNbr.toString(), command);
+        // commandStack.set(commandNbr.toString(), command);
         commandNbr += 1;
         lastCommand = command
         socket?.send(JSON.stringify(command));
@@ -157,12 +143,6 @@ function pushCommandToSocket(command) {
     }
 }
 
-/**
- * @param {FromWorkerGameMessageTypes.FromWorkerMessage} message 
- */
-function pushMessageToMainThread(message) {
-    self.postMessage(message);
-}
 
 /**
  * @param {PongClientTypes.ClientCommandResponse} response
@@ -192,6 +172,7 @@ function initSocket(socketUrl) {
 
             /** @type {PongClientTypes.ClientCommandResponse | PongServerTypes.ServerMessage} */
             const message = JSON.parse(e.data);
+            // console.log('server message: ', message);
             if ('tag' in message) {
                 handleServerBroadCast(message);
             } else {
@@ -225,127 +206,3 @@ function initSocket(socketUrl) {
         console.log('error: ', error);
     }
 }
-
-/** @param {MessageEvent} ev */
-onmessage = (ev) => {
-    /** @type {ToWorkerGameMessageTypes.GameWorkerMessage} */
-    const msg = ev.data;
-    // console.log('onmessage: ', msg.message);
-    // console.dir(ev.data);
-    switch (msg.message) {
-        case 'game_worker_create_local':
-            game = new Pong(msg);
-            userId = msg.userId;
-            break;
-        case 'game_worker_create_remote':
-            game = new Pong(msg);
-            if (msg.socketUrl) initSocket(msg.socketUrl);
-            userId = msg.userId;
-            break;
-        case 'worker_game_move':
-            try {
-                if (!game || (lastMove && lastMove == msg.action)) return;
-                const timestamp_ms = game.movePaddle(msg.action, msg.new_y);
-                if (!socket) return;
-                if (lastCommand.cmd == "client-move" && lastCommand.action == msg.action) return;
-                pushCommandToSocket({ cmd: 'client-move', new_y: msg.new_y, action: msg.action, timestamp_sec: timestamp_ms/1000, timestamp_ms: Math.round(timestamp_ms) });
-                lastMove = msg.action
-            } catch (error) {
-                console.log(`error move paddle: ${error}`);
-            }
-            break;
-        case 'worker_game_pause':
-            if (socket) pushCommandToSocket({ cmd: 'client-pause' });
-            else game?.pauseGame();
-            break;
-        case 'worker_game_resume':
-            if (socket) pushCommandToSocket({ cmd: 'client-resume' });
-            else game?.resumeGame();
-            break;
-        case 'worker_game_start':
-            console.log('worker_game_start! socket?: ', socket);
-            if (socket) {
-                console.log('push to socket: client ready');
-                pushCommandToSocket({ cmd: 'client-ready' });
-            }else {
-                game?.startGame();
-            }
-            break;
-        case 'worker_game_quit':
-            if (socket) pushCommandToSocket({ cmd: 'client-leave-game' });
-            else game?.quitGame();
-            self.close()
-            break;
-      
-        case 'worker_game_resize':
-            game?.setCanvasSizes(msg);
-            break;
-        case 'worker_game_change_color':
-            game?.changeColor(msg);
-            break;
-        default:
-            break;
-    }
-};
-
-// /** @param {MessageEvent} ev */
-// onmessage = (ev) => {
-//     /** @type {ToWorkerGameMessageTypes.GameWorkerMessage} */
-//     const msg = ev.data;
-//     // console.log('onmessage: ', msg.message);
-//     // console.dir(ev.data);
-//     switch (msg.message) {
-//         case 'game_worker_create_local':
-//             game = new Pong(msg);
-//             userId = msg.userId;
-//             break;
-//         case 'game_worker_create_remote':
-//             game = new Pong(msg);
-//             if (msg.socketUrl) initSocket(msg.socketUrl);
-//             userId = msg.userId;
-//             break;
-//         case 'worker_game_move':
-//             try {
-//                 if (!game) return;
-//                 const timestamp_ms = game.movePaddle(msg.action, msg.new_y);
-//                 if (!socket) return;
-//                 if (lastCommand.cmd == "client-move" && lastCommand.action == msg.action) return;
-//                 pushCommandToSocket({ cmd: 'client-move', new_y: msg.new_y, action: msg.action, timestamp_sec: timestamp_ms/1000 });
-                
-//             } catch (error) {
-//                 console.log(`error move paddle: ${error}`);
-//             }
-//             break;
-//         case 'worker_game_pause':
-//             if (socket) pushCommandToSocket({ cmd: 'client-pause' });
-//             else game?.pauseGame();
-//             break;
-//         case 'worker_game_resume':
-//             if (socket) pushCommandToSocket({ cmd: 'client-resume' });
-//             else game?.resumeGame();
-//             break;
-//         case 'worker_game_start':
-//             console.log('worker_game_start! socket?: ', socket);
-//             if (socket) {
-//                 console.log('push to socket: client ready');
-//                 pushCommandToSocket({ cmd: 'client-ready' });
-//             }else {
-//                 game?.startGame();
-//             }
-//             break;
-//         case 'worker_game_quit':
-//             if (socket) pushCommandToSocket({ cmd: 'client-leave-game' });
-//             else game?.quitGame();
-//             self.close()
-//             break;
-      
-//         case 'worker_game_resize':
-//             game?.setCanvasSizes(msg);
-//             break;
-//         case 'worker_game_change_color':
-//             game?.changeColor(msg);
-//             break;
-//         default:
-//             break;
-//     }
-// };

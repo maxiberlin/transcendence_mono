@@ -33,7 +33,7 @@ class ClientBaseCommand(TypedDict):
     # payload: None
 
 
-ClientMoveDirection = Literal["up", "down", "release_up", "release_down"]
+ClientMoveDirection = Literal["up", "down", "release_up", "release_down", "none"]
 
 
 
@@ -48,6 +48,10 @@ class ClientJoinPayload(TypedDict):
 # class ClientUserPayload(TypedDict):
 #     user_id: int
 
+
+class ClientPingCommand(ClientBaseCommand):
+    cmd: Literal["ping"]
+    client_timestamp_ms: float
 
 class ClientReadyCommand(ClientBaseCommand):
     cmd: ClientCommands.CLIENT_READY.value
@@ -87,7 +91,8 @@ ClientCommand: TypeAlias = \
     | ClientMoveCommand \
     | ClientPauseCommand \
     | ClientResumeCommand \
-    | ClientLeaveCommand
+    | ClientLeaveCommand \
+    | ClientPingCommand
 
 
 class InternalDisconnectedCommand(ClientBaseCommand):

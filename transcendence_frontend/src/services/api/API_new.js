@@ -1,6 +1,6 @@
 import { Fetcher } from './api_helper.js';
 import PubSub from '../../lib_templ/reactivity/PubSub.js';
-import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
+import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent } from '../../components/bootstrap/BsToasts.js';
 import BaseBase from '../../lib_templ/BaseBase.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
 
@@ -57,6 +57,14 @@ export const userAPI = {
      */
     getProfile: async (user_id) =>
         await fetcher.$get(`/profile/${user_id}`),
+
+    /**
+     * @param {number} user_id
+     * @param {FormData} data
+     * @returns {Promise<APITypes.ApiResponse<APITypes.UserData>>}
+     */
+    postProfile: async (user_id, data) =>
+        await fetcher.$post(`/profile/${user_id}/edit`, {bodyData: data}),
     /**
      * @param {string} query
      * @returns {Promise<APITypes.ApiResponse<APITypes.SearchResult[]>>}
@@ -367,6 +375,20 @@ export class SessionStore {
         await this.updateData(["game_invitations_sent"]);
     }
 
+    async updateUserData(formData) {
+        if (!this.#isLoggedIn || !this.#sessionData?.user) return;
+        try {
+            const ret = await userAPI.postProfile(this.#sessionData?.user?.id, formData);
+            await this.updateData(["user"]);
+            console.log('res uodate user data: ', ret);
+            if (ret.statuscode === 200)
+                document.dispatchEvent(new ToastNotificationSuccessEvent(ret.message))
+        } catch (error) {
+            this.handleFetchError(error);
+        }
+        
+        
+    }
 
     /**
      * @typedef {keyof APITypes.UserSession | "all"} ListItem
@@ -509,7 +531,7 @@ export class SessionStore {
 
     /**
      * 
-     * @param {BaseBase} host 
+     * @param {BaseBase} [host]
      * @param {boolean} force 
      * @returns {PubSubConsumer<APITypes.UserSession | undefined>}
      */

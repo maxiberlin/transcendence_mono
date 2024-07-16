@@ -151,22 +151,13 @@ export class BaseElement extends BaseBase {
 
     /**
      * @param {string} route
-     * @param {any} params
-     * @param {import('./router/Router.js').default} [router]
+     * @param {object} params
+     * @param {URL} url
      * @returns {Promise<symbol | void> | symbol | void}
      */
     // @ts-ignore
     // eslint-disable-next-line no-unused-vars
-    onBeforeMount(route, params, router) {}
-
-    /**
-     * @param {string} route
-     * @param {import('./router/Router.js').default} [router]
-     * @returns {void}
-     */
-    // @ts-ignore
-    // eslint-disable-next-line no-unused-vars
-    onAfterMount(route, router) {}
+    onBeforeMount(route, params, url) {}
 
     /**
      * @param {string} route
@@ -174,7 +165,14 @@ export class BaseElement extends BaseBase {
      */
     // @ts-ignore
     // eslint-disable-next-line no-unused-vars
-    onRouteChange(route) {}
+    onAfterMount(route) {}
+
+    /**
+     * @param {string} route
+     * @param {object} params
+     * @param {URL} url
+     */
+    onRouteChange(route, params, url) {}
 
     onBeforeUnMount() {}
 

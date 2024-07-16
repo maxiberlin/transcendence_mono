@@ -52,6 +52,12 @@ declare namespace PongGameplayTypes {
 }
 
 declare namespace PongServerTypes {
+    export interface Pong {
+        tag: 'pong';
+        client_timestamp_ms: number;
+        server_timestamp_ms: number;
+    }
+
     export interface GameReady {
         tag: 'server-game-ready';
         timestamp: number;
@@ -120,6 +126,7 @@ declare namespace PongServerTypes {
 
     // Type alias for ServerMessage
     export type ServerMessage =
+        | Pong
         | GameReady
         | GameStart
         | GameUpdate
@@ -138,6 +145,11 @@ declare namespace PongClientTypes {
         id?: number;
     }
 
+    export interface Ping extends ClientBaseCommand {
+        cmd: 'ping';
+        client_timestamp_ms: number;
+    }
+
     type ClientMoveDirection = 'up' | 'down' | 'release_up' | 'release_down';
 
     interface ClientUserPayload {
@@ -151,9 +163,11 @@ declare namespace PongClientTypes {
     interface ClientMoveCommand extends ClientBaseCommand {
         cmd: 'client-move';
         timestamp_sec: number;
-        timestamp_ms: number;
+        timestamp_ms?: number;
         action?: ClientMoveDirection;
         new_y?: number;
+        tickno?: number;
+        tick_diff?: number;
     }
 
     interface ClientPauseCommand extends ClientBaseCommand {
@@ -182,6 +196,7 @@ declare namespace PongClientTypes {
     }
 
     type ClientCommand =
+        | Ping
         | ClientJoinCommand
         | ClientReadyCommand
         | ClientMoveCommand
@@ -270,6 +285,11 @@ declare namespace PongClientTypes {
 // }
 
 declare namespace FromWorkerGameMessageTypes {
+    export interface GameTouchValid {
+        message: 'from-worker-game-touch-valid';
+        valid: boolean;
+        ident: number;
+    }
     export interface GamePaused {
         message: 'from-worker-game-paused';
     }
@@ -293,6 +313,7 @@ declare namespace FromWorkerGameMessageTypes {
         gameResults: object | undefined;
     }
     export type FromWorkerMessage =
+        | GameTouchValid
         | GameReady
         | GamePaused
         | GameResumed
@@ -308,6 +329,7 @@ declare namespace ToWorkerGameMessageTypes {
         socketUrl?: string;
         data: APITypes.GameScheduleItem;
         userId: number;
+        screenOrientationType: OrientationType;
     }
     export interface Init {
         message: 'worker_game_init';
@@ -329,6 +351,8 @@ declare namespace ToWorkerGameMessageTypes {
     }
     export interface Resize {
         message: 'worker_game_resize';
+        canvasX: number;
+        canvasY: number;
         width: number;
         height: number;
         dpr: number;
@@ -337,6 +361,20 @@ declare namespace ToWorkerGameMessageTypes {
         message: 'worker_game_move';
         action?: PongClientTypes.ClientMoveDirection;
         new_y?: number;
+    }
+    export interface GameTouchRect {
+        ident: number;
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+        y: number;
+    }
+    export interface GameTouchEvent {
+        message: 'worker_game_touch';
+        type: 'start' | 'move' | 'end';
+        touchRect?: GameTouchRect;
+        ident?: number;
     }
     export interface MouseEvent {
         message: 'worker_game_mouseevent';
@@ -360,5 +398,6 @@ declare namespace ToWorkerGameMessageTypes {
         | Resize
         | MoveEvent
         | MouseEvent
-        | ChangeColor;
+        | ChangeColor
+        | GameTouchEvent;
 }

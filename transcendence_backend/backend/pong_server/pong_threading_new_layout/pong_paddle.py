@@ -2,6 +2,7 @@
 from .game_base_class import GameObjDataClass, Collision
 from .pong_settings import PongSettings
 from enum import Enum
+import math
 from .messages_client import ClientMoveDirection
 
 
@@ -31,15 +32,31 @@ class PongPaddle(GameObjDataClass):
             boundObj=court
         )
 
-    def update_pos_direct(self, y: float):
-        self.y = max(self.bound_top, min(y, self.bound_bottom - self.h))
 
-    def update_pos_by_dir(self, tick: float):
+    # def update_pos_direct(self, y: float):
+    #     self.y = max(self.bound_top, min(y, self.bound_bottom - self.h))
+    #     if math.isclose(self.y, self.bound_top) or math.isclose(self.y, self.bound_bottom - self.h):
+    #         self.dy = PongPaddle.Dir.NONE.value
+
+    def __update_pos(self, y: float):
+        self.y = max(self.bound_top, min(y, self.bound_bottom - self.h))
+        if math.isclose(self.y, self.bound_top) and self.dy == PongPaddle.Dir.UP.value:
+            self.dy = PongPaddle.Dir.NONE.value
+        if math.isclose(self.y, self.bound_bottom - self.h) and self.dy == PongPaddle.Dir.DOWN.value:
+            self.dy = PongPaddle.Dir.NONE.value
+
+    def set_y_position(self, y: float):
+        self.__update_pos(y)
+        self.dy = PongPaddle.Dir.NONE.value
+
+    def update_pos(self, tick: float):
         new_y = self.y + tick * self.dy * self.speed_y
-        self.update_pos_direct(y=new_y)
+        self.__update_pos(new_y)
 
     def set_direction(self, action: ClientMoveDirection):
         match action:
+            case "none":
+                self.dy = PongPaddle.Dir.NONE.value
             case "up":
                 self.dy = PongPaddle.Dir.UP.value
             case "down":
@@ -50,4 +67,3 @@ class PongPaddle(GameObjDataClass):
                 self.dy = PongPaddle.Dir.NONE.value if self.dy == PongPaddle.Dir.DOWN.value else self.dy
             case _:
                 raise ValueError("Invalid action")
-

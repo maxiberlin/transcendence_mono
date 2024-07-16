@@ -98,7 +98,7 @@ def received_invites(request, *args, **kwargs):
 				'game_mode': invite.game_mode,
 				'tournament': invite.tournament.pk if invite.tournament else None,
 				'id': inviter.pk,
-				'inviter': inviter.username,
+				'username': inviter.username,
 				'alias': player.alias,
 				'avatar': inviter.avatar.url,
 			}
@@ -128,7 +128,7 @@ def sent_invites(request, *args, **kwargs):
 				'game_mode': invite.game_mode,
 				'tournament': invite.tournament.pk if invite.tournament else None,
 				'id': invitee.pk,
-				'invitee': invitee.username,
+				'username': invitee.username,
 				'alias': player.alias,
 				'avatar': invitee.avatar.url,
 			}
@@ -238,13 +238,13 @@ def game_schedule(request, *args, **kwargs):
 				'player_one': {
 					'id': ply_one_user_acc.pk,
 					'username': ply_one_user_acc.username,
-					'avatar': ply_one_user_acc.avatar.url,
+					'avatar': ply_one_user_acc.avatar.url if ply_one_user_acc.avatar else '',
 					'alias': Player.objects.get(user=ply_one_user_acc).alias,
 				},
 				'player_two': {
 					'id': ply_two_user_acc.pk,
 					'username': ply_two_user_acc.username,
-					'avatar': ply_two_user_acc.avatar.url,
+					'avatar': ply_two_user_acc.avatar.url if ply_two_user_acc.avatar else '',
 					'alias': Player.objects.get(user=ply_two_user_acc).alias,
 				}
 			}
@@ -280,13 +280,13 @@ def match_history(request, *args, **kwargs):
 				'player_one': {
 					'id': ply_one_user_acc.pk,
 					'username': ply_one_user_acc.username,
-					'avatar': ply_one_user_acc.avatar.url,
+					'avatar': ply_one_user_acc.avatar.url if ply_one_user_acc.avatar else '',
 					'alias': Player.objects.get(user=ply_one_user_acc).alias,
 				},
 				'player_two': {
 					'id': ply_two_user_acc.pk,
 					'username': ply_two_user_acc.username,
-					'avatar': ply_two_user_acc.avatar.url,
+					'avatar': ply_two_user_acc.avatar.url if ply_two_user_acc.avatar else '',
 					'alias': Player.objects.get(user=ply_two_user_acc).alias
 				},
 				'player_one_score': game.player_one_score,

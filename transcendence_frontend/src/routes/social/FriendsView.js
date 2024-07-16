@@ -74,15 +74,15 @@ export default class FriendsView extends BaseElement {
      * @returns 
      */
     getUserBtn = (data) => {
-        if (this.#lCurr === "fv$friends" && 'request_id' in data)
+        if (this.#lCurr === "fv$rec" && 'request_id' in data && typeof data.request_id === "number")
             return html`
                 <div class="d-flex">
                     ${actions.acceptFriendRequest(data.request_id, { host: this, showText: false } ) }
                     ${actions.rejectFriendRequest(data.request_id, { host: this, showText: false } ) }
                 </div>
             `;
-        if (this.#lCurr === "fv$sent"  && 'request_id' in data)
-            return actions.cancelFriendRequest(data.request_id, { host: this, showText: false } );
+        if (this.#lCurr === "fv$sent"  && 'request_id' in data && typeof data.request_id === "number")
+            return actions.cancelFriendRequest(data.request_id, { host: this, showText: true } );
         if (this.#lCurr === "fv$blocked")
             return actions.unBlockUser(data.id, { host: this });
         if (this.#lCurr === "fv$friends")
@@ -147,7 +147,7 @@ export default class FriendsView extends BaseElement {
             <button
                 data-list="${listType}"
                 type="button"
-                class="btn btn-outline-dark rounded-5 text-center mx-1
+                class="btn btn-outline-dark rounded-5 mx-1
                     ${(this.#lCurr === listType || isActive) ? 'active' : ''}"
             >
                 <i class="fa-solid ${icon} me-2"></i>${text}

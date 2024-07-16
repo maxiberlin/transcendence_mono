@@ -19,6 +19,8 @@ function useCanvasSizes(obsElem, aspectRatio, cb) {
     let newW;
     let newH;
     const myObserver = new ResizeObserver((entries) => {
+        console.log('obsElem boundingRect: ', obsElem.getBoundingClientRect());
+        console.log('contentRect: ', entries[0].contentRect);
         newW = entries[0].contentRect.width;
         newH = entries[0].contentRect.height;
         const calcW = Math.trunc(newH / aspectRatio);
@@ -62,42 +64,7 @@ const renderLoadingModal = () => html`
     </div>
 `;
 
-window.customElements.define(
-    'overlay-screen',
-    class extends BaseElement {
-        render() {
-            return html`
-                <div
-                    class="modal fade"
-                    id="loadingModal"
-                    tabindex="-1"
-                    aria-labelledby="loadingModalLabel"
-                    aria-hidden="true"
-                >
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="loadingModalLabel">
-                                    Verbindung wird hergestellt...
-                                </h5>
-                            </div>
-                            <div class="modal-body text-center">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Laden...</span>
-                                </div>
-                                <p class="mt-3">
-                                    Bitte warten, während die Verbindung zum Server hergestellt wird.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-    },
-);
-
-export default class GameModal extends BaseElement {
+export default class GameModal2 extends BaseElement {
     static observedAtrributes = ['id'];
 
     constructor() {
@@ -123,7 +90,7 @@ export default class GameModal extends BaseElement {
     disconnectedCallback() {
         super.disconnectedCallback();
         if (this.#closeObs) this.#closeObs();
-        this.currentGame?.terminateGame();
+        this.currentGame?.quitGame();
     }
 
     #modalIsOpen = false;
@@ -135,12 +102,13 @@ export default class GameModal extends BaseElement {
         super.requestUpdate();
 
         if (!this.#canvas || !this.#wrapper) return;
-        this.currentGame = await GameHub.startGame('pong', this.#canvas, this.props.game_data, false);
+        this.currentGame = await GameHub.startGame(this.#canvas, this.props.game_data, true);
         this.#closeObs = useCanvasSizes(this.#wrapper, this.#aspectRatio, (newW, newH) => {
             if (!this.#canvas || !this.#wrapper) return;
             this.#canvas.style.width = `${newW}px`;
             this.#canvas.style.height = `${newH}px`;
-            this.currentGame?.resizeCanvas(newW, newH, window.devicePixelRatio);
+            const canvasRect = this.#canvas.getBoundingClientRect();
+            this.currentGame?.resizeCanvas(canvasRect.x, canvasRect.y, newW, newH, window.devicePixelRatio);
         });
     }
 
@@ -148,7 +116,8 @@ export default class GameModal extends BaseElement {
         this.#modalIsOpen = false;
         super.requestUpdate();
         this.#closeObs();
-        this.currentGame?.terminateGame();
+        this.currentGame?.quitGame();
+        // this.currentGame?.terminateGame();
     }
 
     /**
@@ -157,39 +126,6 @@ export default class GameModal extends BaseElement {
      */
     renderHeader = (gameData) => html`
         <div class="modal-header">
-            <div class="w-100 d-flex align-items-center justify-content-evenly">
-                <div
-                    class="d-flex align-items-center p-1 border border-2 border-success rounded-3"
-                    @click=${(ev) => {
-                        ev.stopPropagation();
-                        ev.preventDefault();
-                    }}
-                >
-                    ${renderAvatar(
-                        gameData?.player_one.id,
-                        gameData?.player_one.username,
-                        gameData?.player_one.avatar,
-                        'before',
-                    )}
-                    <span class="fs-1 px-3">${this.currentGame?.scorePlayerOne}</span>
-                </div>
-                <p class="p-2 m-0 fs-3 text-body-emphasis">VS</p>
-                <div
-                    class="d-flex align-items-center p-1 border border-2 border-danger rounded-3"
-                    @click=${(ev) => {
-                        ev.stopPropagation();
-                        ev.preventDefault();
-                    }}
-                >
-                    <span class="fs-1 px-3">${this.currentGame?.scorePlayerOne}</span>
-                    ${renderAvatar(
-                        gameData?.player_two.id,
-                        gameData?.player_two.username,
-                        gameData?.player_two.avatar,
-                        'after',
-                    )}
-                </div>
-            </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
     `;
@@ -252,11 +188,10 @@ export default class GameModal extends BaseElement {
                         <div class="modal-body">
                             ${this.renderGameScreen()}
                         </div>
-                        ${this.renderFooter()}
                     </div>
                 </div>
             </div>
         `;
     }
 }
-window.customElements.define('game-modal', GameModal);
+window.customElements.define('game-modaln', GameModal2);

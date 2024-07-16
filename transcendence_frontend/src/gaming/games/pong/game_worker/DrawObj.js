@@ -7,28 +7,28 @@ export default class DrawObj {
      * @param {PongGameplayTypes.GameObjData} initial
      */
     constructor(ctx, initial) {
-        this.#x = initial.x;
-        this.#y = initial.y;
-        this.w = initial.w;
-        this.w_half = initial.w / 2.0;
-        this.h = initial.h;
-        this.h_half = initial.h / 2.0;
-        this.left = initial.x;
-        this.right = initial.x + initial.w;
-        this.top = initial.y;
-        this.bottom = initial.y + initial.h;
-        this.boundBottom = initial.bound_bottom;
-        this.boundTop = initial.bound_top;
-        this.boundRight = initial.bound_right;
-        this.boundLeft = initial.bound_left;
-        this.speedX = initial.speed_x;
-        this.speedY = initial.speed_y;
-        this.dx = initial.dx;
-        this.dy = initial.dy;
-        this.canvasWidth = 1;
-        this.canvasHeight = 1;
-        this.color = '#000';
-        this.ctx = ctx;
+        /** @type {number} */ this.#x = initial.x;
+        /** @type {number} */ this.#y = initial.y;
+        /** @type {number} */ this.w = initial.w;
+        /** @type {number} */ this.w_half = initial.w / 2.0;
+        /** @type {number} */ this.h = initial.h;
+        /** @type {number} */ this.h_half = initial.h / 2.0;
+        /** @type {number} */ this.left = initial.x;
+        /** @type {number} */ this.right = initial.x + initial.w;
+        /** @type {number} */ this.top = initial.y;
+        /** @type {number} */ this.bottom = initial.y + initial.h;
+        /** @type {number} */ this.boundBottom = initial.bound_bottom;
+        /** @type {number} */ this.boundTop = initial.bound_top;
+        /** @type {number} */ this.boundRight = initial.bound_right;
+        /** @type {number} */ this.boundLeft = initial.bound_left;
+        /** @type {number} */ this.speedX = initial.speed_x;
+        /** @type {number} */ this.speedY = initial.speed_y;
+        /** @type {number} */ this.dx = initial.dx;
+        /** @type {number} */ this.dy = initial.dy;
+        /** @type {number} */ this.canvasWidth = 1;
+        /** @type {number} */ this.canvasHeight = 1;
+        /** @type {string} */ this.color = '#000';
+        /** @type {OffscreenCanvasRenderingContext2D} */ this.ctx = ctx;
     }
 
     #x;
@@ -48,18 +48,38 @@ export default class DrawObj {
         this.bottom = value + this.h;
     }
 
+    /**
+     * @param {number} width 
+     * @param {number} height 
+     */
     setCanvasSizes(width, height) {
         this.canvasWidth = width;
         this.canvasHeight = height;
     }
 
+    /**
+     * @param {string} color 
+     */
     setColor(color) {
         this.color = color;
     }
 
+    /**
+     * @param {number} a 
+     * @param {number} b 
+     * @param {number} alpha 
+     * @returns {number}
+     */
     lerp = (a, b, alpha) => a + alpha * (b - a);
     
+    /**
+     * @param {number} start
+     * @param {number} end
+     * @param {number} time
+     * @returns {number}
+     */
     lerp2 = (start, end, time) => start * (1 - time) + end * time;
+
     /**
      * @param {PongGameplayTypes.GameObjPositionData} lastUpdate 
      * @param {PongGameplayTypes.GameObjPositionData} nextUpdate
@@ -83,9 +103,7 @@ export default class DrawObj {
     }
 
     /**
-     * 
      * @param {DrawObj} obj 
-     * @returns
      */
     coll_ision(obj) {
         let diffTimeX = Infinity;

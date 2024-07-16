@@ -57,7 +57,6 @@ export class Fetcher {
         }
         if (csrfCookieHeaderName) this.#csrf = csrfCookieHeaderName;
         this.#requestInit.headers = new Headers(this.#requestInit.headers);
-        this.#requestInit.headers.set('Content-Type', 'application/json');
     }
 
     /**
@@ -115,13 +114,21 @@ export class Fetcher {
             return;
         }
         let object = bodyData;
-        if (bodyData instanceof FormData) {
-            object = {};
-            bodyData.forEach((value, key) => {
-                object[key] = value;
-            });
+        console.log('my fromdata: ');
+        if (usedRequest.headers instanceof Headers && bodyData instanceof FormData) {
+            usedRequest.body = bodyData;
+            // bodyData.forEach((v, k) => {
+            //     console.log(`key: $${k}$ value: $${v}$`);
+            // })
+            // object = {};
+            // bodyData.forEach((value, key) => {
+            //     object[key] = value;
+            // });
+            // usedRequest.headers.set('Content-Type', 'multipart/form-data');
+        } else if (usedRequest.headers instanceof Headers) {
+            usedRequest.headers.set('Content-Type', 'application/json');
+            usedRequest.body = JSON.stringify(object);
         }
-        usedRequest.body = JSON.stringify(object);
     }
 
     /**
@@ -150,10 +157,10 @@ export class Fetcher {
             usedRequest.headers &&
             usedRequest.headers instanceof Headers
         ) {
-            usedRequest.body =
-                typeof data.bodyData === 'string' ?
-                    data.bodyData
-                :   JSON.stringify(data.bodyData);
+            // usedRequest.body =
+            //     typeof data.bodyData === 'string' ?
+            //         data.bodyData
+            //     :   JSON.stringify(data.bodyData);
             Fetcher.#setHeaders(usedRequest.headers, data.additionalHeaders);
             Fetcher.#setBody(usedRequest, data.bodyData);
         }

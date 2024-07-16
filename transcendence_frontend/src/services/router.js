@@ -58,8 +58,13 @@ const routes = [
         title: 'Friendlist',
     },
     {
-        path: '/profile/edit',
-        component: 'profile-settings-view',
+        path: '/profile/settings',
+        component: 'settings-view',
+        title: 'Profile ',
+    },
+    {
+        path: '/profile/settings/:id',
+        component: 'settings-view',
         title: 'Profile ',
     },
     {

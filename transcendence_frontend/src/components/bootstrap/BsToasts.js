@@ -1,9 +1,19 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
+import { Toast } from 'bootstrap';
 
 export class ToastNotificationErrorEvent extends Event {
     constructor(message) {
         super("toast_notification_error", {bubbles: true});
         this.message = message;
+        this.color = 'danger';
+    }
+}
+
+export class ToastNotificationSuccessEvent extends Event {
+    constructor(message) {
+        super("toast_notification_success", {bubbles: true});
+        this.message = message;
+        this.color = 'success';
     }
 }
 
@@ -23,26 +33,28 @@ export default class BsToasts extends BaseElement {
         super.connectedCallback();
         document.addEventListener('render-notification', this.#onNotification);
         document.addEventListener("toast_notification_error", this.#onNotification);
+        document.addEventListener("toast_notification_success", this.#onNotification);
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
         document.removeEventListener('render-notification', this.#onNotification );
         document.removeEventListener('toast_notification_error', this.#onNotification );
+        document.removeEventListener('toast_notification_success', this.#onNotification );
     }
 
-    /** @param {ToastNotificationErrorEvent} event  */
+    /** @param {ToastNotificationErrorEvent | ToastNotificationSuccessEvent} event  */
     onNotification(event) {
-        if (event instanceof ToastNotificationErrorEvent) {
-            this.renderToastErrorMessage(event.message);
+        if (event instanceof ToastNotificationErrorEvent || event instanceof ToastNotificationSuccessEvent) {
+            this.renderToastMessage(event.message, event.color);
         }
     }
 
-    renderToastErrorMessage = (message) => {
+    renderToastMessage = (message, color) => {
         const templ = document.createElement('template');
         templ.innerHTML = /* html */ `
-            <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex alert alert-danger p-1">
+            <div class="toast align-items-center text-bg-${color} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex alert alert-${color} p-1">
                     <div class="toast-body">
                         ${message}
                     </div>
@@ -62,7 +74,7 @@ export default class BsToasts extends BaseElement {
         this.toastCont.appendChild(toast);
         // @ts-ignore
         // eslint-disable-next-line no-undef
-        const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toast);
+        const toastBootstrap = Toast.getOrCreateInstance(toast);
         toastBootstrap.show();
     };
 
@@ -77,7 +89,7 @@ export default class BsToasts extends BaseElement {
                     ${(el) => {
                         this.toastCont = el;
                     }}
-                    class="toast-container top-0 end-0 p-3"
+                    class="toast-container p-3" style="${"position: fixed;z-index: 1030; top:0;right:0"}"
                 ></div>
             </div>
         `;

@@ -26,7 +26,7 @@ GAME_CHANNEL_ALIAS = "default"
 JOIN_TIMEOUT = 15
 RECONNECT_TIMEOUT = 7
 IDLE_TIMEOUT = 20
-START_GAME_TIMEOUT = 10
+START_GAME_TIMEOUT = 3
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ class GameConsumer(AsyncConsumer):
                     game_handle.player_ready(event['client_command']['user_id'])
 
                 case "client-move" | "client-pause" | "client-resume":
-                    logger.info(f"user {event['client_command']['user_id']} make command: {event['client_command']['cmd']}")
+                    # logger.info(f"user {event['client_command']['user_id']} make command: {event['client_command']['cmd']}")
                     await game_handle.push_action(event['client_command']['user_id'], event)
 
                 case _:
@@ -402,10 +402,10 @@ class GameHandle:
 
     async def push_action(self, user_id: int, action: msg_client.GameEngineMessage):
         if user_id not in self.connected_user_ids:
-            logger.error(f"GameHandle: push_action: user: {user_id} not part of the game, command: {action}")
+            # logger.error(f"GameHandle: push_action: user: {user_id} not part of the game, command: {action}")
             raise RuntimeError(f"unable to push action, user not part of the game")
         elif self.game and self.game.is_alive():
-            logger.info(f"GameHandle: push_action: user: {user_id}, command: {action}")
+            # logger.info(f"GameHandle: push_action: user: {user_id}, command: {action}")
             self.last_action = time.time()
             self.q.put_nowait(action)
         else:

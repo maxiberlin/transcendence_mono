@@ -26,9 +26,10 @@ class WebsocketErrorCode(Enum):
     JOIN_TIMEOUT = 4206
     RECONNECT_TIMEOUT = 4207
     IDLE_TIMEOUT = 4208
-    ALREADY_CONNECTED = 4209
+    GAME_SERVER_TIMEOUT = 4209
+    ALREADY_CONNECTED = 4210
 
-    INTERNAL_ERROR = 4209
+    INTERNAL_ERROR = 4211
 
 
 class CommandError(Exception):
@@ -167,6 +168,10 @@ class GameEnd(BaseBroadcast):
     user_id_loser: int
     reason: GameEndReason
 
+class ServerPongCommand(TypedDict):
+    tag: Literal["pong"]
+    client_timestamp_ms: float
+    server_timestamp_ms: float
 
 @dataclass
 class GamePaused(BaseBroadcast):

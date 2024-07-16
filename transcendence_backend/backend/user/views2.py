@@ -14,6 +14,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 from .utils import *
+import os
+from backend.settings import MEDIA_ROOT
 
 
 @csrf_exempt
@@ -101,7 +103,7 @@ def profile_view(request, *args, **kwargs):
 		'email': account.email,
 		'first_name': account.first_name,
 		'last_name': account.last_name,
-		'avatar': account.avatar.url,
+		'avatar': account.avatar.url if account.avatar else '',
 		'last_login': account.last_login,
 		'date_joined': account.date_joined,
 		'alias': player.alias,
@@ -136,7 +138,7 @@ def profile_edit_view(request, *args, **kwargs):
 	user = request.user
 	user_id = kwargs.get('user_id')
 	try:
-		account = UserAccount.objects.get(pk=user_id)
+		account: UserAccount = UserAccount.objects.get(pk=user_id)
 		player = Player.objects.get(user=account)
 	except (UserAccount.DoesNotExist, Player.DoesNotExist):
 		HttpNotFound404("This profile does not exist")
@@ -146,10 +148,15 @@ def profile_edit_view(request, *args, **kwargs):
 	first_name = request.POST.get('first_name')
 	last_name = request.POST.get('last_name')
 	alias = request.POST.get('alias')
+	avatar = request.FILES.get('avatar')
+	# avatarNone = request.POST.get('avatar')
 
-	avatar = None
-	if 'avatar' in request.FILES:
-		avatar = request.FILES['avatar']
+	# avatar = None
+	print("filesss: ", request.FILES)
+	# if 'avatar' in request.FILES:
+
+	# 	print("NEW AVATARRRR")
+	# 	avatar = request.FILES['avatar']
 
 	if first_name:
 		account.first_name = first_name
@@ -159,6 +166,12 @@ def profile_edit_view(request, *args, **kwargs):
 		player.alias = alias
 	if avatar:
 		account.avatar = avatar
+	# if avatarNone == "None":
+	# 	from django.core.files.images import ImageFile
+	# 	default = ImageFile(open(os.path.join(MEDIA_ROOT, set_default_avatar()), "r"))
+	# 	account.avatar.save(set_default_avatar(), default)
+		# account.avatar.delete(save=True)
+		# account.avatar
 	player.save()
 	account.save()
 	return HttpSuccess200("Profile edited sucessfull")

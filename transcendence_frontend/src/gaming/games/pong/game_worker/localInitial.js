@@ -20,19 +20,18 @@ const defaultSettings = {
 };
 
 const { downscaleX, downscaleY } = useScale(20000, 20000);
-const g_speeddef = 4000
 const sizesDefault = {
     width: downscaleX(20000),
     height: downscaleY(20000),
     paddle_width: downscaleX(300),
     paddle_height: downscaleY(2600),
     paddle_speed_x: downscaleX(0),
-    paddle_speed_y: downscaleY(g_speeddef),
+    paddle_speed_y: downscaleY(15000),
     wall_dist: downscaleX(300),
     ball_width: downscaleX(300),
     ball_height: downscaleY(600),
-    ball_speed_x: downscaleX(g_speeddef),
-    ball_speed_y: downscaleY(g_speeddef),
+    ball_speed_x: downscaleX(10000),
+    ball_speed_y: downscaleY(10000),
     border_width: downscaleX(600),
     border_height: downscaleY(600),
 };

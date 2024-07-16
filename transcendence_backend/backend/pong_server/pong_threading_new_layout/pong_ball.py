@@ -50,7 +50,8 @@ class PongBall(GameObjDataClass):
         self.settings = settings
         self.ball_timeout: float | None = None
         self.serve_to: ServeSide = "serve-left"
-        self.slow_serve = True
+        # self.slow_serve = True
+        self.slow_serve = False
         self.extra_speedup = False
         self.maxPaddleBallDiff = (settings.ball_height/settings.height + settings.paddle_height/settings.height) / 2
 
@@ -73,14 +74,16 @@ class PongBall(GameObjDataClass):
 
 
     def __calc_x(self, tick: float):
-        spd = self.speed_x * 0.75 if self.slow_serve else self.speed_x
-        spd = spd * 1.1 if self.extra_speedup else spd
-        self.x = self.x + tick * self.dx * spd
+        # spd = self.speed_x * 0.75 if self.slow_serve else self.speed_x
+        # spd = spd * 1.1 if self.extra_speedup else spd
+        # self.x = self.x + tick * self.dx * spd
+        self.x = self.x + tick * self.dx * self.speed_x
 
     def __calc_y(self, tick: float):
-        spd = self.speed_y * 0.75 if self.slow_serve else self.speed_y
-        # spd = spd * 1.5 if self.extra_speedup else spd
-        self.y = self.y + tick * self.dy * spd
+        # spd = self.speed_y * 0.75 if self.slow_serve else self.speed_y
+        # # spd = spd * 1.5 if self.extra_speedup else spd
+        # self.y = self.y + tick * self.dy * spd
+        self.y = self.y + tick * self.dy * self.speed_y
 
     def __redo_dir_y(self, tick: float, time_while_collision: float):
         self.__calc_y(tick - time_while_collision)
@@ -128,16 +131,17 @@ class PongBall(GameObjDataClass):
             self.__redo_dir_y(tick, time_while_collision)
             self.slow_serve = False
         elif collision == Collision.COLL_LEFT or collision == Collision.COLL_RIGHT:
+            print(f"COLLISION ON ONE SIDE!!!  {'left' if collision == Collision.COLL_LEFT else 'right'}")
             self.__redo_dir_x(tick, time_while_collision)
             self.slow_serve = False
 
-            ball_center_y = self.top + self.h/2
-            paddle_center_y = paddle.top + paddle.h/2
-            diff_y_abs = abs(ball_center_y - paddle_center_y)
-            rel_diff_y = diff_y_abs / self.maxPaddleBallDiff
-            new_angle_rad = math.radians(rel_diff_y * 75)
-            self.dx = math.cos(new_angle_rad) if collision == Collision.COLL_LEFT else math.cos(new_angle_rad)*-1
-            self.dy = math.sin(new_angle_rad) if ball_center_y > paddle_center_y else math.sin(new_angle_rad)*-1
+            # ball_center_y = self.top + self.h/2
+            # paddle_center_y = paddle.top + paddle.h/2
+            # diff_y_abs = abs(ball_center_y - paddle_center_y)
+            # rel_diff_y = diff_y_abs / self.maxPaddleBallDiff
+            # new_angle_rad = math.radians(rel_diff_y * 75)
+            # self.dx = math.cos(new_angle_rad) if collision == Collision.COLL_LEFT else math.cos(new_angle_rad)*-1
+            # self.dy = math.sin(new_angle_rad) if ball_center_y > paddle_center_y else math.sin(new_angle_rad)*-1
             
 
 

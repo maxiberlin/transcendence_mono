@@ -41,7 +41,7 @@ import BsButton from './bootstrap/BsButton.js';
  * @returns {TplLit}
  */
 const getBtn = (handler, defConf, conf) => {
-    console.log('get acion gtn');
+    // console.log('get acion gtn');
     if (!conf) conf = {};
     const asyncHandler = async () => {
         console.log('action btn clicked');
@@ -50,20 +50,18 @@ const getBtn = (handler, defConf, conf) => {
         if (conf.host && !conf.cb && conf.host instanceof BaseElement)
             conf.host.requestUpdate();
     };
-    let text;
     // if (conf.showText || (conf.showText === undefined && defConf.showText))
-    console.log('conf: ', conf);
-    console.log('defConf: ', defConf);
+    // console.log('conf: ', conf);
+    // console.log('defConf: ', defConf);
     const show = conf.showText ?? defConf.showText;
-    if (show)
-        text = conf.text ?? defConf.text;
-    else text = '';
-    const color = conf.color ?? defConf.color;
-    const icon = conf.icon ?? defConf.icon;
-    const radius = conf.radius ?? defConf.radius;
-    const outline = conf.outline ?? defConf.outline;
-    const dropdownitem = conf.dropdownitem ?? '';
-    const stretch = conf.stretch ?? '';
+    const text = show ? conf.text ?? defConf.text ?? '' : '';
+    
+    const color = conf.color ?? defConf.color ?? "success";
+    const icon = conf.icon ?? defConf.icon ?? "check";
+    const radius = conf.radius ?? defConf.radius ?? "3";
+    const outline = conf.outline ?? defConf.outline ?? true;
+    const dropdownitem = conf.dropdownitem ?? false;
+    const stretch = conf.stretch ?? false;
 
     return html`
     <bs-button
@@ -189,7 +187,7 @@ export const renderDropdown = (conf, actions) => {
     return html`
     <div class="dropdown">
         <button
-            class="btn ${color} "
+            class="btn ${color} mx-1"
             ?outline=${conf.outline}
             type="button"
             data-bs-toggle="dropdown"

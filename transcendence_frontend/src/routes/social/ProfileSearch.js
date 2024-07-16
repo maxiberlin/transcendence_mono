@@ -94,43 +94,60 @@ export default class ProfileSearch extends BaseElement {
         if (this.followlink) {
             router.go(route);
         } else {
-            console.log('jfewgwjrgjnwr');
-            this.#showRes = false;
+            // this.#showRes = false;
             this.#searchData = [];
             this.#currSearchRes = "";
             this.#currSearchNavPos = -1;
+            console.log('handleSelectedClicked -> clear the data');
             super.requestUpdate();
             console.log('inpt: ', this.#inptElem);
             const inpt = this.#searchSection.querySelector("input");
             if (inpt) {
                 inpt.value = '';
-                inpt.blur();
+                this.#searchData = 'Type to search';
+                inpt.focus();
             }
             
         } 
     }
 
     /** @param {KeyboardEvent} ev  */
+    handleSelectionKeypress(ev) {
+        if (!(this.#searchData instanceof Array)) return;
+        if (ev.key === 'ArrowUp') {
+            this.#currSearchNavPos = clamp(0, this.#currSearchNavPos-1, this.#searchData.length-1)
+            this.toggleActiveElement(this.#currSearchNavPos);
+        } else if (ev.key === 'ArrowDown') {
+            this.#currSearchNavPos = clamp(0, this.#currSearchNavPos+1, this.#searchData.length-1)
+            this.toggleActiveElement(this.#currSearchNavPos);
+        } else if (ev.key === 'Enter' && this.#currSearchNavPos >= 0) {
+            console.log('\n\n!!!!!ENTER KEY KLICKED');
+            const selectedRes = this.#searchData[this.#currSearchNavPos];
+            const currentEntry = this.#searchListGroupContainer?.querySelector('div[data-search-result] > a.active');
+            if (currentEntry instanceof HTMLAnchorElement) {
+                console.log('href!!: ', currentEntry.href);
+                this.handleSelectedClicked(currentEntry.href);
+            }
+            console.log('new item: ', selectedRes);
+            this.dispatchEvent(new SelectedSearchResult(selectedRes))
+            if (this.discardprev) this.discarted.push(selectedRes.id);
+        } else {
+            return;
+        }
+        ev.preventDefault();
+    }
+
+    /** @param {KeyboardEvent} ev  */
     #handleSearchResultKeyNav(ev) {
-        if ( this.#showRes && this.#searchData instanceof Array && this.#searchListGroupContainer instanceof Element) {
-            if (ev.key === 'ArrowUp') {
-                this.#currSearchNavPos = clamp(0, this.#currSearchNavPos-1, this.#searchData.length-1)
-                this.toggleActiveElement(this.#currSearchNavPos);
-            } else if (ev.key === 'ArrowDown') {
-                this.#currSearchNavPos = clamp(0, this.#currSearchNavPos+1, this.#searchData.length-1)
-                this.toggleActiveElement(this.#currSearchNavPos);
-            } else if (ev.key === 'Enter' && this.#currSearchNavPos >= 0) {
-                const selectedRes = this.#searchData[this.#currSearchNavPos];
-                if (this.discardprev) this.discarted.push(selectedRes.id);
-                this.dispatchEvent(new SelectedSearchResult(selectedRes))
-                console.log('new item: ', selectedRes);
-                const currentEntry = this.#searchListGroupContainer?.querySelector('div[data-search-result] > a.active');
-                if (currentEntry instanceof HTMLAnchorElement) {
-                    console.log('href!!: ', currentEntry.href);
-                    this.handleSelectedClicked(currentEntry.href);
-                }
-            } else {
-                return;
+        if (this.#showRes) {
+            if (ev.key === 'Escape') {
+                ev.preventDefault();
+                this.#inptElem?.blur();
+                this.#showRes = false;
+                this.#currSearchNavPos = -1;
+                super.requestUpdate();
+            } else if (this.#searchData instanceof Array) {
+                this.handleSelectionKeypress(ev);
             }
         } else {
             this.#currSearchNavPos = -1;
@@ -161,9 +178,9 @@ export default class ProfileSearch extends BaseElement {
                     ev.preventDefault();
                     const selectedRes = this.#searchData[contDiv.dataset.searchResult];
                     console.log('selected result: ', selectedRes);
-                    this.dispatchEvent(new SelectedSearchResult(selectedRes))
                     this.handleSelectedClicked(target.closest('a')?.href ?? '');
                     if (this.discardprev) this.discarted.push(selectedRes.id);
+                    this.dispatchEvent(new SelectedSearchResult(selectedRes))
                 } else {
                     makeUpDate = this.#showRes !== true;
                     this.#showRes = true;
@@ -187,6 +204,12 @@ export default class ProfileSearch extends BaseElement {
 
     render() {
 
+        console.log('render search -> current data:');
+        console.log('currSearchNavPos: ', this.#currSearchNavPos);
+        console.log('currSearchRes: ', this.#currSearchRes);
+        console.log('searchData: ', this.#searchData);
+        console.log('showRes: ', this.#showRes);
+
         if (this.discardprev && this.#searchData instanceof Array)
             this.#searchData = this.#searchData.filter((u)=>!this.discarted.includes(u.id))
         else if (this.props.todiscard.length > 0 && this.#searchData instanceof Array)
@@ -203,6 +226,8 @@ export default class ProfileSearch extends BaseElement {
         } else {
             this.#currSearchRes = '';
         }
+
+        
 
         return html`
             <section

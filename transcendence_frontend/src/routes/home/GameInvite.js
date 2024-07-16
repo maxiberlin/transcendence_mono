@@ -1,3 +1,4 @@
+import { actionButtonDropdowns } from '../../components/ActionButtons.js';
 import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { SelectedSearchResult } from '../social/ProfileSearch.js';
@@ -12,10 +13,7 @@ export default class GameInvite extends BaseElement {
             console.log('new search res: ', ev);
             if (ev.selectedSearchResult) {
                 this.selected.push(ev.selectedSearchResult);
-
-                
                 this.checkValidNbr();
-                super.requestUpdate();
             } else {
                 console.error("NO SEARCH RESULT!!!");
             }
@@ -34,17 +32,23 @@ export default class GameInvite extends BaseElement {
         this.removeEventListener("profile_search_selected_result", this.onSelectedResult);
     }
 
-    checkValidNbr() {
-        const selectedMode = this.querySelector('input[name="tournament-mode"]:checked');
-        if (selectedMode && selectedMode instanceof HTMLInputElement) {
-            console.log('mode: ', selectedMode.value);
+    checkValidNbr(e) {
+        let modeInptElem;
+        if (e && e instanceof InputEvent) {
+            modeInptElem = e.target;
+        } else {
+            modeInptElem = this.querySelector('input[name="tournament-mode"]:checked');
+        }
+        if (modeInptElem && modeInptElem instanceof HTMLInputElement) {
+            console.log('mode: ', modeInptElem.value);
             if (this.selected.length+1 <= 2)
                 this.validnbr = false;
-            else if (selectedMode.value === "single-elemination" && (this.selected.length+1) %2 !== 0)
+            else if (modeInptElem.value === "single-elemination" && (this.selected.length+1) %2 !== 0)
                 this.validnbr = false;
             else
                 this.validnbr = true;
         }
+        super.requestUpdate();
     }
 
     /** @param {MouseEvent} e  */
@@ -61,12 +65,93 @@ export default class GameInvite extends BaseElement {
                 console.log('selected users: ', this.selected);
                 this.selected.splice(Number(item.dataset.selectedUser), 1);
                 this.checkValidNbr();
-                super.requestUpdate();
             }
         }
     }
 
-    render() {
+    testButtons = () => html`
+        <!-- <div class="container bg-info overflow-hidden text-center">
+            <div class="row g-2">
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+            </div>
+        </div>
+        <div class="container mt-5 bg-info overflow-hidden text-center">
+            <div class="row g-2">
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+                <div class="col-6">
+                <div class="p-3 bg-white">Custom column padding</div>
+                </div>
+            </div>
+        </div> -->
+        <div class="container">
+            <div class="row g-2 align-items-center">
+                <div class="col-6 ">
+                    <p class="p-3 m-0 bg-warning">One of four columns</p>
+                </div>
+                <div class="col-6 ">
+                    <p class="p-3 m-0 bg-warning">One of four columns</p>
+                </div>
+                <div class="col-6 ">
+                    <p class="p-3 m-0 bg-warning">One of four columns</p>
+                </div>
+                <div class="col-6 ">
+                    <p class="p-3 m-0 bg-warning">One of four columns</p>
+                </div>
+            </div>
+        </div>
+        <div class="container mt-5 text-center bg-warning">
+        
+            <div class="row gy-3 align-items-center">
+                <div class="col-6"><bs-button stretch text="accept" icon="check" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch text="reject" icon="xmark" color="danger" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch iconright text="accept" icon="check" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch iconright text="reject" icon="xmark" color="danger" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch text="accept" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch text="reject" color="danger" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch icon="check" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button stretch icon="xmark" color="danger" outline></bs-button></div>
+         
+                <div class="col-6 bg-success" style="${"height: 30px;"}">
+                    Jo
+                </div>
+                <div class="col-6 bg-danger" style="${"height: 30px;"}">
+                    No
+                </div>
+                ${actionButtonDropdowns.friendActions(1)}
+                <div class="col-6"><bs-button text="accept" icon="check" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button text="reject" icon="xmark" color="danger" outline></bs-button></div>
+                <div class="col-6"><bs-button text="accept" iconright icon="check" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button text="reject" iconright icon="xmark" color="danger" outline></bs-button></div>
+                <div class="col-6"><bs-button text="accept" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button text="reject" color="danger" outline></bs-button></div>
+                <div class="col-6"><bs-button icon="check" color="success" outline></bs-button></div>
+                <div class="col-6"><bs-button icon="xmark" color="danger" outline></bs-button></div>
+                
+            </div>
+        </div>
+    
+    `
+
+    renderTournamentCreate() {
         return html`
             <div class="container">
                 <h1 >Create a Tournament</h1>
@@ -77,15 +162,26 @@ export default class GameInvite extends BaseElement {
                 </div>
                 <div class="d-flex justify-content-evenly align-items-center" >
 
-                    <input type="radio" name="tournament-mode" class="btn-check" id="btn-round-robin" value="round-robin" autocomplete="off">
+                    <input @click=${this.checkValidNbr.bind(this)}
+                            type="radio"
+                            name="tournament-mode"
+                            class="btn-check"
+                            id="btn-round-robin"
+                            value="round-robin"
+                            autocomplete="off">
                     <label class="btn btn-outline-dark" for="btn-round-robin">Round Robin</label>
 
-                    <input type="radio" name="tournament-mode" class="btn-check" id="btn-single-elemination" value="single-elemination" checked autocomplete="off">
+                    <input @click=${this.checkValidNbr.bind(this)}
+                            type="radio" name="tournament-mode"
+                            class="btn-check"
+                            id="btn-single-elemination"
+                            value="single-elemination"
+                            checked autocomplete="off">
                     <label class="btn btn-outline-dark" for="btn-single-elemination">Single elimination</label>
 
                     <span class="fs-3 m-0 p-0 ${this.validnbr ? 'text-success' : 'text-danger'} " >Players: ${this.selected.length+1}</span>
                 </div>
-                <div class="my-3 container">
+                <div class="my-3">
                     <profile-search .todiscard=${this.selected.map((it)=>it.id)} ></profile-search>
                 </div>
 
@@ -107,9 +203,13 @@ export default class GameInvite extends BaseElement {
                     <bs-button outline color="danger" text="cancel"></bs-button>
                     <bs-button ?disabled=${!this.validnbr}  color="success" text="create"></bs-button>
                 </div>
+
             </div>
-            
         `
+    }
+
+    render() {
+        return this.renderTournamentCreate();
     }
 }
 customElements.define("game-invite", GameInvite);

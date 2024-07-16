@@ -3,7 +3,7 @@ from typing import Literal
 import dataclasses
 from .messages_server import ServeMode, ServeSide
 
-speeeeeed_ball = 20000
+speeeeeed_ball = 5000
 speeeeeed_paddle = 18000
 @dataclasses.dataclass
 class PongSettings:
@@ -22,7 +22,7 @@ class PongSettings:
     serve_mode: ServeMode = dataclasses.field(default="serve-loser")
     initial_serve_to: ServeSide = dataclasses.field(default="serve-left")
     max_score: int = dataclasses.field(default=10)
-    tick_rate: int = dataclasses.field(default=50)
+    tick_rate: int = dataclasses.field(default=40)
 
 
 # class PongSettings:

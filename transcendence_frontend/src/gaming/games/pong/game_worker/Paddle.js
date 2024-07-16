@@ -48,6 +48,7 @@ export default class PongPaddle extends DrawObj {
      * @param {PongClientTypes.ClientMoveDirection} action
      */
     setDir(action) {
+        console.log(`move paddle. pos: x:${this.x*this.canvasWidth} y: ${this.y*this.canvasHeight}`);
         switch (action) {
             case 'up':
                 this.dy = -1;
@@ -66,6 +67,13 @@ export default class PongPaddle extends DrawObj {
         }
     }
 
+    /**
+     * @param {number} nY 
+     */
+    setPaddlePosition(nY) {
+        this.y = clamp(this.boundTop, nY, this.boundBottom - this.h);
+    }
+
     update(elapsed) {
         // if (this.x < 0.5) {
         //     console.log(`paddle left: top: ${this.top}`);
@@ -75,7 +83,7 @@ export default class PongPaddle extends DrawObj {
         if (nY === 0) throw new Error('nY === 0');
 
         if (this.dy !== 0 || elapsed === 0) {
-            this.y = clamp(this.boundTop, nY, this.boundBottom - this.h);
+            this.setPaddlePosition(nY);
         }
     }
 }

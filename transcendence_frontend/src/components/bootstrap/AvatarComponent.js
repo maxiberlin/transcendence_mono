@@ -100,6 +100,16 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 // }
 // customElements.define('avatar-component-new', AvatarComponent2);
 
+/**
+ * @prop text_after
+ * @prop text_before
+ * @attr size
+ * @attr src
+ * @attr status
+ * @attr radius
+ * @attr statusborder
+ * @attr statustext
+ */
 export default class AvatarComponent extends BaseElement {
     static observedAttributes = ['size', 'src', 'status', 'radius', 'statusborder', 'statustext'];
 
