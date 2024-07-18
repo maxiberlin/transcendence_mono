@@ -51,7 +51,7 @@ class PongBall(GameObjDataClass):
         self.ball_timeout: float | None = None
         self.serve_to: ServeSide = "serve-left"
         # self.slow_serve = True
-        self.slow_serve = False
+        self.slow_serve = True
         self.extra_speedup = False
         self.maxPaddleBallDiff = (settings.ball_height/settings.height + settings.paddle_height/settings.height) / 2
 
@@ -135,13 +135,13 @@ class PongBall(GameObjDataClass):
             self.__redo_dir_x(tick, time_while_collision)
             self.slow_serve = False
 
-            # ball_center_y = self.top + self.h/2
-            # paddle_center_y = paddle.top + paddle.h/2
-            # diff_y_abs = abs(ball_center_y - paddle_center_y)
-            # rel_diff_y = diff_y_abs / self.maxPaddleBallDiff
-            # new_angle_rad = math.radians(rel_diff_y * 75)
-            # self.dx = math.cos(new_angle_rad) if collision == Collision.COLL_LEFT else math.cos(new_angle_rad)*-1
-            # self.dy = math.sin(new_angle_rad) if ball_center_y > paddle_center_y else math.sin(new_angle_rad)*-1
+            ball_center_y = self.top + self.h/2
+            paddle_center_y = paddle.top + paddle.h/2
+            diff_y_abs = abs(ball_center_y - paddle_center_y)
+            rel_diff_y = diff_y_abs / self.maxPaddleBallDiff
+            new_angle_rad = math.radians(rel_diff_y * 60)
+            self.dx = math.cos(new_angle_rad) if collision == Collision.COLL_LEFT else math.cos(new_angle_rad)*-1
+            self.dy = math.sin(new_angle_rad) if ball_center_y > paddle_center_y else math.sin(new_angle_rad)*-1
             
 
 

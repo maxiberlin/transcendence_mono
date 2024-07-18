@@ -1,84 +1,25 @@
 import DrawObj from './DrawObj.js';
 
 
-/** @param {(once: boolean, elapsedTimeS: number, currUnixTimeStampMs: number, prevUnixTimeStampMs: number, prevRaw: number, sinceWorkerTimeStamp: number) => void} callback */
-export const useFrame = (callback) => {
-    if (typeof callback !== 'function') throw new Error('invalid callback');
-    let prevTimeStamp;
-    let prevRaw;
-    let currFrame;
-    let timeOrigin = performance.timeOrigin;
-    let once = false;
-    let stopped = true;
+/** @param {FromWorkerGameMessageTypes.FromWorkerMessage} message */
+export const pushMessageToMainThread = (message) => {
+    self.postMessage(message);
+}
 
-    const syncTime = (syncTimeUnixMs) => {
-        if (syncTimeUnixMs) {
-            timeOrigin = syncTimeUnixMs - performance.now();
-            if (prevTimeStamp)
-                timeOrigin + prevRaw;
-        }
-    };
-
-    /** @param {number} sinceWorkerTimeStamp */
-    const renderFunc = (sinceWorkerTimeStamp) => {
-        const unixTimeStamp = timeOrigin + sinceWorkerTimeStamp;
-        if (prevTimeStamp === undefined) {
-            prevTimeStamp = unixTimeStamp;
-            prevRaw = sinceWorkerTimeStamp;
-        }
-        const elapsedTimeMs = sinceWorkerTimeStamp - prevRaw;
-        const elapsed = elapsedTimeMs / 1000;
-        callback(once, elapsed, unixTimeStamp, elapsedTimeMs, prevRaw, sinceWorkerTimeStamp);
-        prevRaw = sinceWorkerTimeStamp;
-        prevTimeStamp = unixTimeStamp;
-        if (!stopped && !once) {
-            currFrame = requestAnimationFrame(renderFunc);
-        } else {
-            currFrame = undefined;
-            prevTimeStamp = undefined;
-            once = false;
-        }
-    };
-    /** @param {number} [startTime] */
-    const startRender = (startTime) => {
-        if (currFrame && !once) return;
-        if (startTime) syncTime(startTime);
-        stopped = false;
-        currFrame = requestAnimationFrame(renderFunc);
-    };
-    const stopRender = () => {
-        if (currFrame) {
-            cancelAnimationFrame(currFrame);
-            currFrame = undefined;
-            prevTimeStamp = undefined;
-            stopped = true;
-        }
-    };
-
-    const resetTime = () => {
-        prevTimeStamp = undefined;
-    };
-
-    const getCurrentServerTime = () => {
-        return timeOrigin + performance.now();
+export const useMedian = () => {
+    let median = 0;
+    let sum = 0;
+    let count = 0;
+    /** @param {number} val */
+    const addValue = (val) => {
+        sum += val;
+        count += 1;
+        median = sum / count;
     }
+    const getMedian = () => median;
+    return ({addValue, getMedian});
+}
 
-    const renderAtMostOnce = () => {
-        if (!currFrame) {
-            once = true;
-            currFrame = requestAnimationFrame(renderFunc);
-        } 
-    };
-
-    return {
-        syncTime,
-        startRender,
-        stopRender,
-        resetTime,
-        renderAtMostOnce,
-        getCurrentServerTime
-    };
-};
 
 /**
  * @param {number} time
@@ -101,72 +42,162 @@ function useFps(time) {
     };
 }
 
-/**
- * @param {number} userId
- * @param {APITypes.GameScheduleItem} gameSchedule
- * @param {DrawObj} paddleLeft
- * @param {DrawObj} paddleRight
- * @param {boolean} remote
- */
-export const usePaddleSide = (userId, gameSchedule, paddleLeft, paddleRight, remote) => {
-    const side = !remote ? "local"
-                : userId === gameSchedule.player_one.id ? "left"
-                : userId === gameSchedule.player_two.id ? "right"
-                : null;
-}
-
-const useInterpolation = () => {
-
-}
 
 /**
- * @param {DrawObj} paddle
+ * @template {PongTypes.GeneralServerTags} Tgen
  */
-export const useMouseTouchHandler = (paddle) => {
-
-    /** @type {number | null} */
-    let ident = null;
-    /** @type {ToWorkerGameMessageTypes.GameTouchRect | null} */
-    let lastTouch = null;
-
-    /** @param {ToWorkerGameMessageTypes.GameTouchRect} touchRect  */
-    const checkOverlap = (touchRect) => paddle.left < touchRect.right && paddle.right > touchRect.left
-                                                && paddle.top < touchRect.bottom && paddle.bottom > touchRect.top;
-
-    /** @param {ToWorkerGameMessageTypes.GameTouchRect} [touchRect] @returns {boolean} */
-    const handleTouchStart = (touchRect) => {
-        if (touchRect == undefined) throw new Error("handleTouchStart: touchRect is undefined!!");
-        if (paddle && checkOverlap(touchRect)) {
-            ident = touchRect.ident;
-            lastTouch = touchRect;
-            return true;
-        } 
-        return false;
+export class ServerMessageMap {
+    constructor() {
+        /** @type {Map<Tgen, PongServerTypes.BroadcastCallback<any> | PongClientTypes.CommandResponseCallback<any> >} */
+        this.map = new Map();
     }
 
-    /** @param {ToWorkerGameMessageTypes.GameTouchRect} [touchRect] @returns {number | null} */
-    const handleTouchMove = (touchRect) => {
-        if (!touchRect == undefined) throw new Error("handleTouchMove: touchRect is undefined!!");
-        if (touchRect && paddle && lastTouch && touchRect.ident === ident) {
-            const pos = paddle.y + (touchRect.y - lastTouch.y);
-            lastTouch = touchRect;
-            return (pos);
+    /**
+     * @template {Tgen} K
+     * @param {K} key
+     * @param { PongTypes.ServerMessageCallback<K> } value
+     */
+    setHandler(key, value) {
+        if (!this.map.has(key))
+            this.map.set(key, value);
+    }
+
+    /**
+     * @template {Tgen} K
+     * @param {K} key
+     * @returns {PongTypes.ServerMessageCallback<K> | undefined}
+     */
+    getHandler(key) {
+        const value = this.map.get(key);
+        if (value) {
+            return /** @type {PongTypes.ServerMessageCallback<K>} */ (value);
         }
-        return (null);
+        return undefined;
     }
-
-    /** @param {number} [identifier] */
-    const handleTouchEnd = (identifier) => {
-        if (identifier == undefined) throw new Error("handleTouchEnd: identifier is undefined!!");
-        if (identifier === ident) {
-            ident = null;
-            lastTouch = null;
-        }
-    }
-
-    return {
-        handleTouchStart,
-        handleTouchMove,
-        handleTouchEnd
+    /**
+     * @template {Tgen} K
+     * @param {K} key
+     * @returns {boolean}
+     */
+    has(key) {
+        return this.map.has(key)
     }
 }
+
+// /**
+//  * @template {PongTypes.GeneralServerTags} Tgen
+//  */
+// export class WorkerMessageMap {
+//     constructor() {
+//         /** @type {Map<Tgen, PongServerTypes.BroadcastCallback<any> | PongClientTypes.CommandResponseCallback<any> >} */
+//         this.map = new Map();
+//     }
+
+//     /**
+//      * @template {Tgen} K
+//      * @param {K} key
+//      * @param { PongTypes.ServerMessageCallback<K> } value
+//      */
+//     setHandler(key, value) {
+//         if (!this.map.has(key))
+//             this.map.set(key, value);
+//     }
+
+//     /**
+//      * @template {Tgen} K
+//      * @param {K} key
+//      * @returns {PongTypes.ServerMessageCallback<K> | undefined}
+//      */
+//     getHandler(key) {
+//         const value = this.map.get(key);
+//         if (value) {
+//             return /** @type {PongTypes.ServerMessageCallback<K>} */ (value);
+//         }
+//         return undefined;
+//     }
+//     /**
+//      * @template {Tgen} K
+//      * @param {K} key
+//      * @returns {boolean}
+//      */
+//     has(key) {
+//         return this.map.has(key)
+//     }
+// }
+
+
+export const WebsocketErrorCode = {
+    OK: 1000,
+    NON_CLOSING_ERROR: 4100,
+    GAME_ALREADY_CREATED: 4101,
+    USER_ALREADY_JOINED_GAME: 4102,
+    INVALID_COMMAND: 4103,
+    DEFAULT_ERROR: 4199,
+    CLOSING_ERROR: 4200,
+    NOT_AUTHENTICATED: 4201,
+    ALREADY_RUNNING_GAME_SESSION: 4202,
+    INVALID_SCHEDULE_ID: 4203,
+    INVALID_USER_ID: 4204,
+    USER_NO_PARTICIPANT: 4205,
+    JOIN_TIMEOUT: 4206,
+    RECONNECT_TIMEOUT: 4207,
+    IDLE_TIMEOUT: 4208,
+    INTERNAL_ERROR: 4209,
+};
+
+export function getSocketErrorMessage(code) {
+    switch (code) {
+        case WebsocketErrorCode.OK:
+            return 'OK';
+        case WebsocketErrorCode.NON_CLOSING_ERROR:
+            return 'Non-closing error';
+        case WebsocketErrorCode.GAME_ALREADY_CREATED:
+            return 'Game already created';
+        case WebsocketErrorCode.USER_ALREADY_JOINED_GAME:
+            return 'User already joined game';
+        case WebsocketErrorCode.INVALID_COMMAND:
+            return 'Invalid command';
+        case WebsocketErrorCode.DEFAULT_ERROR:
+            return 'Default error';
+        case WebsocketErrorCode.CLOSING_ERROR:
+            return 'Closing error';
+        case WebsocketErrorCode.NOT_AUTHENTICATED:
+            return 'Not authenticated';
+        case WebsocketErrorCode.ALREADY_RUNNING_GAME_SESSION:
+            return 'Already running game session';
+        case WebsocketErrorCode.INVALID_SCHEDULE_ID:
+            return 'Invalid schedule ID';
+        case WebsocketErrorCode.INVALID_USER_ID:
+            return 'Invalid user ID';
+        case WebsocketErrorCode.USER_NO_PARTICIPANT:
+            return 'User no participant';
+        case WebsocketErrorCode.JOIN_TIMEOUT:
+            return 'Join timeout';
+        case WebsocketErrorCode.RECONNECT_TIMEOUT:
+            return 'Reconnect timeout';
+        case WebsocketErrorCode.IDLE_TIMEOUT:
+            return 'Idle timeout';
+        case WebsocketErrorCode.INTERNAL_ERROR:
+            return 'Internal error';
+        default:
+            return 'Unknown error code';
+    }
+}
+
+/** @param {PongClientTypes.ClientCommandResponse} msg */
+export function printCommandResponse(msg) {
+    console.log('----- COMMAND RESPONSE ----');
+    console.log(`cmd ${msg.cmd}`);
+    console.log(`id ${msg.id}`);
+    console.log(`success ${msg.success}`);
+    console.log(`message ${msg.message}`);
+    console.log(`status_code ${msg.status_code}`);
+}
+
+// /** @type {Map<string, PongClientTypes.ClientCommand>} */
+// const commandStack = new Map();
+// let commandNbr = 1;
+// /** @type {PongClientTypes.ClientCommand} */
+// let lastCommand;
+// /** @type {PongClientTypes.ClientMoveDirection | undefined} */
+// let lastMove;

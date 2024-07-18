@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict, TypeAlias, NotRequired
+from typing import Literal, TypedDict, TypeAlias, NotRequired, Any
 from enum import Enum
 import uuid
 from channels.layers import get_channel_layer
@@ -125,6 +125,7 @@ class ClientResponse(TypedDict):
     id: int
     message: str
     status_code: int
+    payload: Any
     # type: Literal["command-response"]
 
 class GameEngineMessageResponse(TypedDict):
@@ -212,7 +213,7 @@ class InternalMessenger:
 
 
 async def async_send_command_response(event: GameEngineMessage, success: bool, message: str,
-    status_code: WebsocketErrorCode = WebsocketErrorCode.OK) -> None:
+    status_code: WebsocketErrorCode = WebsocketErrorCode.OK, payload: Any = None) -> None:
 
     if not isinstance(event["client_command"]["id"], int):
         logging.error("Error: send_command_response: invalid id")
@@ -224,6 +225,7 @@ async def async_send_command_response(event: GameEngineMessage, success: bool, m
             "cmd": event["client_command"]["cmd"],
             "message": message,
             "status_code": status_code.value,
+            "payload": payload
         }
     }
     layer = get_channel_layer()
@@ -242,8 +244,8 @@ async def async_send_command_response(event: GameEngineMessage, success: bool, m
 
 @async_to_sync
 async def sync_send_command_response(event: GameEngineMessage, success: bool, message: str,
-    status_code: WebsocketErrorCode = WebsocketErrorCode.OK):
-    await async_send_command_response(event, success, message, status_code)
+    status_code: WebsocketErrorCode = WebsocketErrorCode.OK, payload: Any = None):
+    await async_send_command_response(event, success, message, status_code, payload)
 
 
 

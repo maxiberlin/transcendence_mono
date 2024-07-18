@@ -30,6 +30,7 @@ from typing import Any
 
 @dataclass(slots=True)
 class ClientMoveItem:
+    msg: msg_client.GameEngineMessage
     cmd: msg_client.ClientMoveCommand
     paddle: PongPaddle
     timestamp_sec: float = field(default=0)
@@ -91,6 +92,7 @@ class PongGame(threading.Thread):
         self.lastone_ms = 0
         self.player_move_queue: list[ClientMoveItem] = []
         self.tick_frame: int = 0
+        self.game_start_time_unix_sec = time.time()*1000
 
 
     def process_commands_sec(self, cmd: msg_client.GameEngineMessage, current_time_sec: float, max_past_timestamp_sec: float):            
@@ -124,7 +126,7 @@ class PongGame(threading.Thread):
                         print(f"new move command!: current_time_sec: {current_time_sec}, timestamp: {timestamp_sec}, diff: {(current_time_sec - timestamp_sec) *1000}")
                         if not timestamp_sec or not isinstance(timestamp_sec, float):
                             raise msg_server.CommandError("invalid timestamp_sec", msg_server.WebsocketErrorCode.INVALID_COMMAND)
-                        if timestamp_sec > current_time_sec or timestamp_sec < max_past_timestamp_sec:
+                        if timestamp_sec < 0 or timestamp_sec > current_time_sec or timestamp_sec < max_past_timestamp_sec:
                             raise msg_server.CommandError("timestamp_ms out of bounds", msg_server.WebsocketErrorCode.INVALID_COMMAND)
                     
                         paddle: PongPaddle | None = None
@@ -143,8 +145,9 @@ class PongGame(threading.Thread):
                             #     paddle.set_y_position(new_y)
                             # if action:
                             #     paddle.set_direction(action)
-                            self.player_move_queue.append(ClientMoveItem(timestamp_sec=timestamp_sec, paddle=paddle, cmd=command))
-                        raise msg_server.CommandError("invalid action", msg_server.WebsocketErrorCode.INVALID_COMMAND)
+                            self.player_move_queue.append(ClientMoveItem(msg=cmd, timestamp_sec=timestamp_sec, paddle=paddle, cmd=command))
+                        else:
+                            raise msg_server.CommandError("invalid action", msg_server.WebsocketErrorCode.INVALID_COMMAND)
                     
                     case "client-leave-game":
                         user_id = command.get("user_id", None)
@@ -203,12 +206,17 @@ class PongGame(threading.Thread):
             item = self.player_move_queue[-1]
             first_move_time = item.timestamp_sec
 
-            print(f"first_move: {first_move_time}, last_update: {last_update_time}, current: {curr_time_sec}, invalid: {invalid_tick_frames}")
+            l = last_update_time*1000 - self.game_start_time_unix_sec*1000
+            c = curr_time_sec*1000 - self.game_start_time_unix_sec*1000
+            f = first_move_time*1000 - self.game_start_time_unix_sec*1000
             if (last_update_time > first_move_time):
                 invalid_tick_frames = max(0, math.ceil((last_update_time - first_move_time) / tick_duration_sec))
+                print(f"invalid prev: first_move: {f}, last_update: {l}, current: {c}, invalid: {invalid_tick_frames}")
                 revert_time = invalid_tick_frames * tick_duration_sec
                 last_timestamp = last_update_time - revert_time
                 self.update_game_objects(revert_time*-1)
+            else:
+                print(f"between now and last: last_update: {l}, first_move: {f}, current: {c}")
             while len(self.player_move_queue) > 0:
                 item = self.player_move_queue.pop()
                 paddle = item.paddle
@@ -223,6 +231,12 @@ class PongGame(threading.Thread):
                     paddle.set_direction(action)
                 elif new_y:
                     paddle.set_y_position(new_y)
+                msg_client.sync_send_command_response(item.msg, True, f"new position: paddle y:{paddle.y}",
+                    msg_server.WebsocketErrorCode.OK, payload={
+                        "server_time_now_ms": curr_time_sec*1000,
+                        "server_time_processed_your_time_ms": last_timestamp*1000,
+                        "diff_to_now": curr_time_sec*1000 - last_timestamp*1000
+                    }) 
                 score = self.update_ball(duration)
                 if score != PongBall.Scored.SCORE_NONE:
                     break
@@ -270,13 +284,28 @@ class PongGame(threading.Thread):
         if score != PongBall.Scored.SCORE_NONE:
             if score == PongBall.Scored.SCORE_PLAYER_LEFT:
                 self.gameResults["player_one_score"] += 1
+                self.send_score("left", self.gameResults["player_one_score"])
+                print(f"scored player one: {self.gameResults['player_one_score']}, max score: {self.settings.max_score}")
+                if self.gameResults["player_one_score"] == self.settings.max_score:
+                    self.end_game(self.gameResults["player_two_pk"], "win")
             elif score == PongBall.Scored.SCORE_PLAYER_RIGHT:
                 self.gameResults["player_two_score"] += 1
-            if self.gameResults["player_one_score"] >= self.settings.max_score:
-                self.end_game(self.gameResults["player_two_pk"], "win")
-            elif self.gameResults["player_two_score"] >= self.settings.max_score:
-                self.end_game(self.gameResults["player_one_pk"], "win")
+                self.send_score("right", self.gameResults["player_two_score"])
+                print(f"scored player one: {self.gameResults['player_two_score']}, max score: {self.settings.max_score}")
+                if self.gameResults["player_two_score"] == self.settings.max_score:
+                    self.end_game(self.gameResults["player_one_pk"], "win")
         return score
+
+    def send_score(self, side: msg_server.GameSide, winner_pk: int):
+        msg_server.sync_send_to_consumer(msg_server.GamePlayerScored(
+            side=side,
+            who_scored_id=winner_pk,
+            player_one_id=self.gameResults["player_one_pk"],
+            player_two_id=self.gameResults["player_two_pk"],
+            player_one_score=self.gameResults["player_one_score"],
+            player_two_score=self.gameResults["player_two_score"]
+        ), group_name=self.group_name)
+       
 
     def run(self):
         self.running = True
@@ -285,12 +314,12 @@ class PongGame(threading.Thread):
         tick_duration_sec: float = 1 / self.settings.tick_rate
         sleep_duration_sec: float = tick_duration_sec
         start_time_sec = end_time_sec = game_start_time_perf_sec = time.perf_counter()
-        game_start_time_unix_sec: float = time.time()
-        game_start_time_unix_ms: int = int(game_start_time_unix_sec*1000)
+        self.game_start_time_unix_sec: float = time.time()
+        game_start_time_unix_ms: int = int(self.game_start_time_unix_sec*1000)
         time_slept_sec: float = 0
         simulation_time_sec: float = 0
         max_input_timediff_sec: float = 5 * tick_duration_sec
-        current_time_sec = game_start_time_unix_sec
+        current_time_sec = self.game_start_time_unix_sec
 
         msg_server.sync_send_to_consumer(msg_server.GameStart(timestamp=game_start_time_unix_ms), group_name=self.group_name)
         
@@ -301,7 +330,7 @@ class PongGame(threading.Thread):
                 time_slept_sec = end_time_sec - start_time_sec
                 
                 self.tick_frame += 1
-                current_time_sec = game_start_time_unix_sec + (end_time_sec - game_start_time_perf_sec)
+                current_time_sec = self.game_start_time_unix_sec + (end_time_sec - game_start_time_perf_sec)
                 simulation_time_sec = time_slept_sec + time_processing_inputs_sec
                 max_past_timestamp_sec = current_time_sec - max_input_timediff_sec
                
@@ -372,14 +401,24 @@ class PongGame(threading.Thread):
     def end_game(self, loser_user_id: int, reason: msg_server.GameEndReason):
         if self.gameResults["player_one_pk"] == loser_user_id:
             winner_user_id = self.gameResults["player_two_pk"]
+            winner_side: msg_server.GameSide = "right"
+            loser_side: msg_server.GameSide = "left"
         elif self.gameResults["player_two_pk"] == loser_user_id:
             winner_user_id = self.gameResults["player_one_pk"]
+            winner_side: msg_server.GameSide = "left"
+            loser_side: msg_server.GameSide = "right"
         else:
             raise ValueError("invalid user_id")
         if reason == "surrender" or reason == "timeout" or reason == "win":
             msg_server.sync_send_to_consumer(msg_server.GameEnd(
-                    user_id_loser=loser_user_id,
-                    user_id_winner=winner_user_id,
+                    loser_id=loser_user_id,
+                    winner_id=winner_user_id,
+                    loser_side=loser_side,
+                    winner_side=winner_side,
+                    player_one_id=self.gameResults["player_one_pk"],
+                    player_two_id=self.gameResults["player_two_pk"],
+                    player_one_score=self.gameResults["player_one_score"],
+                    player_two_score=self.gameResults["player_two_score"],
                     reason=reason
                 ), group_name=self.group_name)
             self.running = False

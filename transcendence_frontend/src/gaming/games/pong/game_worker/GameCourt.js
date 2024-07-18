@@ -2,11 +2,10 @@ import DrawObj from './DrawObj.js';
 
 export default class GameCourt extends DrawObj {
     /**
-     * @param {OffscreenCanvasRenderingContext2D} ctx
      * @param {PongGameplayTypes.GameObjData} initialData
      */
-    constructor(ctx, initialData) {
-        super(ctx, initialData);
+    constructor(initialData) {
+        super(initialData);
         this.scoreL = 0;
         this.scoreR = 0;
         this.color = '#FFF';
@@ -18,10 +17,8 @@ export default class GameCourt extends DrawObj {
         this.borderColor = borderColor;
     }
 
-    /**
-     * @param {number | undefined} elapsedTimeSec
-     */
-    draw(elapsedTimeSec) {
+    /** @param {OffscreenCanvasRenderingContext2D} ctx */
+    draw(ctx) {
         const x = this.x * this.canvasWidth;
         const y = this.y * this.canvasHeight;
         const w = this.w * this.canvasWidth;
@@ -31,24 +28,24 @@ export default class GameCourt extends DrawObj {
         const x_center = x + w / 2.0;
         const textHeight = 70;
 
-        this.ctx.fillStyle = this.borderColor;
-        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        ctx.fillStyle = this.borderColor;
+        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-        super.draw(elapsedTimeSec)
-        this.ctx.strokeStyle = this.borderColor;
-        this.ctx.lineWidth = bW;
-        this.ctx.beginPath();
-        this.ctx.setLineDash([bH, bH]);
-        this.ctx.moveTo(x_center, y + bH / 2.0);
-        this.ctx.lineTo(x_center, y + h - bH / 2.0);
-        this.ctx.stroke();
+        super.draw(ctx)
+        ctx.strokeStyle = this.borderColor;
+        ctx.lineWidth = bW;
+        ctx.beginPath();
+        ctx.setLineDash([bH, bH]);
+        ctx.moveTo(x_center, y + bH / 2.0);
+        ctx.lineTo(x_center, y + h - bH / 2.0);
+        ctx.stroke();
 
-        this.ctx.fillStyle = this.borderColor;
-        this.ctx.font = `${textHeight}px sans-serif`;
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText(this.scoreL.toString(), x_center - bH, bH + textHeight);
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
+        ctx.fillStyle = this.borderColor;
+        ctx.font = `${textHeight}px sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.fillText(this.scoreL.toString(), x_center - bH, bH + textHeight);
+        ctx.textAlign = 'left';
+        ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
     }
 }
 

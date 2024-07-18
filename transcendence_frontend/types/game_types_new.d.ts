@@ -4,6 +4,8 @@ declare namespace PongGameplayTypes {
     export type ServeMode = 'serve-winner' | 'serve-loser' | 'serve-random';
     export type InitialServe = 'initial-serve-left' | 'initial-serve-right';
     export type ServeSide = 'serve-left' | 'serve-right';
+    export type PongGameSides = 'left' | 'right';
+    export type GameEndReason = 'reguar' | 'surrender' | 'timeout';
 
     // TypedDict equivalents
     export interface GameSettings {
@@ -52,13 +54,17 @@ declare namespace PongGameplayTypes {
 }
 
 declare namespace PongServerTypes {
-    export interface Pong {
+    export interface ServerBaseMessage {
+        tag: string;
+    }
+
+    export interface Pong extends ServerBaseMessage {
         tag: 'pong';
         client_timestamp_ms: number;
         server_timestamp_ms: number;
     }
 
-    export interface GameReady {
+    export interface GameReady extends ServerBaseMessage {
         tag: 'server-game-ready';
         timestamp: number;
         court: PongGameplayTypes.GameObjData;
@@ -71,12 +77,12 @@ declare namespace PongServerTypes {
         user_id_right: number;
     }
 
-    export interface GameStart {
+    export interface GameStart extends ServerBaseMessage {
         tag: 'server-game-start';
         timestamp: number;
     }
 
-    export interface GameUpdate {
+    export interface GameUpdate extends ServerBaseMessage {
         tag: 'server-game-update';
         timestamp: number;
         tickno: number;
@@ -86,42 +92,62 @@ declare namespace PongServerTypes {
         paddle_right: PongGameplayTypes.GameObjPositionData;
     }
 
-    export interface GameEnd {
+    export interface GameEnd extends ServerBaseMessage {
         tag: 'server-game-end';
-        timestamp: number;
-        winner: string;
-        looser: string;
+        winner_side: PongGameplayTypes.PongGameSides;
+        loser_side: string;
+        winner_id: number;
+        loser_id: number;
+        player_one_id: number;
+        player_two_id: number;
+        player_one_score: number;
+        player_two_score: number;
+        reason: PongGameplayTypes.GameEndReason;
+    }
+    export interface PlayerScored extends ServerBaseMessage {
+        tag: 'server-game-player-scored';
+        side: PongGameplayTypes.PongGameSides;
+        who_scored_id: number;
+        player_one_id: number;
+        player_two_id: number;
+        player_one_score: number;
+        player_two_score: number;
     }
 
-    export interface GamePaused {
+    export interface GamePaused extends ServerBaseMessage {
         tag: 'server-game-paused';
         timestamp: number;
     }
 
-    export interface GameResumed {
+    export interface GameResumed extends ServerBaseMessage {
         tag: 'server-game-resumed';
         timestamp: number;
     }
 
-    export interface UserConnected {
+    export interface UserConnected extends ServerBaseMessage {
         tag: 'server-user-connected';
         timestamp: number;
+        user_id: number;
     }
 
-    export interface UserDisconnected {
+    export interface UserDisconnected extends ServerBaseMessage {
         tag: 'server-user-disconnected';
         timestamp: number;
+        user_id: number;
     }
 
-    export interface UserSurrendered {
+    export interface UserSurrendered extends ServerBaseMessage {
         tag: 'server-user-surrendered';
         timestamp: number;
+        user_id: number;
     }
 
-    export interface Error {
+    export interface ServerInternalErr extends ServerBaseMessage {
         tag: 'server-game-error';
         timestamp: number;
         error: string;
+        name: string;
+        message: string;
     }
 
     // Type alias for ServerMessage
@@ -130,13 +156,18 @@ declare namespace PongServerTypes {
         | GameReady
         | GameStart
         | GameUpdate
+        | PlayerScored
         | GameEnd
         | GamePaused
         | GameResumed
         | UserConnected
         | UserDisconnected
         | UserSurrendered
-        | Error;
+        | ServerInternalErr;
+
+    export type ServerMessageTags = ServerMessage['tag'];
+
+    export type BroadcastCallback<T> = (br: Extract<PongServerTypes.ServerMessage, { tag: T; }>) => void;
 }
 
 declare namespace PongClientTypes {
@@ -187,14 +218,6 @@ declare namespace PongClientTypes {
         cmd: 'client-leave-game';
     }
 
-    interface ClientCommandResponse {
-        success: boolean;
-        cmd: string;
-        id: number;
-        message: string;
-        status_code: number;
-    }
-
     type ClientCommand =
         | Ping
         | ClientJoinCommand
@@ -203,86 +226,27 @@ declare namespace PongClientTypes {
         | ClientPauseCommand
         | ClientResumeCommand
         | ClientLeaveCommand;
+
+    type ClientCommandTags = ClientCommand['cmd'];
+
+    export interface ClientCommandResponse {
+        success: boolean;
+        cmd: ClientCommand['cmd'];
+        id: number;
+        message: string;
+        status_code: number;
+    }
+    export type CommandResponseCallback<T> = (res: ClientCommandResponse & { cmd: T; }) => void;
 }
 
-// declare namespace WorkerGameMessageTypes {
-//     export interface Create {
-//         message: 'worker_game_create';
-//         canvas: OffscreenCanvas;
-//     }
-//     export interface GameWorkerInit {
-//         message: 'worker_game_init';
-//         settings: PongServerTypes.GameStart;
-//         state: PongServerTypes.GameUpdate;
-//     }
-//     export interface GameWorkerStart {
-//         message: 'worker_game_start';
-//     }
-//     export interface GameWorkerQuit {
-//         message: 'worker_game_quit';
-//     }
-//     export interface GameWorkerPause {
-//         message: 'worker_game_pause';
-//     }
-//     export interface GameWorkerContinue {
-//         message: 'worker_game_continue';
-//     }
-//     export interface GameWorkerTerminate {
-//         message: 'worker_game_terminate';
-//     }
-//     export interface GameWorkerResize {
-//         message: 'worker_game_resize';
-//         width: number;
-//         height: number;
-//         dpr: number;
-//     }
-//     export interface GameWorkerKeyEvent {
-//         message: 'worker_game_keyevent';
-//         keyevent: string;
-//         key: string;
-//     }
-//     export interface GameWorkerMouseEvent {
-//         message: 'worker_game_mouseevent';
-//         posX: number;
-//         posY: number;
-//     }
-//     export interface GameWorkerChangeColor {
-//         message: 'worker_game_change_color';
-//         colorWhite: string;
-//         colorBlack: string;
-//     }
-//     export interface GameWorkerUpdatePos {
-//         message: 'worker_game_update_pos';
-//         state: PongServerTypes.GameUpdate;
-//     }
-//     export interface GameWorkerHideBall {
-//         message: 'worker_game_hide_ball';
-//     }
-//     export interface GameWorkerShowBall {
-//         message: 'worker_game_show_ball';
-//     }
-//     export interface HereSocker {
-//         message: 'worker_here_socket';
-//         socket: WebSocket;
-//     }
-
-//     export type GameWorkerMessage =
-//         | Create
-//         | GameWorkerInit
-//         | GameWorkerStart
-//         | GameWorkerQuit
-//         | GameWorkerPause
-//         | GameWorkerContinue
-//         | GameWorkerTerminate
-//         | GameWorkerResize
-//         | GameWorkerKeyEvent
-//         | GameWorkerMouseEvent
-//         | GameWorkerChangeColor
-//         | GameWorkerUpdatePos
-//         | GameWorkerHideBall
-//         | GameWorkerShowBall
-//         | HereSocker;
-// }
+declare namespace PongTypes {
+    export type GeneralServerMessage = PongServerTypes.ServerMessage | PongClientTypes.ClientCommandResponse;
+    export type GeneralServerTags = PongServerTypes.ServerMessageTags | PongClientTypes.ClientCommandTags;
+    export type ServerMessageCallback<T> =
+        T extends PongServerTypes.ServerMessageTags ? PongServerTypes.BroadcastCallback<T>
+        : T extends PongClientTypes.ClientCommandTags ? PongClientTypes.CommandResponseCallback<T>
+        : never;
+}
 
 declare namespace FromWorkerGameMessageTypes {
     export interface GameTouchValid {
@@ -296,8 +260,13 @@ declare namespace FromWorkerGameMessageTypes {
     export interface GameResumed {
         message: 'from-worker-game-resumed';
     }
+    export interface ClientConnected {
+        message: 'from-worker-client-connected';
+        user_id: number;
+    }
     export interface ClientDisconnected {
         message: 'from-worker-client-disconnected';
+        user_id: number;
     }
     export interface GameReady {
         message: 'from-worker-game-ready';
@@ -308,18 +277,41 @@ declare namespace FromWorkerGameMessageTypes {
         error: string;
         errorCode: number;
     }
-    export interface GameDone {
+
+    export interface PlayerScored {
+        message: 'from-worker-player-scored';
+        side: PongGameplayTypes.PongGameSides;
+        who_scored_id: number;
+        player_one_id: number;
+        player_two_id: number;
+        player_one_score: number;
+        player_two_score: number;
+    }
+
+    export interface GameEnd {
         message: 'from-worker-game-done';
-        gameResults: object | undefined;
+        winner_side: PongGameplayTypes.PongGameSides;
+        loser_side: string;
+        winner_id: number;
+        loser_id: number;
+        player_one_id: number;
+        player_two_id: number;
+        player_one_score: number;
+        player_two_score: number;
+        reason: PongGameplayTypes.GameEndReason;
     }
     export type FromWorkerMessage =
         | GameTouchValid
         | GameReady
         | GamePaused
         | GameResumed
+        | ClientConnected
         | ClientDisconnected
         | GameError
-        | GameDone;
+        | PlayerScored
+        | GameEnd;
+
+    export type FromWorkerMessageTags = FromWorkerMessage['message'];
 }
 
 declare namespace ToWorkerGameMessageTypes {
@@ -329,7 +321,6 @@ declare namespace ToWorkerGameMessageTypes {
         socketUrl?: string;
         data: APITypes.GameScheduleItem;
         userId: number;
-        screenOrientationType: OrientationType;
     }
     export interface Init {
         message: 'worker_game_init';
@@ -357,10 +348,10 @@ declare namespace ToWorkerGameMessageTypes {
         height: number;
         dpr: number;
     }
-    export interface MoveEvent {
-        message: 'worker_game_move';
-        action?: PongClientTypes.ClientMoveDirection;
-        new_y?: number;
+    export interface KeyEvent {
+        message: 'worker_game_key';
+        type: string;
+        key: string;
     }
     export interface GameTouchRect {
         ident: number;
@@ -387,7 +378,7 @@ declare namespace ToWorkerGameMessageTypes {
         colorBlack: string;
     }
 
-    export type GameWorkerMessage =
+    export type ToWorkerMessage =
         | Create
         | Init
         | Start
@@ -396,8 +387,19 @@ declare namespace ToWorkerGameMessageTypes {
         | Resume
         | Terminate
         | Resize
-        | MoveEvent
+        | KeyEvent
         | MouseEvent
         | ChangeColor
         | GameTouchEvent;
+
+    export type ToWorkerMessageTags = ToWorkerMessage['message'];
 }
+
+// declare namespace WorkerGameTypes {
+//     export type GeneralWorkerMessage = FromWorkerGameMessageTypes.FromWorkerMessage | ToWorkerGameMessageTypes.ToWorkerMessage;
+//     export type GeneralServerTags = PongServerTypes.ServerMessageTags | PongClientTypes.ClientCommandTags;
+//     export type ServerMessageCallback<T> =
+//         T extends PongServerTypes.ServerMessageTags ? PongServerTypes.BroadcastCallback<T>
+//         : T extends PongClientTypes.ClientCommandTags ? PongClientTypes.CommandResponseCallback<T>
+//         : never;
+// }

@@ -21,13 +21,14 @@ export default class PubSubConsumer extends BaseReactive {
         // console.log('constructor PubSubConsumer');
         super(initialValue, host);
         this.#pubSubInst = pubSubInst;
+        if (host == undefined) force = true;
         this.#force = force;
 
         this.#handler = (event) => {
-            // console.log(
-            //     'PubSubConsumer: onNewValue: event.detail: ',
-            //     event.detail,
-            // );
+            console.log(
+                'PubSubConsumer: myHost: ', host, ' onNewValue: event.detail: ',
+                event.detail,
+            );
             this.onNewValue(event.detail, this.#force);
         };
 

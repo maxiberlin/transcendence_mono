@@ -14,23 +14,29 @@ function calcRandAngleSinCos() {
 }
 
 export default class PongBall extends DrawObj {
+
     static Scored = {
-        SCORE_NONE: 0,
-        SCORE_LEFT: 1,
-        SCORE_RIGHT: 2,
+        /** @type {"none"} */
+        SCORE_NONE: "none",
+        /** @type {PongGameplayTypes.PongGameSides} */
+        SCORE_LEFT: "left",
+        /** @type {PongGameplayTypes.PongGameSides} */
+        SCORE_RIGHT: "right",
     }
 
     /**
-     * @param {OffscreenCanvasRenderingContext2D} ctx
      * @param {PongGameplayTypes.GameObjData} initDataBall
-     * @param {boolean} remote
+     * @param {boolean} setBallAngle
      */
-    constructor(ctx, initDataBall, remote) {
-        super(ctx, initDataBall);
-        if (!remote) {
+    constructor(initDataBall, setBallAngle) {
+        super(initDataBall);
+        if (setBallAngle) {
+            // console.log('ball set Ball angles');
+            // console.log(this);
             const { sin, cos } = calcRandAngleSinCos();
             this.dx = cos;
             this.dy = sin;
+            // console.log('init data: ', initDataBall);
         }
     }
 
@@ -52,26 +58,29 @@ export default class PongBall extends DrawObj {
     }
     /**
      *
-     * @param {PongPaddle} paddleLeft
-     * @param {PongPaddle} paddleRight
-     * @returns {number}
+     * @param {PongPaddle} [paddleLeft]
+     * @param {PongPaddle} [paddleRight]
+     * @returns {PongGameplayTypes.PongGameSides | "none"}
      */
     updateBall(elapsed, paddleLeft, paddleRight) {
         this.#calcX(elapsed)
         this.#calcY(elapsed)
 
         const diffY = this.dy > 0 ? this.bottom - this.boundBottom : this.dy < 0 ? this.boundTop - this.top : 0;
-        if (diffY > 0) {
+        if (diffY > 0)
             this.#recalcDirY(elapsed, diffY / Math.abs(this.dy * this.speedY))
-        }
-        if (this.left >= paddleLeft.right && this.right <= paddleRight.left)
-            return PongBall.Scored.SCORE_NONE;
 
         if (this.right <= this.boundLeft)
             return PongBall.Scored.SCORE_LEFT;
         if (this.left >= this.boundRight)
             return PongBall.Scored.SCORE_RIGHT;
 
+        if (!paddleLeft || !paddleRight) {
+            // console.log('NO PADDLE!!');
+            return PongBall.Scored.SCORE_NONE;
+        }
+        if (this.left >= paddleLeft.right && this.right <= paddleRight.left)
+            return PongBall.Scored.SCORE_NONE;
         const paddle = this.left < paddleLeft.right ? paddleLeft : paddleRight;
         const [collision, diffTime] = this.coll_ision(paddle);
 
@@ -113,8 +122,8 @@ export default class PongBall extends DrawObj {
 //     }
 
 //     update(elapsed) {
-//         // console.log(`ball: top: ${this.top}`);
-//         // console.log(`ball: bottom: ${this.bottom}`);
+// //         // console.log(`ball: top: ${this.top}`);
+// //         // console.log(`ball: bottom: ${this.bottom}`);
 //         this.x += elapsed * this.speedX * this.dx;
 //         this.y += elapsed * this.speedY * this.dy;
 
@@ -141,8 +150,8 @@ export default class PongBall extends DrawObj {
 //      * @returns {number | undefined}
 //      */
 //     checkCollision(paddleLeft, paddleRight) {
-//         // console.log('ball width: ', this.w);
-//         // console.log('ball height: ', this.h);
+// //         // console.log('ball width: ', this.w);
+// //         // console.log('ball height: ', this.h);
 //         if (this.left >= paddleLeft.right && this.right <= paddleRight.left)
 //             return undefined;
 

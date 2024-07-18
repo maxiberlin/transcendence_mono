@@ -1,12 +1,11 @@
 /* eslint-disable no-console */
-/// <reference path="../../types/game_types_new.d.ts"/>
 
 export default class DrawObj {
     /**
-     * @param {OffscreenCanvasRenderingContext2D} ctx
      * @param {PongGameplayTypes.GameObjData} initial
      */
-    constructor(ctx, initial) {
+    constructor(initial) {
+        console.log('init draw: ', initial);
         /** @type {number} */ this.#x = initial.x;
         /** @type {number} */ this.#y = initial.y;
         /** @type {number} */ this.w = initial.w;
@@ -28,7 +27,7 @@ export default class DrawObj {
         /** @type {number} */ this.canvasWidth = 1;
         /** @type {number} */ this.canvasHeight = 1;
         /** @type {string} */ this.color = '#000';
-        /** @type {OffscreenCanvasRenderingContext2D} */ this.ctx = ctx;
+        
     }
 
     #x;
@@ -92,9 +91,10 @@ export default class DrawObj {
         this.dy = lastUpdate.dy
     }
 
-    draw() {
-        this.ctx.fillStyle = this.color;
-        this.ctx.fillRect(
+    /** @param {OffscreenCanvasRenderingContext2D} ctx */
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(
             this.x * this.canvasWidth,
             this.y * this.canvasHeight,
             this.w * this.canvasWidth,

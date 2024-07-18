@@ -1,89 +1,111 @@
 /* eslint-disable no-useless-constructor */
+// @ts-check
 import DrawObj from './DrawObj.js';
-
-/// <reference path="../../types.d.ts"/>
-
-/**
- * @param {number} min
- * @param {number} curr
- * @param {number} max
- * @returns {number}
- */
-function clamp(min, curr, max) {
-    return Math.max(min, Math.min(curr, max));
-}
+import { pushMessageToMainThread } from './utils.js';
 
 export default class PongPaddle extends DrawObj {
-    static PADDLE_POS_LEFT = 0;
-
-    static PADDLE_POS_RIGHT = 1;
-
-    /**
-     * @param {OffscreenCanvasRenderingContext2D} ctx
-     * @param {PongGameplayTypes.GameObjData} initialDataPaddle
-     */
-    constructor(ctx, initialDataPaddle) {
-        super(ctx, initialDataPaddle);
+    /** @param {PongGameplayTypes.GameObjData} initialDataPaddle */
+    constructor(initialDataPaddle) {
+        super(initialDataPaddle);
         this.dy = 0;
     }
 
-    moveUp(stop) {
-        if (!stop) {
-            this.dy = -1;
-        } else if (this.dy === -1) {
-            this.dy = 0;
-        }
-    }
-
-    moveDown(stop) {
-        if (!stop) {
-            this.dy = 1;
-        } else if (this.dy === 1) {
-            this.dy = 0;
-        }
-    }
+    #DIR_NONE = /** @type {const} */(0);
+    #DIR_UP = /** @type {const} */(-1);
+    #DIR_DOWN = /** @type {const} */(1);
 
     /**
-     *
-     * @param {PongClientTypes.ClientMoveDirection} action
+     * @param {boolean} shouldUpdate
+     * @param {ToWorkerGameMessageTypes.KeyEvent} d
+     * @param {string} keyUp
+     * @param {string} keyDown
+     * @returns {PongClientTypes.ClientMoveDirection | null}
      */
-    setDir(action) {
-        console.log(`move paddle. pos: x:${this.x*this.canvasWidth} y: ${this.y*this.canvasHeight}`);
-        switch (action) {
-            case 'up':
-                this.dy = -1;
-                break;
-            case 'down':
-                this.dy = 1;
-                break;
-            case 'release_up':
-                this.dy = this.dy === -1 ? 0 : this.dy;
-                break;
-            case 'release_down':
-                this.dy = this.dy === 1 ? 0 : this.dy;
-                break;
-            default:
-                throw new TypeError(`invalid action ${action}`);
+    handleKey(shouldUpdate, d, keyUp, keyDown) {
+        if (d.key === keyUp) {
+            if (d.type === 'keydown') {
+                if (shouldUpdate)
+                    this.dy = this.#DIR_UP;
+                return ("up");
+            }
+            else if (d.type === 'keyup') {
+                if (shouldUpdate)
+                    this.dy = this.dy === this.#DIR_UP ? this.#DIR_NONE : this.dy
+                return ("release_up");
+            }
+        } else if (d.key === keyDown) {
+            if (d.type === 'keydown') {
+                if (shouldUpdate)
+                    this.dy = this.#DIR_DOWN;
+                return ("down");
+            }
+            else if (d.type === 'keyup') {
+                if (shouldUpdate)
+                    this.dy = this.dy === this.#DIR_DOWN ? this.#DIR_NONE : this.dy
+                return ("release_down");
+            }
         }
+        return (null);
     }
 
-    /**
-     * @param {number} nY 
-     */
-    setPaddlePosition(nY) {
-        this.y = clamp(this.boundTop, nY, this.boundBottom - this.h);
+    /** @param {number} nY @returns {number} */
+    #getPaddlePosition(nY) {
+        return Math.max(this.boundTop, Math.min(nY, this.boundBottom - this.h));
     }
 
+    /** @param {number} elapsed */
     update(elapsed) {
-        // if (this.x < 0.5) {
-        //     console.log(`paddle left: top: ${this.top}`);
-        //     console.log(`paddle left: bottom: ${this.bottom}`);
-        // }
         const nY = this.y + this.speedY * elapsed * this.dy;
         if (nY === 0) throw new Error('nY === 0');
 
-        if (this.dy !== 0 || elapsed === 0) {
-            this.setPaddlePosition(nY);
+        if (this.dy !== this.#DIR_NONE || elapsed === 0) {
+            this.y = this.#getPaddlePosition(nY);
         }
+    }
+
+    /** @type {number | null} */
+    #ident = null;
+    /** @type {ToWorkerGameMessageTypes.GameTouchRect | null} */
+    #lastTouch = null;
+    /** @param {ToWorkerGameMessageTypes.GameTouchRect} touchRect  */
+    #checkOverlap = (touchRect) => this.left < touchRect.right && this.right > touchRect.left
+                                && this.top < touchRect.bottom && this.bottom > touchRect.top;
+
+    /**
+     * @param {boolean} shouldUpdate
+     * @param {ToWorkerGameMessageTypes.GameTouchEvent} d
+     * @returns {number | boolean | null}
+     */
+    handleMouseTouch(shouldUpdate, d) {
+        if (d.type === "start" && d.touchRect !== undefined) {
+            if (this.#checkOverlap(d.touchRect)) {
+                console.log('VALID TOUCH START');
+                this.#ident = d.touchRect.ident;
+                this.#lastTouch = d.touchRect;
+                return (true);
+            } else {
+                console.log('INVALID TOUCH START');
+                return (false);
+            }
+        } else if (d.type === "move" && d.touchRect !== undefined) {
+            console.log('handle touch move!');
+            if (d.touchRect && this.#lastTouch && d.touchRect.ident === this.#ident) {
+                const pos = this.#getPaddlePosition(this.y + (d.touchRect.y - this.#lastTouch.y));
+                this.#lastTouch = d.touchRect;
+                console.log('VALID MOVE!');
+                if (shouldUpdate) {
+                    console.log('Update now');
+                    this.dy = this.#DIR_NONE;
+                    this.y = pos;
+                }
+                return (pos);
+            }
+        } else if (d.type === "end" && d.ident !== undefined) {
+            if (d.ident === this.#ident) {
+                this.#ident = null;
+                this.#lastTouch = null;
+            }
+        }
+        return (null);
     }
 }

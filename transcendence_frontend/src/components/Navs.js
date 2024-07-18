@@ -17,7 +17,7 @@ export function useState(parent, initialValue) {
   
     function setState(newValue) {
       state = newValue;
-    //   console.log(`State updated to: ${state}`);
+    // //   console.log(`State updated to: ${state}`);
       parent.requestUpdate();
     }
   
@@ -37,7 +37,7 @@ export function useState(parent, initialValue) {
 // const getNavItem = (parent, text, href) => {
 
 //     let [getActive, setActive] = useState(parent, false);
-//     console.log('Hallo get nav item');
+// //     console.log('Hallo get nav item');
 //     return html`
 //         <li class="nav-item">
 //             <a @click=${()=>{setActive(true)}} class="nav-link ${getActive() ? 'active' : ''}"
@@ -96,10 +96,10 @@ export const getNavItem = (parent, conf, onClick, stoppropagation) => {
         if (conf.firstActive !== undefined)
             isActive = getActive() || firstRender && conf.firstActive;
         else isActive = getActive()
-        console.log('render getNavItem, firstRender?: ', firstRender);
-        console.log('render getNavItem, getActive()?: ', getActive());
-        console.log('render getNavItem, isActive?: ', isActive);
-        console.log('render getNavItem, conf: ', conf);
+        // console.log('render getNavItem, firstRender?: ', firstRender);
+        // console.log('render getNavItem, getActive()?: ', getActive());
+        // console.log('render getNavItem, isActive?: ', isActive);
+        // console.log('render getNavItem, conf: ', conf);
         const link = html`
             <a
                 @click=${(e)=>{
@@ -165,8 +165,8 @@ export class VerticalNav extends BaseElement {
     }
 
     render() {
-        // console.log('render navbar, navconfig: ', this.props.navconfigs);
-        // console.log('row?: ', this.row);
+        // // console.log('render navbar, navconfig: ', this.props.navconfigs);
+        // // console.log('row?: ', this.row);
         if (!this.navItems || this.navItems.length < this.props.navconfigs.length)
             this.navItems = Array.from(this.props.navconfigs, (conf)=>getNavItem(this, conf, this.onClick.bind(this), this.stoppropagation));
         const navv = html`

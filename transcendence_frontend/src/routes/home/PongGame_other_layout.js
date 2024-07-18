@@ -188,6 +188,7 @@ export default class GameModal2 extends BaseElement {
                         <div class="modal-body">
                             ${this.renderGameScreen()}
                         </div>
+                        ${this.renderFooter()}
                     </div>
                 </div>
             </div>

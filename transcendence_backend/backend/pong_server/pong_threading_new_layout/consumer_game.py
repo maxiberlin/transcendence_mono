@@ -86,23 +86,21 @@ class GameConsumer(AsyncConsumer):
                 case "client-disconnected":
                     logger.info(f"user {event['client_command']['user_id']} disconnected")
                     await game_handle.player_disconnected(event["client_command"]["user_id"])
+                    await msg_client.async_send_command_response(event, True, f"command {event['client_command']['cmd']} handled successfully", msg_server.WebsocketErrorCode.OK)
 
                 case "client-join-game":
                     logger.info(f"user {event['client_command']['user_id']} joined game {event['game_group_name']} -> schedule_id: {event['client_command']['schedule_id']}")
-                    await game_handle.player_join(
-                        event["client_command"]["user_id"],
-                        event["client_command"]["schedule_id"]
-                    )
+                    await game_handle.player_join(event["client_command"]["user_id"], event["client_command"]["schedule_id"])
+                    await msg_client.async_send_command_response(event, True, f"command {event['client_command']['cmd']} handled successfully", msg_server.WebsocketErrorCode.OK)
 
                 case "client-leave-game":
                     logger.info(f"user {event['client_command']['user_id']} attempt to leave game {event['game_group_name']}")
-                    await GameHandle.remove_game(
-                        game_handle=game_handle,
-                        user_id=event["client_command"]["user_id"]
-                    )
+                    await GameHandle.remove_game(game_handle=game_handle, user_id=event["client_command"]["user_id"])
+                    await msg_client.async_send_command_response(event, True, f"command {event['client_command']['cmd']} handled successfully", msg_server.WebsocketErrorCode.OK)
 
                 case  "client-ready":
                     game_handle.player_ready(event['client_command']['user_id'])
+                    await msg_client.async_send_command_response(event, True, f"command {event['client_command']['cmd']} handled successfully", msg_server.WebsocketErrorCode.OK)
 
                 case "client-move" | "client-pause" | "client-resume":
                     # logger.info(f"user {event['client_command']['user_id']} make command: {event['client_command']['cmd']}")
@@ -112,7 +110,7 @@ class GameConsumer(AsyncConsumer):
                     logger.error(f"user {event['client_command']['user_id']} invalid command: {event['client_command']['cmd']}")
                     raise msg_server.CommandError("Invalid command", msg_server.WebsocketErrorCode.INVALID_COMMAND)
 
-            await msg_client.async_send_command_response(event, True, f"command {event['client_command']['cmd']} handled successfully", msg_server.WebsocketErrorCode.OK)
+            
 
         except msg_server.CommandError as e:
             logger.error(f"CommandError: {e}, code: {e.error_code}")
@@ -146,7 +144,7 @@ class GameHandle:
         handle = cls.__game_handles.get(game_group_name, None)
         if not handle:
             logger.debug(f"no handle found, create new handle for {game_group_name}")
-            handle = cls.__game_handles[game_group_name] = GameHandle(PongSettings(max_score=10000), game_group_name, GAME_CHANNEL_ALIAS)
+            handle = cls.__game_handles[game_group_name] = GameHandle(PongSettings(), game_group_name, GAME_CHANNEL_ALIAS)
             handle.join_timeout_task = asyncio.get_running_loop().create_task(handle.__join_timeout())
         return handle
 

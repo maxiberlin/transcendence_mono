@@ -48,7 +48,7 @@ export class Fetcher {
      */
     constructor(baseUrl, baseRequest, timeoutMs, csrfCookieHeaderName) {
         this.#baseUrl = new URL(baseUrl ?? '');
-        // console.log('base url: ', this.#baseUrl);
+        // // console.log('base url: ', this.#baseUrl);
         this.#timeoutMs = timeoutMs ?? 10000;
         if (baseRequest) {
             this.#requestInit = { ...baseRequest };
@@ -68,7 +68,7 @@ export class Fetcher {
             .then((text) => {
                 /** @type {APITypes.ApiResponse} */
                 const data = text && JSON.parse(text);
-                console.log('fetch response: ', data);
+                // console.log('fetch response: ', data);
                 if (typeof data === "object") {
                     data.statuscode = response.status
                     return data;
@@ -114,11 +114,11 @@ export class Fetcher {
             return;
         }
         let object = bodyData;
-        console.log('my fromdata: ');
+        // console.log('my fromdata: ');
         if (usedRequest.headers instanceof Headers && bodyData instanceof FormData) {
             usedRequest.body = bodyData;
             // bodyData.forEach((v, k) => {
-            //     console.log(`key: $${k}$ value: $${v}$`);
+            // //     console.log(`key: $${k}$ value: $${v}$`);
             // })
             // object = {};
             // bodyData.forEach((value, key) => {
@@ -141,16 +141,16 @@ export class Fetcher {
         const searchParams = data?.searchParams;
         let newUrl = url;
         if (searchParams instanceof URLSearchParams) {
-            // console.log('search params string: ', searchParams.toString());
+            // // console.log('search params string: ', searchParams.toString());
             newUrl = `${url}?${searchParams.toString()}`;
         }
         const usedUrl = new URL(newUrl, this.#baseUrl);
-        // console.log("used url: ", usedUrl);
+        // // console.log("used url: ", usedUrl);
         /** @type {RequestInit} */
         const usedRequest = {};
         Object.assign(usedRequest, this.#requestInit);
-        // console.log("base req: ", this.#requestInit);
-        // console.log("used req: ", usedRequest);
+        // // console.log("base req: ", this.#requestInit);
+        // // console.log("used req: ", usedRequest);
         usedRequest.method = method;
         if (
             data &&
@@ -166,11 +166,11 @@ export class Fetcher {
         }
         usedRequest.signal = AbortSignal.timeout(this.#timeoutMs);
 
-        // console.log("fetch this url: ", usedUrl.href);
-        // console.log("fetch headers: ", usedRequest.headers);
-        // console.log("fetch body Data: ", usedRequest.body);
+        // // console.log("fetch this url: ", usedUrl.href);
+        // // console.log("fetch headers: ", usedRequest.headers);
+        // // console.log("fetch body Data: ", usedRequest.body);
 
-        // console.log('fetch url: ', usedUrl);
+        // // console.log('fetch url: ', usedUrl);
         return fetch(usedUrl, usedRequest).then(
             Fetcher.#handleResponse.bind(this),
         );

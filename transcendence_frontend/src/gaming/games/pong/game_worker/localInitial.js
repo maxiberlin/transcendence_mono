@@ -11,7 +11,7 @@ const useScale = (scaleX, scaleY) => {
 };
 
 /** @type {PongGameplayTypes.GameSettings} */
-const defaultSettings = {
+export const defaultSettings = {
     initial_serve_to: 'initial-serve-left',
     max_score: 10,
     point_wait_time_ms: 1000,
@@ -37,7 +37,7 @@ const sizesDefault = {
 };
 
 /** @type {PongGameplayTypes.GameObjData} */
-const courtDefault = {
+export const courtDefault = {
     x: 0.0,
     y: sizesDefault.border_height,
     w: sizesDefault.width,
@@ -53,7 +53,7 @@ const courtDefault = {
 };
 
 /** @type {PongGameplayTypes.GameObjData} */
-const paddleLeftDefault = {
+export const paddleLeftDefault = {
     x: sizesDefault.wall_dist,
     y: sizesDefault.height / 2.0 - sizesDefault.paddle_height / 2.0,
     w: sizesDefault.paddle_width,
@@ -69,7 +69,7 @@ const paddleLeftDefault = {
 };
 
 /**  @type {PongGameplayTypes.GameObjData} */
-const paddleRightDefault = {
+export const paddleRightDefault = {
     x:
         sizesDefault.width -
         (sizesDefault.wall_dist + sizesDefault.paddle_width),
@@ -87,7 +87,7 @@ const paddleRightDefault = {
 };
 
 /** @type {PongGameplayTypes.GameObjData} */
-const ballDefault = {
+export const ballDefault = {
     x: sizesDefault.width / 2.0 - sizesDefault.ball_width / 2.0,
     y: sizesDefault.height / 2.0 - sizesDefault.ball_height / 2.0,
     w: sizesDefault.ball_width,
@@ -102,21 +102,19 @@ const ballDefault = {
     bound_bottom: courtDefault.y + courtDefault.h,
 };
 
-/**
- * @param {APITypes.GameScheduleItem} data
- * @returns {PongServerTypes.GameReady}
- */
-const initialDataDefault = (data) => ({
-    tag: 'server-game-ready',
-    timestamp: Date.now(),
-    court: courtDefault,
-    ball: ballDefault,
-    paddle_left: paddleLeftDefault,
-    paddle_right: paddleRightDefault,
-    settings: defaultSettings,
-    timeout_time_sec: 10,
-    user_id_left: data.player_one.id,
-    user_id_right: data.player_two.id,
-});
-
-export default initialDataDefault;
+// /**
+//  * @param {APITypes.GameScheduleItem} data
+//  * @returns {PongServerTypes.GameReady}
+//  */
+// const initialDataDefault = {
+//     tag: 'server-game-ready',
+//     timestamp: Date.now(),
+//     court: courtDefault,
+//     ball: ballDefault,
+//     paddle_left: paddleLeftDefault,
+//     paddle_right: paddleRightDefault,
+//     settings: defaultSettings,
+//     timeout_time_sec: 10,
+//     user_id_left: -1,
+//     user_id_right: -1,
+// };

@@ -159,14 +159,6 @@ class GameUpdate(BaseBroadcast):
     paddle_left: GameObjPositionData
     paddle_right: GameObjPositionData
 
-GameEndReason = Literal["win", "surrender", "timeout"]
-
-@dataclass
-class GameEnd(BaseBroadcast):
-    tag = "server-game-end"
-    user_id_winner: int
-    user_id_loser: int
-    reason: GameEndReason
 
 class ServerPongCommand(TypedDict):
     tag: Literal["pong"]
@@ -198,6 +190,33 @@ class UserDisconnected(BaseBroadcast):
 class UserReconnected(BaseBroadcast):
     tag = "server-user-reconnected"
     user_id: int
+
+
+GameEndReason = Literal["win", "surrender", "timeout"]
+GameSide = Literal["left", "right"]
+
+@dataclass
+class GameEnd(BaseBroadcast):
+    tag = "server-game-end"
+    winner_side: GameSide
+    loser_side: GameSide
+    winner_id: int
+    loser_id: int
+    player_one_id: int
+    player_two_id: int
+    player_one_score: int
+    player_two_score: int
+    reason: GameEndReason
+
+@dataclass
+class GamePlayerScored(BaseBroadcast):
+    tag = "server-game-player-scored"
+    side: GameSide
+    who_scored_id: int
+    player_one_id: int
+    player_two_id: int
+    player_one_score: int
+    player_two_score: int
 
 
 @dataclass

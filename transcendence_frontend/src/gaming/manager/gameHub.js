@@ -135,7 +135,7 @@ class GameWorkerManager {
     }
 
     /**
-     * @param {ToWorkerGameMessageTypes.GameWorkerMessage} message
+     * @param {ToWorkerGameMessageTypes.ToWorkerMessage} message
      * @param {Transferable[]} [transfer]
      */
     postMessage(message, transfer = []) {
@@ -194,6 +194,7 @@ export default class GameHub {
             const url = new URL(window.location.origin);
             const socketUrl = `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`;
             const offscreencanvas = canvas.transferControlToOffscreen();
+            console.log('create msg to worker: userid: ', GameHub.currentUser.value?.user?.id);
             this.worker.postMessage(
                 {
                     message: isRemote ? 'game_worker_create_remote' : 'game_worker_create_local',
@@ -201,7 +202,6 @@ export default class GameHub {
                     socketUrl,
                     data: this.gameData,
                     userId: GameHub.currentUser.value?.user?.id ?? -1,
-                    screenOrientationType: screen.orientation.type
                 },
                 [offscreencanvas],
             );
@@ -224,6 +224,7 @@ export default class GameHub {
 
     /** @param {FromWorkerGameMessageTypes.FromWorkerMessage} msg  */
     onWorkerMessage(msg) {
+        console.log('worker message: ', msg);
         if (msg.message === "from-worker-game-touch-valid") {
             console.log('new validity message: ', msg);
             // console.log('my map: ', this.currTouches);
@@ -233,37 +234,15 @@ export default class GameHub {
                 // this.currTouches.delete(msg.identifier);
             }
         }
-        console.log('worker message:');
-        console.dir(msg);
     }
 
-    /**
-     * @param {KeyboardEvent} e
-     */
-    handleKey(e) {
-        /** @type {PongClientTypes.ClientMoveDirection | undefined} */
-        let dir;
-        console.log('gameHub: handleKey: Event: ', e);
-        switch (e.key) {
-            case 'ArrowUp':
-                if (e.type === 'keydown') dir = 'up';
-                else if (e.type === 'keyup') dir = 'release_up';
-                break;
-            case 'ArrowDown':
-                if (e.type === 'keydown') dir = 'down';
-                else if (e.type === 'keyup') dir = 'release_down';
-                break;
-            case 'Escape':
-                break;
-            default:
-                break;
-        }
-        if (dir) {
-            this.worker.postMessage({
-                message: 'worker_game_move',
-                action: dir
-            });
-        }
+    /** @param {KeyboardEvent} e */
+    handleKey = (e) => {
+        this.worker.postMessage({
+            message: 'worker_game_key',
+            key: e.key,
+            type: e.type
+        });
     }
 
     startGame() {
