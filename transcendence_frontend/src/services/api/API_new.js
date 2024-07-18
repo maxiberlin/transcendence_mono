@@ -253,6 +253,10 @@ export const gameAPI = {
 
 export class SessionStore {
 
+    constructor() {
+        this.#initNotificationSocket();
+    }
+
     #isLoggedIn = false;
 
     /** @type {APITypes.UserSession | undefined} */
@@ -527,6 +531,39 @@ export class SessionStore {
             this.handleFetchError(error)
         }
     }
+    /**
+     * @param {"friend-reject" | "friend-accept" | "friend-cancel" | "game-reject" | "game-accept" | "game-cancel"} action
+     * @param {number} request_id 
+     */
+    async handleRequestWebsocket(action, request_id) {
+        if (!this.#isLoggedIn || !this.#sessionData) return;
+        let toUpdate = [];
+        if (action === "game-accept") {
+            this.pushToNotificationSocket({command: "accept_game_invitation", notification_id: request_id});
+            toUpdate = ["game_invitations_received", "game_schedule"];
+        
+        } else if (action === "game-reject") {
+            this.pushToNotificationSocket({command: "reject_game_invitation", notification_id: request_id});
+            toUpdate = ["game_invitations_received"]
+        
+        } else if (action === "game-cancel") {
+            toUpdate = ["game_invitations_sent"]
+        
+        } else if (action === "friend-accept") {
+            this.pushToNotificationSocket({command: "accept_friend_request", notification_id: request_id});
+            toUpdate = ["friend_requests_received", "user"]
+        
+        } else if (action === "friend-reject") {
+            this.pushToNotificationSocket({command: "reject_friend_request", notification_id: request_id});
+            toUpdate = ["friend_requests_received"]
+        
+        } else if (action === "friend-cancel") {
+            toUpdate = ["friend_requests_sent"]
+        }
+        setTimeout(async () => {
+            await this.updateData(toUpdate);
+        }, 1000);
+    }
 
 
     /**
@@ -541,6 +578,56 @@ export class SessionStore {
     }
 
     #pubsub = new PubSub();
+
+    /**
+     * @typedef {"message" | "open" | "close" | "error"} SocketEventType
+     */
+    /**
+     * @typedef {((e: Event) => void)} SocketHandler
+     */
+
+    /** @type {Map<SocketEventType, SocketHandler[]>} */
+    #socketHandlerMap = new Map();
+    /**
+     * @param {SocketEventType} type 
+     * @param {SocketHandler} handler
+     */
+    addNotificationMessageHandler(type, handler) {
+        if (this.#notificationSocket) {
+            let handlerMap = this.#socketHandlerMap.get(type);
+            if (!handlerMap) {
+                    this.#notificationSocket.addEventListener(type, this.onSocketEvent);
+                    handlerMap = [];
+                    this.#socketHandlerMap.set(type, handlerMap);
+            }
+            handlerMap.push(handler);
+        }
+    }
+
+    /** @param {Event | MessageEvent} e */
+    onSocketEvent = (e) => {
+        const jo = e.type;
+        if (jo === "close" || jo === "error" || jo === "open" || jo === "message") {
+            const hh = this.#socketHandlerMap.get(jo);
+            if (hh) hh.forEach((h) => h(e))
+        }
+    }
+
+    /** @type {WebSocket | null} */
+    #notificationSocket = null;
+    #initNotificationSocket() {
+        this.#notificationSocket = new WebSocket(`wss://api.${window.location.host}/`);
+        if (this.#notificationSocket.readyState == WebSocket.OPEN)
+            console.log("Notification Socket OPEN complete.")
+        else if (this.#notificationSocket.readyState == WebSocket.CONNECTING)
+            console.log("Notification Socket connecting..")
+    }
+
+     /** @param {NotificationTypes.NotificationCommand} command */
+    pushToNotificationSocket(command) {
+        if (this.#notificationSocket)
+            this.#notificationSocket.send(JSON.stringify(command));
+    }
 }
 
 export const sessionService = new SessionStore();

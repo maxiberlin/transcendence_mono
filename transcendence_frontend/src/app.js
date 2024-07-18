@@ -30,6 +30,7 @@ import FriendsView from './routes/social/FriendsView.js';
 import ChatView from './routes/social/ChatView.js';
 import GameInvite from './routes/home/GameInvite.js';
 import { SettingsView } from './routes/profile/SettingsView.js';
+import { NotificationView } from './routes/notifications/NotificationView';
 
 const onDomLoaded = async () => {
     await sessionService.login();

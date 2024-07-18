@@ -40,7 +40,7 @@ import BsButton from './bootstrap/BsButton.js';
  * @param {ActionBtnData} [conf]
  * @returns {TplLit}
  */
-const getBtn = (handler, defConf, conf) => {
+export const getBtn = (handler, defConf, conf) => {
     // console.log('get acion gtn');
     if (!conf) conf = {};
     const asyncHandler = async () => {
@@ -102,7 +102,7 @@ const defaultConf = {
  */
 
 /** @type {DefaultConfigs} */
-const configs = {
+export const configs = {
     block: {...defaultConf, text: "block", color: "danger", icon: "lock" },
     unblock: {...defaultConf, text: "unblock", color: "success", icon: "unlock" },
     addFriend: {...defaultConf, text: "add", color: "dark", icon: "user-plus" },
@@ -151,8 +151,8 @@ export const actions = {
         getBtn(sessionService.handleRequest.bind(sessionService, "game-accept", invitationId), configs.acceptReq, conf),
     rejectGameInvitation: (invitationId, conf) =>
         getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
-    
 };
+
 
 /**
  * @typedef {Object} ActionButtonGroups
