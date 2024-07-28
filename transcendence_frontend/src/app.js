@@ -1,7 +1,8 @@
 /* eslint-disable no-unused-vars */
 import '../scss/custom.scss'
-// import 'bootstrap'
 // import * as Popper from "@popperjs/core"
+import * as bootstrap from 'bootstrap'
+// import 'bootstrap'
 
 import { sessionService } from './services/api/API_new.js';
 import router from './services/router.js';
@@ -17,6 +18,7 @@ import * as u from './components/utils.js';
 import { VerticalNav } from './components/Navs.js';
 
 // Routes Web Components
+import TimerComp from './components/TimerComp';
 import PongApp from './routes/root.js';
 import LoginRegisterRoute from './routes/auth/LoginRegisterRoute.js';
 import PongBg from './routes/auth/PongBg.js';
@@ -31,6 +33,7 @@ import ChatView from './routes/social/ChatView.js';
 import GameInvite from './routes/home/GameInvite.js';
 import { SettingsView } from './routes/profile/SettingsView.js';
 import { NotificationView } from './routes/notifications/NotificationView';
+
 
 const onDomLoaded = async () => {
     await sessionService.login();

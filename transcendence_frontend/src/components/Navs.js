@@ -63,9 +63,7 @@ const getCounter = (parent) => {
  * @property {string} [href]
  * @property {string} [icon]
  * @property {boolean} [disabled]
- * @property {boolean} [useList]
  * @property {boolean} [firstActive]
- * @property {boolean} [doubleLine]
  */
 
 // /**
@@ -82,17 +80,27 @@ const getCounter = (parent) => {
 //     `
 //     return conf.useList ? html`<li class="nav-item">${link}</li>` : link;
 // }
+
+/**
+ * @typedef {{
+ *      setActive: (newValue: boolean) => void,
+ *      render: (firstRender: boolean, center: boolean, doubleLine: boolean) => TemplateAsLiteral, 
+ *  }} GetNavItemObj
+ * 
+ */
+
 /**
  * @param {BaseElement} parent
  * @param {NavItemConf} conf
  * @param {(setActive: (newValue: boolean) => void)=>void} onClick
  * @param {boolean} stoppropagation
- * @returns 
+ * @param {boolean} useList
+ * @returns {GetNavItemObj}
  */
-export const getNavItem = (parent, conf, onClick, stoppropagation) => {
+export const getNavItem = (parent, conf, onClick, stoppropagation, useList) => {
     let [getActive, setActive] = useState(parent, false);
     let isActive = false;
-    return {setActive, render: (firstRender, center, mobile) => {
+    return {setActive, render: (firstRender, center, doubleLine) => {
         if (conf.firstActive !== undefined)
             isActive = getActive() || firstRender && conf.firstActive;
         else isActive = getActive()
@@ -109,7 +117,10 @@ export const getNavItem = (parent, conf, onClick, stoppropagation) => {
                     onClick(setActive)
                     firstRender = false;
                 }} 
-                class="${conf.doubleLine ? 'd-flex flex-column align-items-center p-3' : ''} nav-link ps-3 w-100 ${isActive ? 'active link-light' : ''}"
+                class="nav-link ps-3 w-100
+                    ${doubleLine ? 'd-flex flex-column align-items-center p-3' : ''}
+                    ${isActive ? 'active link-light' : ''}
+                "
                 ?disabled=${conf.disabled}
                 href="${conf.href ?? '#'}"
                 aria-current="${isActive ? "page" : undefined}"
@@ -117,10 +128,10 @@ export const getNavItem = (parent, conf, onClick, stoppropagation) => {
                 ${conf.icon ? html`
                         <i class="fa-solid fa-fw fa-${conf.icon} fs-5"></i>
                 `:''}
-                <span class="${center ? 'm-0' : 'ms-2'}  fs-6">${conf.text}</span>
+                <span class="${(center || doubleLine) ? 'm-0' : 'ms-2'}  fs-6">${conf.text}</span>
             </a>
         `
-        return conf.useList ? html`<li class="nav-item ${center ? 'text-center' : 'text-start'}">${link}</li>` : link;
+        return useList ? html`<li class="nav-item ${center ? 'text-center' : 'text-start'}">${link}</li>` : link;
     }}
 }
 
@@ -134,13 +145,16 @@ export class SelectedNavLink extends Event {
 
 /**
  * @prop {NavItemConf[]} navconfigs
+ * @attr notification
  * @attr stoppropagation
- * @attr row
- * @attr center
  * @attr burger
+ * @attr row
+ * @attr linebreak
+ * @attr center
+ * @attr list
  */
 export class VerticalNav extends BaseElement {
-    static observedAttributes = ["stoppropagation", "row", "burger", "center"];
+    static observedAttributes = ["notification", "stoppropagation", "burger", "row", "linebreak", "center", "list"];
 
     static id = 0;
     static getIdName = () => `navbar-toggler-${VerticalNav.id++}`
@@ -148,14 +162,17 @@ export class VerticalNav extends BaseElement {
     constructor() {
         super(false, false);
         this.props.navconfigs = [];
-        /** @type {Array<{setActive: (newValue: boolean) => void, render: (firstRender: boolean, center: boolean) => TemplateAsLiteral}> | undefined} */
+        /** @type {Array<GetNavItemObj> | undefined} */
         this.navItems;
-        this.stoppropagation = false;
-        this.row = false;
         this.firstRender = true;
-        this.burger = false;
         this.useId = VerticalNav.getIdName();
-        this.center = false;
+        this.stoppropagation = false;
+        this.notification = false;
+        this.burger = false;
+        this.row = false;
+        this.linebreak = false;
+        this.center = true;
+        this.list = true;
     }
 
     onClick = (setActive) => {
@@ -168,23 +185,65 @@ export class VerticalNav extends BaseElement {
         // // console.log('render navbar, navconfig: ', this.props.navconfigs);
         // // console.log('row?: ', this.row);
         if (!this.navItems || this.navItems.length < this.props.navconfigs.length)
-            this.navItems = Array.from(this.props.navconfigs, (conf)=>getNavItem(this, conf, this.onClick.bind(this), this.stoppropagation));
+            this.navItems = Array.from(
+                this.props.navconfigs,
+                (conf) => getNavItem(this, conf, this.onClick.bind(this), this.stoppropagation, this.list)
+            );
         const navv = html`
-            <ul class="navbar-nav nav-pills nav-justified w-100 d-flex align-items-stretch justify-content-around ${this.row === true ? 'flex-row' : 'flex-column'}">
-                ${ this.navItems?.map((i)=>i.render(this.firstRender, this.center)) }
+        <div class="d-flex flex-row justify-content-evenly align-items-center w-100">
+            ${this.notification ? html`
+                <div>
+                    <!-- <notification-view></notification-view> -->
+                </div>
+            ` : ''}
+            <ul
+                class="
+                    navbar-nav nav-pills nav-justified w-100 d-flex align-items-stretch justify-content-around
+                    ${this.row === true ? 'flex-row' : 'flex-column'}
+                    "
+            >
+                
+                <li class="position-relative" style="${""}" ></li>
+                ${ this.navItems?.map((i)=>i.render(this.firstRender, this.center, this.linebreak)) }
             </ul>
+        </div>
         `;
+        // ${this.notification ? html`<notification-view></notification-view>` : ''}
         return html`
-            <div class=" border-end nav navbar navbar-expand-lg pong-navbar-padd bg-light-subtle h-100 w-100" >
+            <div
+                class=" border-end nav navbar navbar-expand-lg pong-navbar-padd bg-light-subtle h-100 w-100"
+            >
                 ${this.burger ? html`
                     <div class="container-fluid">
-                        <button class="btn btn-link link-body-emphasis" type="button" data-bs-toggle="offcanvas"  data-bs-target="#${this.useId}" aria-controls="${this.useId}" aria-expanded="false" aria-label="Toggle navigation">
-                           <i class="fa-solid fa-bars me-3"></i>Open Settings
+                        <button
+                            class="btn btn-link link-body-emphasis"
+                            type="button"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#${this.useId}"
+                            aria-controls="${this.useId}"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation"
+                        >
+                           <i class="fa-solid fa-bars me-3"></i>
+                           Open Settings
                         </button>
-                        <div data-bs-backdrop="false" class="offcanvas offcanvas-start" tabindex="-1" id="${this.useId}" aria-labelledby="offcanvasNavbarLabel-${this.useId}">
+                        <div
+                            data-bs-backdrop="false"
+                            class="offcanvas offcanvas-start"
+                            tabindex="-1"
+                            id="${this.useId}"
+                            aria-labelledby="offcanvasNavbarLabel-${this.useId}"
+                        >
                             <div class="offcanvas-header">
-                                <h5 class="offcanvas-title" id="offcanvasNavbarLabel-${this.useId}">Settings</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                                <h5 class="offcanvas-title" id="offcanvasNavbarLabel-${this.useId}">
+                                    Settings
+                                </h5>
+                                <button
+                                    type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="offcanvas"
+                                    aria-label="Close">
+                                </button>
                             </div>
                             <div class="offcanvas-body">
                                 ${navv}

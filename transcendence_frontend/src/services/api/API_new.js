@@ -586,47 +586,52 @@ export class SessionStore {
      * @typedef {((e: Event) => void)} SocketHandler
      */
 
-    /** @type {Map<SocketEventType, SocketHandler[]>} */
+    /** @type {Map<SocketEventType, SocketHandler>} */
     #socketHandlerMap = new Map();
     /**
      * @param {SocketEventType} type 
      * @param {SocketHandler} handler
      */
     addNotificationMessageHandler(type, handler) {
-        if (this.#notificationSocket) {
-            let handlerMap = this.#socketHandlerMap.get(type);
-            if (!handlerMap) {
-                    this.#notificationSocket.addEventListener(type, this.onSocketEvent);
-                    handlerMap = [];
-                    this.#socketHandlerMap.set(type, handlerMap);
-            }
-            handlerMap.push(handler);
-        }
+        console.log('addNotificationMessageHandler');
+        this.#socketHandlerMap.set(type, handler);
+        if (type === "open" && this.#openSockerEvent)
+            handler(this.#openSockerEvent);
     }
 
     /** @param {Event | MessageEvent} e */
     onSocketEvent = (e) => {
         const jo = e.type;
+        console.log('socket event: ', e);
         if (jo === "close" || jo === "error" || jo === "open" || jo === "message") {
+            if (jo === "open")
+                this.#openSockerEvent = e;
             const hh = this.#socketHandlerMap.get(jo);
-            if (hh) hh.forEach((h) => h(e))
+            console.log(hh);
+            if (hh) hh(e);
         }
     }
+    #openSockerEvent;
 
     /** @type {WebSocket | null} */
-    #notificationSocket = null;
+    notificationSocket = null;
     #initNotificationSocket() {
-        this.#notificationSocket = new WebSocket(`wss://api.${window.location.host}/`);
-        if (this.#notificationSocket.readyState == WebSocket.OPEN)
+        this.notificationSocket = new WebSocket(`wss://api.${window.location.host}/`);
+        if (this.notificationSocket.readyState == WebSocket.OPEN)
             console.log("Notification Socket OPEN complete.")
-        else if (this.#notificationSocket.readyState == WebSocket.CONNECTING)
+        else if (this.notificationSocket.readyState == WebSocket.CONNECTING)
             console.log("Notification Socket connecting..")
+      
+        this.notificationSocket.addEventListener("open", this.onSocketEvent);
+        this.notificationSocket.addEventListener("error", this.onSocketEvent);
+        this.notificationSocket.addEventListener("message", this.onSocketEvent);
+        this.notificationSocket.addEventListener("close", this.onSocketEvent);
     }
 
      /** @param {NotificationTypes.NotificationCommand} command */
     pushToNotificationSocket(command) {
-        if (this.#notificationSocket)
-            this.#notificationSocket.send(JSON.stringify(command));
+        if (this.notificationSocket)
+            this.notificationSocket.send(JSON.stringify(command));
     }
 }
 

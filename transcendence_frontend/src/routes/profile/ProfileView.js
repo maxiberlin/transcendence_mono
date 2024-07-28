@@ -47,9 +47,9 @@ export class ProfileView extends BaseElement {
     async handleUrlParams(params, shouldRerender) {
         this.routerParams = params;
 
-        console.log('handle params');
-        console.log(this.sessionUser.value);
-        console.log(params);
+        // console.log('handle params');
+        // console.log(this.sessionUser.value);
+        // console.log(params);
         if ((this.sessionUser.value !== undefined && params.pk === undefined)
             || this.sessionUser.value?.user?.id === params.pk) {
             this.profileUserData = this.sessionUser.value?.user;
@@ -64,7 +64,7 @@ export class ProfileView extends BaseElement {
      * @returns {Promise<symbol | void>}
      */
     async onBeforeMount(route, params, url) {
-        console.log("onBeforeMount");
+        // console.log("onBeforeMount");
         if (!sessionService.isLoggedIn) {
             return router.redirect('/');
         }
@@ -72,7 +72,7 @@ export class ProfileView extends BaseElement {
     }
 
     async onRouteChange(route, params, url) {
-        console.log("onRouteChange, params: ", params);
+        // console.log("onRouteChange, params: ", params);
         await this.handleUrlParams(params, false);
         
         super.requestUpdate();
@@ -97,7 +97,7 @@ export class ProfileView extends BaseElement {
      * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral | string}
      */
     getActionButtons = (userData) => {
-        console.log(userData);
+        // console.log(userData);
         if (!userData) return "";
         if (userData.is_self)
             return html`
@@ -112,7 +112,7 @@ export class ProfileView extends BaseElement {
                 </a>
             `;
         let data;
-        console.log('profile view: userdata: ', userData);
+        // console.log('profile view: userdata: ', userData);
         if ((data = sessionService.getFriend(userData.id)) !== undefined)
             return html`
                 <button disabled class="btn btn-dark me-1">
@@ -143,7 +143,7 @@ export class ProfileView extends BaseElement {
     };
 
     render() {
-        console.log("render profile!!");
+        // console.log("render profile!!");
         // if (
         //     this.#isError &&
         //     this.#isError.data.message !== 'Blocked: You cannot view this account'
@@ -166,7 +166,7 @@ export class ProfileView extends BaseElement {
             ${this.routerParams.pk ?
                         actions.unBlockUser(this.routerParams.pk, {
                             cb: () => {
-                                console.log("unblock clicked - redirect to same page");
+                                // console.log("unblock clicked - redirect to same page");
                                 this.fetchProfileData(this.routerParams.pk, true);
                             }
                         })
@@ -291,7 +291,7 @@ export class ProfileView extends BaseElement {
               </div>
               <div class="col-12 col-md-6 mt-3">
                 <div class="row g-3">
-                  <div class="col-12">
+                  <div class="col-12 pb-3">
                     ${renderListCard(
                     'Match History',
                     'scroll',
@@ -475,11 +475,11 @@ customElements.define('profile-view', ProfileView);
 //             try {
 //                 this.profileUserData = await getUserData(params.pk);
 //             } catch (error) {
-//                 console.log(error)
+// //                 console.log(error)
 //                 this.#isError = error;
 //                 this.#isError.pk = params.pk;
 //                 if (error instanceof Error) {
-//                     console.log("dispatch notify event")
+// //                     console.log("dispatch notify event")
 //                     this.#isError.data = {message: error.message}
 //                     document.dispatchEvent(new CustomEvent("render-notification", {detail: {message: this.#isError.data.message}, bubbles: true}));
 //                     return router.redirect("/");
@@ -556,9 +556,9 @@ customElements.define('profile-view', ProfileView);
 // //     return html`
 // //         <div class="col-12">
 // //         <bs-button  ._async_handler=${async ()=>{
-// //             console.log("async handler send friend request");
+// // //             console.log("async handler send friend request");
 // //             await sessionService.sendFriendRequest(userData.id);
-// //             console.log("async handler send req done");
+// // //             console.log("async handler send req done");
 // //             super.requestUpdate();
 // //         }} color="dark" icon="user-plus" loadingtext="add">add</bs-button>
 
@@ -583,8 +583,8 @@ customElements.define('profile-view', ProfileView);
 //             </a>
 //             `
 //         let data;
-//         // console.log("render new Profile Data -> render new Button");
-//         // console.log(this.sessionUser.value)
+// //         // console.log("render new Profile Data -> render new Button");
+// //         // console.log(this.sessionUser.value)
 
 //         if ((data = sessionService.getFriend(userData.id)) !== undefined) {
 //             return html`
@@ -627,7 +627,7 @@ customElements.define('profile-view', ProfileView);
 //     // d-flex flex-column flex-md-row
 //     render() {
 
-//         // console.log("render new Profile Data");
+// //         // console.log("render new Profile Data");
 //         if (this.#isError && this.#isError.data.message !== "Blocked: You cannot view this account") {
 //             this.dispatchEvent(new CustomEvent("render-notification", {detail: {message: this.#isError.data.message}, bubbles: true}));
 //             router.go("/");

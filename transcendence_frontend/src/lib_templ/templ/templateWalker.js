@@ -190,22 +190,24 @@ function resolveTemplate(staleNodes) {
         const st = staleNodes[i];
         if (st === null) {
             i++;
-        } else if (
-            st !== null &&
-            st.i === nodeCount
-            // &&
-            // node instanceof Element
-        ) {
+        } else if ( st !== null && st.i === nodeCount) {
             const node = walker.currentNode;
+
+            
             if (st.t === wTypes.outer) {
+                // @ts-ignore
                 liveNodes.push(new OuterNode(node, i));
             } else if (st.t === wTypes.func) {
+                // @ts-ignore
                 liveNodes.push(new FuncNode(node, i));
             } else if (st.n && st.t === wTypes.prop) {
+                // @ts-ignore
                 liveNodes.push(new AttributePropNode(node, st.n, i));
             } else if (st.n && st.t === wTypes.bool) {
+                // @ts-ignore
                 liveNodes.push(new AttributeBoolNode(node, st.n, i));
             } else if (st.n && st.t === wTypes.event) {
+                // @ts-ignore
                 liveNodes.push(new AttributeEventNode(node, st.n, i));
             } else if (st.s && st.n && st.t === wTypes.multiAttr) {
                 const len = st.s.length;

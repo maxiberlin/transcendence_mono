@@ -82,20 +82,20 @@ export default class Router {
             }
         });
         window.addEventListener('popstate', (event) => {
-            console.log("popstate!")
+            // console.log("popstate!")
             if (!event.state?.route) {
-                // console.log("no prev entry: go to '/'");
+                // // console.log("no prev entry: go to '/'");
                 this.go('/', false);
             } else {
                 this.go(event.state.route, false, true);
             }
         });
-        // console.log("router: mount root component")
+        // // console.log("router: mount root component")
         this.#root = document.createElement(rootElem);
         document.body.appendChild(this.#root);
         // document.dispatchEvent()
-        // // console.log("first path: ", location.pathname);
-        // console.log("router, go on init");
+        // // // console.log("first path: ", location.pathname);
+        // // console.log("router, go on init");
         this.go(window.location.pathname, false);
     }
 
@@ -106,13 +106,13 @@ export default class Router {
      */
     #findRoute(urlSegments, params) {
         const match = this.#routes?.find((route) => {
-            // // console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
+            // // // console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
             if (route.segments?.length !== urlSegments.length) {
                 return false;
             }
             const isMatch = route.segments.every((segment, i) => {
-                // // console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
-                // console.log("segments: ", segment);
+                // // // console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
+                // // console.log("segments: ", segment);
                 if (segment[0] === ':') {
                     route[segment.slice(1)] = decodeURIComponent(
                         urlSegments[i],
@@ -120,11 +120,11 @@ export default class Router {
                     params[segment.slice(1)] = decodeURIComponent(
                         urlSegments[i],
                     );
-                    // console.log("new param route obj: ", route);
+                    // // console.log("new param route obj: ", route);
                 }
                 return segment === urlSegments[i] || segment[0] === ':';
             });
-            // // console.log("is Match? ", isMatch);
+            // // // console.log("is Match? ", isMatch);
             return isMatch;
         });
         return match;
@@ -132,13 +132,13 @@ export default class Router {
 
     static toggleHistoryState(route, addToHistory) {
         if (addToHistory) {
-            // console.log("ROUTER Push State, current history: ", history.state);
+            // // console.log("ROUTER Push State, current history: ", history.state);
             window.history.pushState({ route }, '', route);
-            // console.log("ROUTER Push State, new history: ", history.state);
+            // // console.log("ROUTER Push State, new history: ", history.state);
         } else if (!addToHistory) {
-            console.log("ROUTER REPLACE, current history: ", history.state);
+            // console.log("ROUTER REPLACE, current history: ", history.state);
             window.history.replaceState({ route }, '', route);
-            // console.log("ROUTER REPLACE, new history: ", history.state);
+            // // console.log("ROUTER REPLACE, new history: ", history.state);
         }
     }
 
@@ -196,7 +196,7 @@ export default class Router {
      * @param {boolean} isFromHistory
      */
     async go(route, addToHistory = true, isFromHistory = false) {
-        console.log('router go!, curr scroll: ', window.history.scrollRestoration);
+        // console.log('router go!, curr scroll: ', window.history.scrollRestoration);
         if (!this.#isInit) this.#isInit = true;
 
         const url = new URL(route, window.location.origin);
@@ -209,7 +209,7 @@ export default class Router {
         const urlSegments = route.split('/').slice(1);
         let matchObj = this.#findRoute(urlSegments, params);
 
-        console.log('matchObj Router: ', matchObj);
+        // console.log('matchObj Router: ', matchObj);
         if (this.#root instanceof BaseElement) {
             await this.#root.onRouteChange(route, params, url);
         }
@@ -247,10 +247,10 @@ export default class Router {
             });
         }
         if (!isFromHistory) {
-            console.log('scroll to topp!!!');
+            // console.log('scroll to topp!!!');
             window.scrollTo({left: 0, top: 0, behavior: "auto"});
         } else {
-            console.log('no scroll! from history');
+            // console.log('no scroll! from history');
         }
     }
 }
@@ -336,20 +336,20 @@ export default class Router {
 //             }
 //         });
 //         window.addEventListener('popstate', (event) => {
-//             // console.log("popstate!")
+// //             // console.log("popstate!")
 //             if (!event.state?.route) {
-//                 // console.log("no prev entry: go to '/'");
+// //                 // console.log("no prev entry: go to '/'");
 //                 this.go('/', false);
 //             } else {
 //                 this.go(event.state.route, false);
 //             }
 //         });
-//         // console.log("router: mount root component")
+// //         // console.log("router: mount root component")
 //         this.#root = document.createElement(rootElem);
 //         document.body.appendChild(this.#root);
 //         // document.dispatchEvent()
-//         // // console.log("first path: ", location.pathname);
-//         // console.log("router, go on init");
+// //         // // console.log("first path: ", location.pathname);
+// //         // console.log("router, go on init");
 //         this.go(window.location.pathname, false);
 //     }
 
@@ -360,13 +360,13 @@ export default class Router {
 //      */
 //     #findRoute(urlSegments, params) {
 //         const match = this.#routes?.find((route) => {
-//             // // console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
+// //             // // console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
 //             if (route.segments?.length !== urlSegments.length) {
 //                 return false;
 //             }
 //             const isMatch = route.segments.every((segment, i) => {
-//                 // // console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
-//                 // console.log("segments: ", segment);
+// //                 // // console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
+// //                 // console.log("segments: ", segment);
 //                 if (segment[0] === ':') {
 //                     route[segment.slice(1)] = decodeURIComponent(
 //                         urlSegments[i],
@@ -374,11 +374,11 @@ export default class Router {
 //                     params[segment.slice(1)] = decodeURIComponent(
 //                         urlSegments[i],
 //                     );
-//                     // console.log("new param route obj: ", route);
+// //                     // console.log("new param route obj: ", route);
 //                 }
 //                 return segment === urlSegments[i] || segment[0] === ':';
 //             });
-//             // // console.log("is Match? ", isMatch);
+// //             // // console.log("is Match? ", isMatch);
 //             return isMatch;
 //         });
 //         return match;
@@ -386,13 +386,13 @@ export default class Router {
 
 //     static toggleHistoryState(route, addToHistory, replace) {
 //         if (addToHistory && !replace) {
-//             // console.log("ROUTER Push State, current history: ", history.state);
+// //             // console.log("ROUTER Push State, current history: ", history.state);
 //             window.history.pushState({ route }, '', route);
-//             // console.log("ROUTER Push State, new history: ", history.state);
+// //             // console.log("ROUTER Push State, new history: ", history.state);
 //         } else if (!addToHistory && replace) {
-//             // console.log("ROUTER REPLACE, current history: ", history.state);
+// //             // console.log("ROUTER REPLACE, current history: ", history.state);
 //             window.history.replaceState({ route }, '', route);
-//             // console.log("ROUTER REPLACE, new history: ", history.state);
+// //             // console.log("ROUTER REPLACE, new history: ", history.state);
 //         }
 //     }
 
@@ -451,7 +451,7 @@ export default class Router {
 //      * @param {boolean} replace
 //      */
 //     go(route, addToHistory = true, replace = false) {
-//         console.log('router go!, curr scroll: ', window.history.scrollRestoration);
+// //         console.log('router go!, curr scroll: ', window.history.scrollRestoration);
 //         if (!this.#isInit) this.#isInit = true;
 
 //         const url = new URL(route, window.location.origin);
@@ -465,7 +465,7 @@ export default class Router {
 //         const params = {};
 //         const urlSegments = route.split('/').slice(1);
 //         let matchObj = this.#findRoute(urlSegments, params);
-//         console.log('matchObj Router: ', matchObj);
+// //         console.log('matchObj Router: ', matchObj);
 //         if (!matchObj) matchObj = Router.componentDefault404;
 //         component = document.createElement(matchObj.component);
 //         if (!component) {
@@ -512,7 +512,7 @@ export default class Router {
 //     if (!curr) {
 //         this.#root.appendChild(node);
 //     }else if (curr.tagName === node.tagName && curr instanceof BaseElem && typeof curr["onRouteChange"] === "function") {
-// //         console.log("SAME NODE");
+// // //         console.log("SAME NODE");
 //         curr["onRouteChange"]();
 //     } else {
 //         let fadeOut = curr.animate([{opacity: 1}, {opacity: 0}],{ duration: 200});
@@ -527,18 +527,18 @@ export default class Router {
 // }
 
 // go(route, addToHistory=true, replace=false) {
-// //     console.log("router, go: ", route);
+// // //     console.log("router, go: ", route);
 //     const oldRoute = location.pathname;
 
 //     let component;
 //     const urlSegments = route.split("/").slice(1);
 //     const matchObj = this.#findRoute(urlSegments);
 //     if (matchObj) {
-// //         console.log("match found: ", matchObj)
+// // //         console.log("match found: ", matchObj)
 //         component = document.createElement(matchObj.component);
 //     }
 //     if (component) {
-// //         console.log("component created");
+// // //         console.log("component created");
 //         let shouldAddToHistory;
 //         if (!addToHistory && typeof component["beforeHistoryPush"] === "function")
 //             shouldAddToHistory = component["beforeHistoryPush"]();

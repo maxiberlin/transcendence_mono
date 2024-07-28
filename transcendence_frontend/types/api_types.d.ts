@@ -43,6 +43,7 @@ declare namespace APITypes {
         request_id: number;
     }
 
+
     export interface GameInvitationItem extends BasicUserData {
         [key: string]: JSONValue;
         alias: string;

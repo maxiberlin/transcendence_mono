@@ -1,8 +1,59 @@
 import BaseNode from './BaseNode.js';
 
+// import('../../BaseElement.js').BaseElement
+
+/**
+ * @template {HTMLElement} T
+ */
+export class Ref {
+    /** @type {T | undefined} */
+    value;
+
+    // /** @type {boolean} */
+    // #initialized = false;
+
+    // /** @returns {T | undefined} */
+    // get value() {
+    //     // if (!this.#value) {
+    //     //     throw new Error("REF value checked before assigned!");
+    //     // }
+    //     return (this.#value);
+    // }
+
+    // /** @param {T} val  */
+    // set value(val) {
+    //     if (this.#initialized === true)
+    //         return;
+    //     this.#value = val;
+    //     this.#initialized = true;
+    // }
+
+}
+
+/** 
+ * @template {HTMLElement} T
+ */
+export function createRef() {
+    /** @type {Ref<T>} */
+    const ref = new Ref();
+    return (ref);
+}
+
+/**
+ * @template {HTMLElement} T
+ * @param {Ref<T>} refelem 
+ */
+export function ref(refelem) {
+    /** @param {T} elem */
+    return (elem) => {
+        refelem.value = elem;
+    };
+}
+
+
 export default class FuncNode extends BaseNode {
     /**
-     * @param {(arg0: Element) => void} value
+     * @param {(arg0: Node) => void} value
      */
     setValue(value) {
         if (typeof value === 'function') {
@@ -10,6 +61,216 @@ export default class FuncNode extends BaseNode {
         }
     }
 }
+
+
+
+
+
+// export class Directive {
+
+//     // /** @type {Set<Disconnectable>} */
+//     _$disconnectableChildren = new Set();
+
+//     /** @type {Part} */
+//     __part;
+//     /** @type {number | undefined} */
+//     __attributeIndex;
+    
+//     /** @type {Directive | undefined} */
+//     __directive;
+    
+//     /** @type {Disconnectable | undefined} */
+//     _$parent;
+
+
+//     // ['_$notifyDirectiveConnectionChanged']?(isConnected: boolean): void;
+
+//     /** @param {PartInfo} _partInfo  */
+//     constructor(_partInfo) {
+//         super();
+//     }
+
+//     /** @returns {boolean} */
+//     get _$isConnected() {
+//         return this._$parent?._$isConnected;
+//     }
+
+//     /**
+//      * @param {Part} part 
+//      * @param {Disconnectable} parent 
+//      * @param {number} [attributeIndex] 
+//      */
+//     _$initialize(part, parent, attributeIndex) {
+//         this.__part = part;
+//         this._$parent = parent;
+//         this.__attributeIndex = attributeIndex;
+//     }
+
+//     /**
+//      * @param {Part} part 
+//      * @param {Array<unknown>} props 
+//      * @returns {unknown}
+//      */
+//     _$resolve(part, props) {
+//         return this.update(part, props);
+//     }
+
+//     /**
+//      * @param  {Array<unknown>} props 
+//      */
+//     render(...props) {}
+
+//     /**
+//      * @param {Part} _part 
+//      * @param {Array<unknown>} props 
+//      */
+//     update(_part, props) {
+//         return this.render(...props);
+//     }
+// }
+
+
+
+   
+
+// export abstract class AsyncDirective extends Directive {
+
+//     _$disconnectableChildren = undefined;
+
+//     override _$initialize(part: Part, parent: Disconnectable, attributeIndex: number | undefined) {
+//         super._$initialize(part, parent, attributeIndex);
+//         addDisconnectableToParent(this);
+//         this.isConnected = part._$isConnected;
+//     }
+
+//     override['_$notifyDirectiveConnectionChanged'](isConnected: boolean, isClearingDirective = true) {
+//         if (isConnected !== this.isConnected) {
+//             this.isConnected = isConnected;
+//             if (isConnected) {
+//                 this.reconnected?.();
+//             } else {
+//                 this.disconnected?.();
+//             }
+//         }
+//         if (isClearingDirective) {
+//             notifyChildrenConnectedChanged(this, isConnected);
+//             removeDisconnectableFromParent(this);
+//         }
+//     }
+
+//     setValue(value: unknown) {
+//         if (isSingleExpression(this.__part as unknown as PartInfo)) {
+//             this.__part._$setValue(value, this);
+//         } else {
+//             // this.__attributeIndex will be defined in this case, but
+//             // assert it in dev mode
+//             if (DEV_MODE && this.__attributeIndex === undefined) {
+//                 throw new Error(`Expected this.__attributeIndex to be a number`);
+//             }
+//             const newValues = [...(this.__part._$committedValue as Array<unknown>)];
+//             newValues[this.__attributeIndex!] = value;
+//             (this.__part as AttributePart)._$setValue(newValues, this, 0);
+//         }
+//     }
+
+//     protected disconnected() { }
+
+//     protected reconnected() { }
+// }
+
+// /** @type {WeakMap<object, WeakMap<Function, Element | undefined> >} */
+// const lastElementForContextAndCallback = new WeakMap()
+
+// /**
+//  * @template {HTMLElement} T
+//  * @typedef {Ref<T> | ((el: T | undefined) => void)} RefOrCallback
+//  */
+
+// /**
+//  * @template {HTMLElement} T
+//  */
+// class RefDirective {
+//     /** @type {Element | undefined} */
+//     _element;
+//     /** @type {RefOrCallback<T> | undefined} */
+//     _ref;
+//     /** @type {object | undefined} */
+//     _context;
+
+//     /** @param {RefOrCallback<T>} [_ref]  */
+//     render(_ref) {
+//         return undefined;
+//     }
+
+//     /**
+//      * @param {ElementPart} part 
+//      * @param {RefOrCallback<T>} ref 
+//      * @returns 
+//      */
+//     update(part, ref) {
+//         const refChanged = ref !== this._ref;
+//         if (refChanged && this._ref !== undefined) {
+//             this._updateRefValue(undefined);
+//         }
+//         if (refChanged || this._lastElementForRef !== this._element) {
+//             this._ref = ref;
+//             this._context = part.options?.host;
+//             this._updateRefValue((this._element = part.element));
+//         }
+//         return undefined;
+//     }
+
+//     isConnected = false;
+
+//     /**
+//      * @param {Element | undefined} element 
+//      */
+//     _updateRefValue(element) {
+//         if (!this.isConnected) {
+//             element = undefined;
+//         }
+//         if (typeof this._ref === 'function') {
+
+//             const context = this._context ?? globalThis;
+//             let lastElementForCallback =
+//                 lastElementForContextAndCallback.get(context);
+//             if (lastElementForCallback === undefined) {
+//                 lastElementForCallback = new WeakMap();
+//                 lastElementForContextAndCallback.set(context, lastElementForCallback);
+//             }
+//             if (lastElementForCallback.get(this._ref) !== undefined) {
+//                 this._ref.call(this._context, undefined);
+//             }
+//             lastElementForCallback.set(this._ref, element);
+//             // Call the ref with the new element value
+//             if (element !== undefined) {
+//                 this._ref.call(this._context, element);
+//             }
+//         } else if (this._ref) {
+//             this._ref.value = element;
+//         }
+//     }
+
+//     get _lastElementForRef() {
+//         return typeof this._ref === 'function'
+//             ? lastElementForContextAndCallback
+//                 .get(this._context ?? globalThis)
+//                 ?.get(this._ref)
+//             : this._ref?.value;
+//     }
+
+//     disconnected() {
+//         if (this._lastElementForRef === this._element) {
+//             this._updateRefValue(undefined);
+//         }
+//     }
+
+//     reconnected() {
+//         this._updateRefValue(this._element);
+//     }
+// }
+
+
 
 // export class BaseNode {
 //     /**

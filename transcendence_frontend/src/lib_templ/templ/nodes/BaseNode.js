@@ -1,6 +1,6 @@
 export default class BaseNode {
     /**
-     * @param {Element} node
+     * @param {ChildNode} node
      * @param {number} index
      */
     constructor(node, index) {
@@ -18,7 +18,7 @@ export default class BaseNode {
     // eslint-disable-next-line class-methods-use-this
     destroy() {}
 
-    /** @type {Element} */
+    /** @type {ChildNode | HTMLElement} */
     element;
 
     index;

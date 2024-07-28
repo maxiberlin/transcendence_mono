@@ -7,6 +7,23 @@ import Template from '../Template.js';
 const isPrimitive = (val) =>
     val === null || (typeof val !== 'object' && typeof val !== 'function');
 
+//     /**
+//      * @param {ChildNode} commentMarker
+//      * @param {TemplateStringsArray} strings
+//      * @param {any[]} values
+//      * @param {any} [animArr]
+//      */
+// function createLiveTemplateAndMount(commentMarker, strings, values, animArr) {
+//     const live = Template.getInstance(strings);
+//     if (!(commentMarker instanceof Comment))
+//         throw new Error("OuterNode: createLiveTemplateAndMount: Own Node needs to be a Comment as Marker")
+//     const parent = commentMarker.parentElement
+//     if (!(parent instanceof HTMLElement))
+//         throw new Error("OuterNode: createLiveTemplateAndMount: Element to append the LiveTemplate Data needs to be an HTML Element")
+//     live.mountMe( parent, commentMarker, values, animArr );
+//     return live;
+// }
+
 export default class OuterNode extends BaseNode {
     destroy() {
         this.cleanup();
@@ -24,6 +41,8 @@ export default class OuterNode extends BaseNode {
         }
         this.#currentTemplateValue = null;
     }
+
+  
 
     /**
      * @param {TemplateAsLiteral} value
@@ -55,13 +74,15 @@ export default class OuterNode extends BaseNode {
         // // console.log("same templ: ", templ === this.#currentVal.template)
         const animArr = this.#currentTemplateValue.unMountMe(anim);
         // // console.log("ANIM ARR: ", animArr);
-        this.#currentTemplateValue = Template.getInstance(value.strings);
-        this.#currentTemplateValue.mountMe(
-            this.element.parentNode,
-            this.element,
-            value.values,
-            animArr,
-        );
+        // this.#currentTemplateValue = createLiveTemplateAndMount(this.element, value.strings, value.values, anim);
+        this.#currentTemplateValue = Template.createLiveInsertBeforeNode(this.element, value, anim);
+        // this.#currentTemplateValue = Template.getInstance(value.strings);
+        // this.#currentTemplateValue.mountMe(
+        //     this.element.parentNode,
+        //     this.element,
+        //     value.values,
+        //     animArr,
+        // );
         return true;
     }
 
@@ -73,21 +94,11 @@ export default class OuterNode extends BaseNode {
 
         const curr = this.#currentTemplateValue;
         if (curr instanceof LiveTemplate && templ === curr.template) {
-            // // console.log("templ: just update: curr", this.#currentVal);
-            // console.log("setValueLiveTemplate: just update!");
             curr.update(value.values);
         } else {
-            // console.log('NEW LIVE TEMPLATE');
             this.cleanup();
-            this.#currentTemplateValue = Template.getInstance(value.strings);
-            // // console.log("templ: create new: ", this.#currentVal);
-            // // console.log("templ: create values: ", value.values);
-            this.#currentTemplateValue.mountMe(
-                this.element.parentNode,
-                this.element,
-                value.values,
-            );
-            // this.#currentVal.update(value.values);
+            // this.#currentTemplateValue = createLiveTemplateAndMount(this.element, value.strings, value.values);
+            this.#currentTemplateValue = Template.createLiveInsertBeforeNode(this.element, value);
         }
     }
 
@@ -97,19 +108,18 @@ export default class OuterNode extends BaseNode {
             this.cleanup();
             this.#currentTemplateValue = [];
         }
-
-        // // console.log("setValueAsLiveTemplateArray");
-        value.forEach((val, i) => {
-            if (!(this.#currentTemplateValue instanceof Array)) throw new Error('');
+        let i = 0, len = value.length;
+        while (i < len) {
             if (i === this.#currentTemplateValue.length) {
-                const res = html`${val}`;
-                const templ = Template.getInstance(res.strings);
-                templ.mountMe(this.element.parentNode, this.element, [val]);
+                const res = html`${value[i]}`;
+                const templ = Template.createLiveInsertBeforeNode(this.element, res);
+                // const templ = createLiveTemplateAndMount(this.element, res.strings, [value[i]])
                 this.#currentTemplateValue.push(templ);
             } else {
-                this.#currentTemplateValue[i].update([val]);
+                this.#currentTemplateValue[i].update([value[i]]);
             }
-        });
+            ++i;
+        }
         while (this.#currentTemplateValue.length > value.length) {
             const elem = this.#currentTemplateValue.pop();
             elem?.unMountMe();
@@ -121,13 +131,9 @@ export default class OuterNode extends BaseNode {
         if (this.#currentTemplateValue instanceof Text) {
             if (value !== this.#literalVal) {
                 this.#currentTemplateValue.textContent = String(value);
-                // console.log(`set primitive - values changed: old: ${this.#literalVal}, new: ${value}`);
                 this.#literalVal = value;
-            } else {
-                // console.log(`set primitive - still the same: old: ${this.#literalVal}, new: ${value}`);
             }
         } else {
-            // console.log(`set primitive - complete different type`);
             this.cleanup();
             this.#currentTemplateValue = document.createTextNode(String(value));
             this.element.parentNode?.insertBefore(this.#currentTemplateValue, this.element);

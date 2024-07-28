@@ -16,7 +16,7 @@ services:
       - staticfiles:/app/static/
       - ./transcendence_frontend/dist:/var/www/pong_spa
       - ./nginx.conf.d:/etc/nginx/conf.d
-      - ./ssl/pong.com:/etc/nginx/ssl/pong.com
+      - ./ssl/pong42.com:/etc/nginx/ssl/pong
     ports:
       - "80:80"
       - "443:443"

@@ -65,40 +65,55 @@ declare namespace NotificationTypes {
         notification_type: string;
         notification_id: number;
         description: string;
-        is_active?: boolean;
+        is_active: boolean;
         is_read: number;
         natural_timestamp: number;
         timestamp: number;
         actions: {
             redirect_url: string;
         };
-        item: APITypes.FriendRequestItem;
+        user: APITypes.BasicUserData;
+    }
+
+    export interface GetChatConversations {
+        command: 'chat.get_chat_conversations';
+        page: number;
     }
 }
 
 declare namespace NotificationMessageTypes {
+    // eslint-disable-next-line no-shadow
+    export enum NotificationMessageEnum {
+        GENERAL_MSG_TYPE_NOTIFICATIONS_DATA = 0, // New 'general' notifications data payload incoming
+        GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED = 1, // No more 'general' notifications to retrieve
+        GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2, // Retrieved all 'general' notifications newer than the oldest visible on screen
+        GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS = 3, // Get any new notifications
+        GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT = 4, // Send the number of unread "general" notifications to the template
+        GENERAL_MSG_TYPE_UPDATED_NOTIFICATION = 5, // Update a notification that has been altered
+    }
+
     export interface NotificationsList {
-        general_msg_type: 'GENERAL_MSG_TYPE_NOTIFICATIONS_DATA';
+        general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_NOTIFICATIONS_DATA;
         notifications: NotificationTypes.NotificationData[];
         new_page_number: number;
     }
     export interface RefreshNotificationsList {
-        general_msg_type: 'GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD';
+        general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD;
         notifications: NotificationTypes.NotificationData[];
     }
     export interface NewNotificationsList {
-        general_msg_type: 'GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS';
+        general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS;
         notifications: NotificationTypes.NotificationData[];
     }
     export interface NotificationUpdate {
-        general_msg_type: 'GENERAL_MSG_TYPE_UPDATED_NOTIFICATION';
+        general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_UPDATED_NOTIFICATION;
         notification: NotificationTypes.NotificationData;
     }
     export interface PaginationExhausted {
-        general_msg_type: 'GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED';
+        general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED;
     }
     export interface NotificationCount {
-        general_msg_type: 'GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT';
+        general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT;
         count: number;
     }
     export interface ProgressBarDisplay {
@@ -114,4 +129,19 @@ declare namespace NotificationMessageTypes {
         | PaginationExhausted;
 
     export type NotificationMessageTags = NotificationMessage['general_msg_type'];
+
+    type ChatConversationType = 'single' | 'group';
+
+    export interface ChatConversation {
+        conversation_ident: string;
+        users: APITypes.BasicUserData[];
+        created_at: string;
+        type: ChatConversationType;
+    }
+
+    export interface GetChatConversationsResponse {
+        msg_type: 'chat.get_chat_conversations_response';
+        conversations: ChatConversation[];
+        next_page: number;
+    }
 }

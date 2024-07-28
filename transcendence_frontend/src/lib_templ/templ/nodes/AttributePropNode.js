@@ -14,7 +14,6 @@ export default class AttributePropNode extends BaseNode {
 
     /** @param {any} value */
     setValue(value) {
-        /** @type {BaseBase | Element} */
         const el = this.element;
         if (el instanceof BaseBase) {
             el.props[this.#attrName] = value;

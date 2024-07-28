@@ -1,6 +1,6 @@
 from django.test import TestCase
 from unittest.mock import MagicMock
-from pong_server.pong_threading_new_layout.game import PongGame
+from pong_server.pong_old.game import PongGame
 
 
 class TestPongGame(TestCase):

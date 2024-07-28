@@ -43,12 +43,12 @@
             "sizes": "192x192"
         }
     ],
-    "start_url": "https://pong.com/",
+    "start_url": "https://pong42.com/",
     "display": "standalone",
     "id": "/",
     "theme_color": "#ced4da",
     "background_color": "#ced4da",
-    "scope": "https://pong.com/",
+    "scope": "https://pong42.com/",
     "lang": "en",
     "dir": "ltr",
     "orientation": "portrait-primary",

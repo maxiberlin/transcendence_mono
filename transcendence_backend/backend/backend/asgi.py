@@ -21,7 +21,10 @@ django_asgi_app = get_asgi_application()
 
 # from public_chat import routing as pb_routing
 from pong_server import routing as ps_routing
-from pong_server.pong_threading_new_layout.consumer_game import GameConsumer
+from notification import routing as nf_routing
+
+# from pong_server.pong_old.consumer_game import GameConsumer
+from pong_server.pong_new.consumer_game import GameConsumer
 
 # application = ProtocolTypeRouter({
 #     "channel": ChannelNameRouter({
@@ -34,7 +37,7 @@ application = ProtocolTypeRouter({
     'websocket': AllowedHostsOriginValidator(
         AuthMiddlewareStack(
             # URLRouter(pb_routing.websocket_urlpatterns + ps_routing.websocket_urlpatterns)
-            URLRouter(ps_routing.websocket_urlpatterns)
+            URLRouter(ps_routing.websocket_urlpatterns + nf_routing.websocket_urlpatterns)
         )
     ),
     'channel': ChannelNameRouter({

@@ -98,9 +98,9 @@ export default class ProfileSearch extends BaseElement {
             this.#searchData = [];
             this.#currSearchRes = "";
             this.#currSearchNavPos = -1;
-            console.log('handleSelectedClicked -> clear the data');
+            // console.log('handleSelectedClicked -> clear the data');
             super.requestUpdate();
-            console.log('inpt: ', this.#inptElem);
+            // console.log('inpt: ', this.#inptElem);
             const inpt = this.#searchSection.querySelector("input");
             if (inpt) {
                 inpt.value = '';
@@ -121,14 +121,14 @@ export default class ProfileSearch extends BaseElement {
             this.#currSearchNavPos = clamp(0, this.#currSearchNavPos+1, this.#searchData.length-1)
             this.toggleActiveElement(this.#currSearchNavPos);
         } else if (ev.key === 'Enter' && this.#currSearchNavPos >= 0) {
-            console.log('\n\n!!!!!ENTER KEY KLICKED');
+            // console.log('\n\n!!!!!ENTER KEY KLICKED');
             const selectedRes = this.#searchData[this.#currSearchNavPos];
             const currentEntry = this.#searchListGroupContainer?.querySelector('div[data-search-result] > a.active');
             if (currentEntry instanceof HTMLAnchorElement) {
-                console.log('href!!: ', currentEntry.href);
+                // console.log('href!!: ', currentEntry.href);
                 this.handleSelectedClicked(currentEntry.href);
             }
-            console.log('new item: ', selectedRes);
+            // console.log('new item: ', selectedRes);
             this.dispatchEvent(new SelectedSearchResult(selectedRes))
             if (this.discardprev) this.discarted.push(selectedRes.id);
         } else {
@@ -160,8 +160,8 @@ export default class ProfileSearch extends BaseElement {
         if (!(target instanceof Node)) return;
         const shad = target.getRootNode();
         if (shad instanceof ShadowRoot) target = shad.host;
-        // console.log('searchSection: ', this.#searchSection);
-        // console.log('target: ', target);
+        // // console.log('searchSection: ', this.#searchSection);
+        // // console.log('target: ', target);
         let makeUpDate = false;
         if (
             this.#searchSection &&
@@ -169,15 +169,15 @@ export default class ProfileSearch extends BaseElement {
             target instanceof HTMLElement
         ) {
             if (this.#searchSection.contains(target)) {
-                console.log('jo inside section!: entry: ', target);
+                // console.log('jo inside section!: entry: ', target);
                 const contDiv = target.closest('div[data-search-result]');
                 if (contDiv && contDiv instanceof HTMLElement && contDiv.dataset.searchResult && this.#searchData instanceof Array) {
-                    console.log('cont div: ', contDiv.dataset.searchResult);
+                    // console.log('cont div: ', contDiv.dataset.searchResult);
                     // ev.stopImmediatePropagation();
                     ev.stopPropagation()
                     ev.preventDefault();
                     const selectedRes = this.#searchData[contDiv.dataset.searchResult];
-                    console.log('selected result: ', selectedRes);
+                    // console.log('selected result: ', selectedRes);
                     this.handleSelectedClicked(target.closest('a')?.href ?? '');
                     if (this.discardprev) this.discarted.push(selectedRes.id);
                     this.dispatchEvent(new SelectedSearchResult(selectedRes))
@@ -187,7 +187,7 @@ export default class ProfileSearch extends BaseElement {
                 }
                 
             } else {
-                // console.log('NOT inside section');
+                // // console.log('NOT inside section');
                 makeUpDate = this.#showRes !== false;
                 this.#showRes = false;
             }
@@ -204,11 +204,11 @@ export default class ProfileSearch extends BaseElement {
 
     render() {
 
-        console.log('render search -> current data:');
-        console.log('currSearchNavPos: ', this.#currSearchNavPos);
-        console.log('currSearchRes: ', this.#currSearchRes);
-        console.log('searchData: ', this.#searchData);
-        console.log('showRes: ', this.#showRes);
+        // console.log('render search -> current data:');
+        // console.log('currSearchNavPos: ', this.#currSearchNavPos);
+        // console.log('currSearchRes: ', this.#currSearchRes);
+        // console.log('searchData: ', this.#searchData);
+        // console.log('showRes: ', this.#showRes);
 
         if (this.discardprev && this.#searchData instanceof Array)
             this.#searchData = this.#searchData.filter((u)=>!this.discarted.includes(u.id))

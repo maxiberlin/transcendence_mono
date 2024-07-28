@@ -9,7 +9,7 @@ import json
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 from user.utils import *
 from datetime import datetime
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, Union
 from django.db.models.query import QuerySet
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404

@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 declare namespace PongGameplayTypes {
     // Enums
 
@@ -58,6 +59,10 @@ declare namespace PongServerTypes {
         tag: string;
     }
 
+    export interface Hello extends ServerBaseMessage {
+        tag: 'hello';
+        heartbeat_ms: number;
+    }
     export interface Pong extends ServerBaseMessage {
         tag: 'pong';
         client_timestamp_ms: number;
@@ -66,25 +71,38 @@ declare namespace PongServerTypes {
 
     export interface GameReady extends ServerBaseMessage {
         tag: 'server-game-ready';
-        timestamp: number;
+        timestamp_ms: number;
         court: PongGameplayTypes.GameObjData;
         ball: PongGameplayTypes.GameObjData;
         paddle_left: PongGameplayTypes.GameObjData;
         paddle_right: PongGameplayTypes.GameObjData;
         settings: PongGameplayTypes.GameSettings;
-        timeout_time_sec: number;
+        start_timeout_sec: number;
+        reconnect_timeout_sec: number;
         user_id_left: number;
         user_id_right: number;
     }
 
     export interface GameStart extends ServerBaseMessage {
         tag: 'server-game-start';
-        timestamp: number;
+        timestamp_ms: number;
+    }
+
+    export interface GameObjPosBinary {
+        x: number;
+        y: number;
+    }
+    export interface GameUpdateBinaryItem {
+        tickno: number;
+        timestamp_ms: number;
+        ball: GameObjPosBinary;
+        paddle_left: GameObjPosBinary;
+        paddle_right: GameObjPosBinary;
     }
 
     export interface GameUpdate extends ServerBaseMessage {
         tag: 'server-game-update';
-        timestamp: number;
+        timestamp_ms: number;
         tickno: number;
         invalid_ticks: number;
         ball: PongGameplayTypes.GameObjPositionData;
@@ -116,29 +134,29 @@ declare namespace PongServerTypes {
 
     export interface GamePaused extends ServerBaseMessage {
         tag: 'server-game-paused';
-        timestamp: number;
     }
 
     export interface GameResumed extends ServerBaseMessage {
         tag: 'server-game-resumed';
-        timestamp: number;
     }
 
     export interface UserConnected extends ServerBaseMessage {
         tag: 'server-user-connected';
-        timestamp: number;
         user_id: number;
     }
 
     export interface UserDisconnected extends ServerBaseMessage {
         tag: 'server-user-disconnected';
-        timestamp: number;
+        user_id: number;
+    }
+
+    export interface UserReconnected extends ServerBaseMessage {
+        tag: 'server-user-reconnected';
         user_id: number;
     }
 
     export interface UserSurrendered extends ServerBaseMessage {
         tag: 'server-user-surrendered';
-        timestamp: number;
         user_id: number;
     }
 
@@ -152,6 +170,7 @@ declare namespace PongServerTypes {
 
     // Type alias for ServerMessage
     export type ServerMessage =
+        | Hello
         | Pong
         | GameReady
         | GameStart
@@ -162,6 +181,7 @@ declare namespace PongServerTypes {
         | GameResumed
         | UserConnected
         | UserDisconnected
+        | UserReconnected
         | UserSurrendered
         | ServerInternalErr;
 
@@ -268,9 +288,17 @@ declare namespace FromWorkerGameMessageTypes {
         message: 'from-worker-client-disconnected';
         user_id: number;
     }
+    export interface ClientReconnected {
+        message: 'from-worker-client-reconnected';
+        user_id: number;
+    }
     export interface GameReady {
         message: 'from-worker-game-ready';
-        startTime: number;
+        startTimeoutSec: number;
+    }
+    export interface GameStarted {
+        message: 'from-worker-game-started';
+        ballTimeoutSec: number;
     }
     export interface GameError {
         message: 'from-worker-error';
@@ -303,10 +331,12 @@ declare namespace FromWorkerGameMessageTypes {
     export type FromWorkerMessage =
         | GameTouchValid
         | GameReady
+        | GameStarted
         | GamePaused
         | GameResumed
         | ClientConnected
         | ClientDisconnected
+        | ClientReconnected
         | GameError
         | PlayerScored
         | GameEnd;

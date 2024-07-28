@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MYCERT=pong.com
+MYCERT=pong42.com
 IP=35.198.107.15
 
 

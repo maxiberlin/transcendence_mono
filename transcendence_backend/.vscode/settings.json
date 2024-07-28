@@ -6,4 +6,7 @@
         "editor.wordBasedSuggestions": "off",
         "editor.formatOnSave": false,
     },
+    "mypy.runUsingActiveInterpreter": true,
+    "mypy.configFile": "backend/mypy.ini",
+    "mypy.enabled": true
 }

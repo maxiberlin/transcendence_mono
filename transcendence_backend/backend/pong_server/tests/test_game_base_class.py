@@ -1,6 +1,6 @@
 import math
 from django.test import TestCase
-from pong_server.pong_threading_new_layout.game_base_class import GameObjDataClass, Collision
+from pong_server.pong_old.game_base_class import GameObjDataClass, Collision
 
 def print_data(objBall: GameObjDataClass, objPaddle: GameObjDataClass):
     # print("------- X-Axis ------------")

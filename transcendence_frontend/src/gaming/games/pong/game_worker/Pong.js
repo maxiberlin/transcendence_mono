@@ -18,16 +18,18 @@ const useFrame = (onceCb, callback) => {
 
     /** @param {number} workerCurrentTimeMs */
     const renderFunc = (workerCurrentTimeMs) => {
+        if (once) {
+            onceCb();
+            once = false;
+            currFrame = undefined;
+            return ;
+        } 
         if (workerLastTimeMs === undefined)
             workerLastTimeMs = workerCurrentTimeMs;
         const elapsedMs = workerCurrentTimeMs - workerLastTimeMs;
         workerLastTimeMs = workerCurrentTimeMs;
-        if (once) {
-            onceCb();
-            once = false;
-        } else {
-            callback(workerCurrentTimeMs, workerLastTimeMs, elapsedMs, timeOrigin + workerCurrentTimeMs);
-        }
+        
+        callback(workerCurrentTimeMs, workerLastTimeMs, elapsedMs, timeOrigin + workerCurrentTimeMs);
         if (!stopped) {
             currFrame = requestAnimationFrame(renderFunc);
         } else {
@@ -40,6 +42,7 @@ const useFrame = (onceCb, callback) => {
         if (currFrame && !once) return;
         if (startTime) syncTime(startTime);
         stopped = false;
+        console.log('START RENDERING');
         currFrame = requestAnimationFrame(renderFunc);
     };
     const stopRender = () => {
@@ -156,6 +159,7 @@ export class PongLocal extends Pong {
         super(d.offscreencanvas, false, d.userId);
         this.manager.setSettings(defaultSettings.max_score, defaultSettings.point_wait_time_ms, false, d.data.player_one.id,  d.data.player_two.id)
         console.log('PONG LOCAL');
+        pushMessageToMainThread({message: "from-worker-game-ready", startTimeoutSec: 0});
     }
    
     /**
@@ -174,6 +178,11 @@ export class PongLocal extends Pong {
                 this.manager.makeAction(score, "local-set-score-check-win-message-main");
         }
         this.manager.draw();
+    }
+
+    startGame() {
+        
+        super.startGame();
     }
 
     /** @param {ToWorkerGameMessageTypes.KeyEvent} d  */

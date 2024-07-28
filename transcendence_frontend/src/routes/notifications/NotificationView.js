@@ -2,6 +2,7 @@ import { actionButtonGroups, configs, getBtn } from '../../components/ActionButt
 import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { sessionService } from '../../services/api/API_new';
+import { Popover } from 'bootstrap';
 
 const GENERAL_NOTIFICATION_INTERVAL = 4000
 const GENERAL_NOTIFICATION_TIMEOUT = 5000
@@ -26,13 +27,15 @@ export class NotificationView extends BaseElement {
     /** @type {WebSocket | null} */
     #notificationSocket = null;
     #pageNo = 1;
-    #oldesTimeStamp = Date.now()
-    #newestTmeStamp = Date.now()
+    #oldesTimeStamp = Math.round(Date.now() / 1000);
+    #newestTmeStamp = Math.round(Date.now() / 1000);
     #unreadCount = 0;
 
     /** @param {NotificationTypes.NotificationData} notification @param {boolean} [front]  */
     setNotification(notification, front=false) {
         const i = this.#notificationDataList.findIndex(i => i.notification_id === notification.notification_id)
+        console.log('set Notification: ', notification);
+        console.log('set Notification index: ', i);
         if (i === -1 && !front) this.#notificationDataList.push(notification);
         else if (i === -1 && front) this.#notificationDataList.unshift(notification);
         else this.#notificationDataList[i] = notification;
@@ -51,36 +54,46 @@ export class NotificationView extends BaseElement {
         /** @type {NotificationMessageTypes.NotificationMessage} */
         const data = JSON.parse(e.data);
         console.log(data);
-        if(data.general_msg_type == 'GENERAL_MSG_TYPE_NOTIFICATIONS_DATA') {
+        if(data.general_msg_type === GENERAL_MSG_TYPE_NOTIFICATIONS_DATA) {
             data.notifications.forEach(notification => {
                 this.setNotification(notification);
                 this.updateTimeStamps(notification.timestamp);
             });
+            console.log('old page: ', this.#pageNo);
             this.#pageNo = data.new_page_number;
-        } else if(data.general_msg_type == 'GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS') {
+            console.log('new page: ', this.#pageNo);
+        } else if(data.general_msg_type === GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS) {
             data.notifications.forEach(notification => {
                 this.setNotification(notification, true);
                 this.updateTimeStamps(notification.timestamp);
             });
-        } else if(data.general_msg_type == 'GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD') {
+        } else if(data.general_msg_type === GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD) {
             data.notifications.forEach(notification => {
                 this.setNotification(notification);
                 this.updateTimeStamps(notification.timestamp);
             });
-        } else if(data.general_msg_type == 'GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED') {
+        } else if(data.general_msg_type === GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED) {
             this.#pageNo = -1;
-        } else if(data.general_msg_type == 'GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT') {
+        } else if(data.general_msg_type === GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT) {
             this.#unreadCount = data.count;
-        } else if(data.general_msg_type == 'GENERAL_MSG_TYPE_UPDATED_NOTIFICATION') {
+        } else if(data.general_msg_type === GENERAL_MSG_TYPE_UPDATED_NOTIFICATION) {
             this.setNotification(data.notification);
         }
+
         super.requestUpdate();
     }
 
     connectedCallback() {
         super.connectedCallback();
 
+        
+
         const refreshNotifications = () => {
+            console.log('send: ', {
+                command: "refresh_general_notifications",
+                oldest_timestamp: this.#oldesTimeStamp,
+                newest_timestamp: this.#newestTmeStamp,
+            });
             sessionService.pushToNotificationSocket({
                 command: "refresh_general_notifications",
                 oldest_timestamp: this.#oldesTimeStamp,
@@ -125,30 +138,36 @@ export class NotificationView extends BaseElement {
     /**
      * @param {NotificationTypes.NotificationData} notification 
      */
-    renderNotificationItem = (notification) =>  html`
-        <div class="d-flex flex-column align-items-start general-card p-4">
-            <div class="d-flex flex-row align-items-start">
-                ${avatarLink(notification.item)}
-                ${notification.is_active ? html`
-                    <div class="d-flex flex-grow-1 align-items-center justify-content-between">
-                        <span class="m-auto">
+    renderNotificationItem = (notification) =>  {
+        // console.log('notification render: ', notification);
+        // console.log('active?!?!: ', notification.is_active);
+        // console.log('typeof: ', typeof notification.is_active);
+        return html`
+        <a style="${"max-width: 500px;"}"
+            href="/profile/${notification.user.id}"
+            class="dropdown-item m-0 p-0 d-flex flex-column flex-column align-items-start p-3 w-100">
+            <div class="d-flex flex-row align-items-start" style="${"max-width: 500px;"}">
+                ${avatarLink(notification.user)}
+                ${(notification.is_active === true) ? html`
+                    <div class="d-flex flex-column  align-items-center justify-content-between">
+                        <span class="m-auto d-inline-block text-truncate">
                             ${notification.description}
                         </span>
                         <div class="d-flex ms-2">
-                            ${this.websocketActionButtonGroups.receivedFriendInvitation(notification.item.id, true)}
+                            ${this.websocketActionButtonGroups.receivedFriendInvitation(notification.notification_id, true)}
                         </div>
                     </div>
                 ` : html`
-                    <span class="m-auto">
+                    <span class="m-auto d-inline-block text-truncate">
                         ${notification.description}
                     </span>
-                `}
+                ` }
             </div>
-            <p class="small pt-2 timestamp-text">
+            <p class="small m-0 pt-2 timestamp-text">
                 ${notification.natural_timestamp}
             </p>
-        </div>
-    `
+        </a>
+    `}
 
     renderNoNotification = () => html`
         <div class="d-flex flex-row align-items-start" >
@@ -156,35 +175,60 @@ export class NotificationView extends BaseElement {
         </div>
     `
 
+    scrolltimeout
     /** @param {Event} e */
     onMenuScroll = (e) => {
+        if (this.#pageNo === -1 || this.scrolltimeout !== undefined)
+            return;
         const menu = e.currentTarget;
-        if (menu && menu instanceof HTMLDivElement && menu.scrollTop >= menu.scrollHeight - menu.offsetHeight) {
-            // const pageNumber = document.getElementById("id_general_page_number").innerHTML
-            const pageNumber = -1;
-            // -1 means exhausted or a query is currently in progress
-            if(pageNumber !== -1)
-                sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: pageNumber})
-        }
+        this.scrolltimeout = setTimeout(() => {
+            if (menu && menu instanceof HTMLElement && menu.scrollTop >= menu.scrollHeight - menu.offsetHeight) {
+                sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: this.#pageNo})
+                this.scrolltimeout = undefined;
+            }
+          }, 300);
     }
-
+    // btn-group dropend
     render() {
+        console.log('render: notification list data: ', this.#notificationDataList);
+        const isMobile = window.innerWidth <= 576;
         return html`
-            <div class="btn-group dropleft">
-                <div class="d-flex notifications-icon-container rounded-circle align-items-center mr-3"
-                    id="id_notification_dropdown_toggle" data-bs-toggle="dropdown">
-                    <!--onclick="setGeneralNotificationsAsRead()"-->
-                    <span  class="notify-badge"></span>
-                    <span
-                        class="d-flex material-icons notifications-material-icon m-auto align-items-center">notifications</span>
-                </div>
-                <div @scroll=${ this.onMenuScroll }
-                    class="dropdown-menu scrollable-menu" aria-labelledby="id_notification_dropdown_toggle" >
-                    ${this.#notificationDataList.length === 0 ? this.renderNoNotification()
-                        :  this.#notificationDataList.map((n) => this.renderNotificationItem(n))
-                    }
-                </div>
+        <div class=" ${isMobile ? 'btn-group dropup' : 'dropdown'} ">
+
+        
+            <button
+                @shown.bs.dropdown=${ () => {
+                    document.body.classList.add("overflow-hidden");
+                } }
+                @hidden.bs.dropdown=${ () => {
+                    document.body.classList.remove("overflow-hidden");
+                } }
+                
+                class="btn btn-dark dropdown-toggle position-relative px-3 w-100 h-100"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                <i class="fa-solid fa-bell"></i>
+                ${this.#notificationDataList.length === 0 ? '' : html`
+                    <span class="position-absolute top-0 start-100 px-1 translate-middle badge rounded-pill bg-danger">
+                        ${this.#unreadCount}
+                        <span class="visually-hidden">unread notifications</span>
+                    </span>
+                `}
+            </button>
+            <div
+                @scroll=${ (e) => { this.onMenuScroll(e) } }
+                style="${"max-width: 500px;  height: 30em;"}"
+                class="overflow-scroll dropdown-menu scrollable-menu"
+                aria-labelledby="id_notification_dropdown_toggle"
+            >
+                ${this.#notificationDataList.length === 0 ? this.renderNoNotification()
+                    :  this.#notificationDataList.map((n) => this.renderNotificationItem(n))
+                }
             </div>
+
+        </div>
         `
     }
 

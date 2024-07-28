@@ -6,10 +6,10 @@ from pong_server import consumers
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async 
-from pong_server.pong_threading_new_layout.consumer_game import GameConsumer
+from pong_server.pong_old.consumer_game import GameConsumer
 
-from pong_server.pong_threading_new_layout import messages_client as msg_client
-from pong_server.pong_threading_new_layout import messages_server as msg_server
+from pong_server.pong_old import messages_client as msg_client
+from pong_server.pong_old import messages_server as msg_server
 from user.models import UserAccount
 from game.models import GameSchedule, GameRequest, Player
 from game.utils import create_game_request
@@ -18,7 +18,7 @@ import asyncio
 import random
 import concurrent.futures
 import functools
-from pong_server.pong_threading_new_layout.consumer_game import GameHandle
+from pong_server.pong_old.consumer_game import GameHandle
 
 
 def createUser(num):

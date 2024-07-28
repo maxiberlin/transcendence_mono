@@ -43,12 +43,28 @@ export default class PongApp extends BaseElement {
         this.sessionUser = sessionService.subscribe(this);
         // console.log('current user: ', this.sessionUser.value);
 
-        this.onResize = () => {super.requestUpdate();}
+        this.onResize = () => {
+            super.requestUpdate();
+            console.log('screen sizes: ', window.screen);
+            console.log('innerWidth: ', window.innerWidth);
+            console.log('innerHeight: ', window.innerHeight);
+            console.log('outerWidth: ', window.outerWidth);
+            console.log('outerHeight: ', window.outerHeight);
+
+        }
     }
 
+    shouldAddBottomPadding = false;
     connectedCallback() {
         super.connectedCallback();
         window.addEventListener("resize", this.onResize);
+        setTimeout(() => {
+            if (document.body.scrollHeight > document.body.clientHeight)
+                this.shouldAddBottomPadding = true;
+            console.log('checkk: ', document.body.clientHeight);            
+            console.log('checkk: ', document.body.scrollHeight);            
+            super.requestUpdate();
+        }, 500);
     }
 
     disconnectedCallback() {
@@ -97,33 +113,46 @@ export default class PongApp extends BaseElement {
     `
     /** @type {Array<import('../components/Navs.js').NavItemConf>} */
     configs = [
-        {text: '', doubleLine: true, useList: true, href: '/', icon: 'home'},
-        {text: '', doubleLine: true, useList: true, href: '/social/friends', icon: 'users'},
-        {text: '', doubleLine: true, useList: true, href: '/profile', icon: 'user'},
-        {text: '', doubleLine: true, useList: true, href: '/profile/settings', icon: 'gear'},
+        {text: '', href: '/', icon: 'home'},
+        {text: '', href: '/social/friends', icon: 'users'},
+        {text: '', href: '/profile', icon: 'user'},
+        {text: '', href: '/profile/settings', icon: 'gear'},
     ];
 
+    renderNav = (isMobile) => html`
+        ${!sessionService.isLoggedIn ? '' : html`
+            <div  class="p-0 m-0  ${isMobile ? 'pong-navbar-mobile' : 'pong-fixed-top-1' }" >
+                <vertical-nav
+                    notification
+                    .navconfigs=${this.configs}
+                    row
+                    ?linebreak=${isMobile}
+                >
+                </vertical-nav>
+                
+            </div>
+        `}
+    `
+
+    /** @type {HTMLDivElement | undefined} */
+    navdiv
     render() {
         console.log('render root!: window.innerWidth: ', window.innerWidth);
         const isMobile = window.innerWidth <= 576;
 
+        
         return html`
-            <div class="container-fluid bg-dark-subtle h-100">
+            <div class="p-0 container-fluid bg-dark-subtle h-100">
                 <bs-toasts></bs-toasts>
-                <div class="row">
-                    ${!sessionService.isLoggedIn ? '' : html`
-                        <div class="p-0 m-0 ${isMobile ? 'pong-fixed-bottom-1 pong-navbar-mobile' : 'col pong-fixed-left-1 pong-navbar-desktop'}">
-                            <vertical-nav center .navconfigs=${this.configs} ?row=${isMobile}  ></vertical-nav>
-                        </div>
-                        `}
+                <div class="d-flex flex-column h-100">
 
-                    ${!isMobile ? html`<div class="pong-navbar-desktop"></div>` : ''}
-                    <div id="scroll-container" class="col p-0 w-100">
+                    ${this.renderNav(isMobile)}
+                    <div id="scroll-container" class="${isMobile ? '' : 'p-0 flex-grow-1'}  w-100 " style="${this.shouldAddBottomPadding ? `padding-bottom: 6em; height: auto;` : 'padding-bottom: 6em; height: 100%'}">
                         ${sessionService.isLoggedIn ? '' : this.renderLoginRegister()}
+                        
                         <main id="root-outlet" class="w-100 h-100"></main>
                         
                     </div>
-                    ${isMobile ? html`<div class="pong-spacer-mobile w-100"></div>` : ''}
                     
                 </div>
             </div>

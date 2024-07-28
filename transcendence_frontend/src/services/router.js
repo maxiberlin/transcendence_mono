@@ -78,8 +78,8 @@ const routes = [
         title: 'Profile ',
     },
     {
-        path: '/games/:game',
-        component: 'game-invite',
+        path: '/games/:game/play/:schedule_id',
+        component: 'game-modaln',
         title: 'Game View ',
     },
 ];

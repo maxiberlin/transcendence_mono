@@ -127,7 +127,7 @@ export class ServerMessageMap {
 
 
 export const WebsocketErrorCode = {
-    OK: 1000,
+    OK: 4000,
     NON_CLOSING_ERROR: 4100,
     GAME_ALREADY_CREATED: 4101,
     USER_ALREADY_JOINED_GAME: 4102,

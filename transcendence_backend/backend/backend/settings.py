@@ -47,13 +47,17 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'channels',
+    # 'django_extensions',
 
     'user',
     'friends',
     'game',
     'pong_server',
+    'notification'
     # 'public_chat',
     # 'chat',
+    
+    
 ]
 
 MIDDLEWARE = [
@@ -74,6 +78,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "https://pong.com",
+    "https://pong42.com",
     "https://pongparty.com",
 ]
 
@@ -86,6 +91,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "https://pong.com",
+    "https://pong42.com",
     "https://pongparty.com",
 ]
 

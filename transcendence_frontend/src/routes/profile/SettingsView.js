@@ -39,7 +39,7 @@ export class SettingsView extends BaseElement {
         this.addEventListener("selected_nav_link", this.selectedHandler);
         window.addEventListener("resize", this.onShouldUpdate);
         this.addEventListener("hidden.bs.offcanvas", this.onShouldUpdate);
-        this.addEventListener("hidePrevented.bs.offcanvas", (e)=>{console.log('hide prev?: ', e);});
+        // this.addEventListener("hidePrevented.bs.offcanvas", (e)=>{console.log('hide prev?: ', e);});
     }
 
     disconnectedCallback() {

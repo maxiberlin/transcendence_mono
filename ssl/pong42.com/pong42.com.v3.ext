@@ -1,0 +1,9 @@
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+extendedKeyUsage = serverAuth, clientAuth
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = pong42.com
+DNS.2 = api.pong42.com
+IP.1 = 35.198.107.15

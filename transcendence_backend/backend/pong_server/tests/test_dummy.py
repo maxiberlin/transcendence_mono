@@ -4,8 +4,8 @@ import functools
 import queue
 import threading
 import time
-from pong_server.pong_threading_new_layout.game import PongGame
-from pong_server.pong_threading_new_layout.pong_settings import PongSettings
+from pong_server.pong_old.game import PongGame
+from pong_server.pong_old.pong_settings import PongSettings
 from django.test import TestCase
 
 

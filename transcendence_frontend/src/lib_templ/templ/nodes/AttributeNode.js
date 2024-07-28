@@ -24,7 +24,7 @@ import BaseNode from './BaseNode.js';
 
 export default class AttributeMultiNode extends BaseNode {
     /**
-     * @param {any} element
+     * @param {HTMLElement} element
      * @param {string} name
      * @param {string[]} strings
      * @param {number} index

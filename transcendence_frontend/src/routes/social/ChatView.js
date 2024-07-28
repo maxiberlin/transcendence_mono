@@ -2,85 +2,65 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
 export default class ChatView extends BaseElement {
     static observedAttributes = [];
-
     constructor() {
-        super();
+        super(false, false);
 
-        this.#roomName = 'joo';
     }
 
-    #roomName;
+    renderMessage = () => html``
 
-    /** @type {WebSocket | undefined} */
-    #chatSocket;
+    renderMessageContainer = () => html``
 
-    connectedCallback() {
-        super.connectedCallback();
+    renderChatsList = () => html`
+        <ul class="list-group w-100">
+            <li class="list-group-item text-body-secondary fs-6">
+                <div class="w-100 row text-center align-items-center justify-content-between">
+                    halo
+                </div>
+            </li>
+            <li class="list-group-item text-body-secondary fs-6">
+                <div class="w-100 row text-center align-items-center justify-content-between">
+                    halo
+                </div>
+            </li>
+            <li class="list-group-item text-body-secondary fs-6">
+                <div class="w-100 row text-center align-items-center justify-content-between">
+                    halo
+                </div>
+            </li>
+        </ul>
+       
+    `
+    
+    renderChatContainer = () => html``
 
-        this.#chatSocket = new WebSocket(
-            `ws://127.0.0.1/ws/chat/${this.#roomName}/`,
-        );
-
-        // console.log('chatsocket: ', this.#chatSocket);
-
-        this.#chatSocket.onmessage = (e) => {
-            this.onWebsocketMessage(e);
-        };
-
-        this.#chatSocket.onclose = () => {
-            // console.log(e);
-            // console.error('Chat socket closed unexpectedly');
-        };
-    }
-
-    disconnectedCallback() {
-        super.disconnectedCallback();
-        this.#chatSocket?.close();
-    }
-
-    onWebsocketMessage(e) {
-        // const roomName = JSON.parse(document.getElementById('room-name').textContent);
-
-        const data = JSON.parse(e.data);
-        if (this.chatLog) this.chatLog.value += `${data.message}\n`;
-    }
+    renderMessageInput = () => html`
+        <input
+            class="form-control form-control-lg"
+            type="text"
+            placeholder="type to chat"
+            aria-label=".form-control-lg example"
+        >
+    `
 
     render() {
         return html`
-            <textarea
-                ${(el) => {
-                    this.chatLog = el;
-                }}
-                cols="100"
-                rows="20"
-            ></textarea
-            ><br />
-            <input
-                ${(el) => {
-                    this.msgInputEl = el;
-                }}
-                @keyup=${this.msgSubmitBtn?.click()}
-                type="text"
-                size="100"
-            /><br />
-            <input
-                ${(el) => {
-                    this.msgSubmitBtn = el;
-                }}
-                @click=${() => {
-                    if (!this.msgInputEl) return;
-                    const message = this.msgInputEl.value;
-                    this.#chatSocket?.send(
-                        JSON.stringify({
-                            message,
-                        }),
-                    );
-                    this.msgInputEl.value = '';
-                }}
-                type="button"
-                value="Send"
-            />
-        `;
+            <div class="row g-0" style="${"height: 100%"}">
+                <div class="col-3">
+                    ${this.renderChatsList()}
+                </div>
+                <div class="col d-flex flex-column">
+                    <div class="flex-grow-1">
+                        hallo
+                    </div>
+                    <div class="p-2">
+                        ${this.renderMessageInput()}
+                    </div>
+                </div>
+            </div>
+        `
     }
 }
-customElements.define('chat-view', ChatView);
+customElements.define("chat-view", ChatView);
+
+// style="${"height: 90vh"}"

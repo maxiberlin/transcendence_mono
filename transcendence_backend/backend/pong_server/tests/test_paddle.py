@@ -1,7 +1,7 @@
 from django.test import TestCase
-from pong_server.pong_threading_new_layout.game_base_class import GameObjDataClass
-from pong_server.pong_threading_new_layout.pong_settings import PongSettings
-from pong_server.pong_threading_new_layout.pong_paddle import PongPaddle
+from pong_server.pong_old.game_base_class import GameObjDataClass
+from pong_server.pong_old.pong_settings import PongSettings
+from pong_server.pong_old.pong_paddle import PongPaddle
 
 class PaddleTestCase(TestCase):
     def setUp(self):

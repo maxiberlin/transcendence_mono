@@ -18,17 +18,17 @@ export default class PubSubConsumer extends BaseReactive {
      * @param {import('../BaseBase').default} [host] The host object.
      */
     constructor(pubSubInst, initialValue, force = false, host = undefined) {
-        // console.log('constructor PubSubConsumer');
+        // // console.log('constructor PubSubConsumer');
         super(initialValue, host);
         this.#pubSubInst = pubSubInst;
         if (host == undefined) force = true;
         this.#force = force;
 
         this.#handler = (event) => {
-            console.log(
-                'PubSubConsumer: myHost: ', host, ' onNewValue: event.detail: ',
-                event.detail,
-            );
+            // console.log(
+            //     'PubSubConsumer: myHost: ', host, ' onNewValue: event.detail: ',
+            //     event.detail,
+            // );
             this.onNewValue(event.detail, this.#force);
         };
 
@@ -40,9 +40,9 @@ export default class PubSubConsumer extends BaseReactive {
     #connected = false;
 
     onConnected() {
-        // console.log('on Connected pubSubConsumer, add eventListener!');
-        // console.log('   this pubsub: ', this.#pubSubInst);
-        // console.log('   handler: ', this.#handler);
+        // // console.log('on Connected pubSubConsumer, add eventListener!');
+        // // console.log('   this pubsub: ', this.#pubSubInst);
+        // // console.log('   handler: ', this.#handler);
         if (this.#connected) return;
         this.#pubSubInst.addEventListener(
             this.#pubSubInst.eventType,
@@ -52,7 +52,7 @@ export default class PubSubConsumer extends BaseReactive {
     }
 
     onDisconnected() {
-        // // console.log("on Disconnected pubSubConsumer, add eventListener!");
+        // // // console.log("on Disconnected pubSubConsumer, add eventListener!");
         if (!this.#connected) return;
         this.#pubSubInst.removeEventListener(
             this.#pubSubInst.eventType,

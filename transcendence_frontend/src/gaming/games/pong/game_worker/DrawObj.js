@@ -5,7 +5,7 @@ export default class DrawObj {
      * @param {PongGameplayTypes.GameObjData} initial
      */
     constructor(initial) {
-        console.log('init draw: ', initial);
+        // console.log('init draw: ', initial);
         /** @type {number} */ this.#x = initial.x;
         /** @type {number} */ this.#y = initial.y;
         /** @type {number} */ this.w = initial.w;
@@ -80,15 +80,15 @@ export default class DrawObj {
     lerp2 = (start, end, time) => start * (1 - time) + end * time;
 
     /**
-     * @param {PongGameplayTypes.GameObjPositionData} lastUpdate 
-     * @param {PongGameplayTypes.GameObjPositionData} nextUpdate
+     * @param {PongGameplayTypes.GameObjPositionData | PongServerTypes.GameObjPosBinary} lastUpdate 
+     * @param {PongGameplayTypes.GameObjPositionData | PongServerTypes.GameObjPosBinary} nextUpdate
      * @param {number} elapsedSinceUpdate
      */
     interpolate(lastUpdate, nextUpdate, elapsedSinceUpdate) {
         this.x = this.lerp2(lastUpdate.x, nextUpdate.x, elapsedSinceUpdate);
-        this.dx = lastUpdate.dx
+        this.dx = 'dx' in lastUpdate ? lastUpdate.dx : this.dx;
         this.y = this.lerp2(lastUpdate.y, nextUpdate.y, elapsedSinceUpdate);
-        this.dy = lastUpdate.dy
+        this.dy = 'dy' in lastUpdate ? lastUpdate.dy : this.dy;
     }
 
     /** @param {OffscreenCanvasRenderingContext2D} ctx */

@@ -266,6 +266,26 @@ export const avatarLink = (userData, linkClasses) => {
     </a>
 `};
 
+/**
+ * @param {APITypes.BasicUserData | undefined} userData
+ */
+export const avatarInfo = (userData) => {
+    // let status = '';
+    // if userData.online
+    
+    return userData ? html`
+    <div>
+        <avatar-component
+            size="35"
+            src="${userData.avatar ?? ''}"
+            statusborder
+            radius="circle"
+            .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
+        >
+        </avatar-component>
+    </div>
+` : ''};
+
 // export class AvatarLink extends BaseElem {
 //     static observedAttributes = [
 //         'status',
