@@ -232,15 +232,16 @@ function parseUpdateData(data) {
         ++i;
         ++k;
     }
-    // console.log('ARRAY DECODED:');
+    // console.log('\n\nNEW UPDATE DECODED:');
     // da.forEach((i) => {
     //     console.log('tickno: ', i.tickno);
-    //     console.log('ball x: ', i.ball.x);
-    //     console.log('ball y: ', i.ball.y);
-    //     console.log('paddle_left x: ', i.paddle_left.x);
-    //     console.log('paddle_left y: ', i.paddle_left.y);
-    //     console.log('paddle_right x: ', i.paddle_right.x);
-    //     console.log('paddle_right y: ', i.paddle_right.y);
+    //     console.log('timestamp: ', i.timestamp_ms);
+    //     // console.log('ball x: ', i.ball.x);
+    //     // console.log('ball y: ', i.ball.y);
+    //     // console.log('paddle_left x: ', i.paddle_left.x);
+    //     // console.log('paddle_left y: ', i.paddle_left.y);
+    //     // console.log('paddle_right x: ', i.paddle_right.x);
+    //     // console.log('paddle_right y: ', i.paddle_right.y);
     // })
 
     return (da);
@@ -395,7 +396,7 @@ export class PongRemote extends Pong {
     #serverOffset = useMedian();
     #serverRTT = useMedian();
     #recentFrame = 0;
-    #interpolationTimeMs = 100;
+    #interpolationTimeMs = 200;
     #lastWorkerTimeOnRender = performance.now();
     
     #tickDuration = 0
@@ -434,13 +435,23 @@ export class PongRemote extends Pong {
         this.#lastWorkerTimeOnRender = workerCurrentTimeMs;
         const renderTime = this.#serverGameTime - this.#interpolationTimeMs;
         const q = this.#updateQueueNew;
+        // console.log('\n\nRENDER -> render time: ', renderTime);
+        // console.log('\nMY QUEUE: ');
+        // q.forEach((i) => {
+        //     console.log('tickno: ', i.tickno);
+        //     console.log('timestamp: ', i.timestamp_ms);
+        // })
         while (q.length >= 2 && q[1].timestamp_ms < renderTime) {
+            // console.log('\nSHIFT QUEUE: ');
+            // console.log('tickno: ', q[1].tickno);
+            // console.log('timestamp: ', q[1].timestamp_ms);
+
             q.shift();
-            console.log('SHIFT QUEUE: ');
+            
         }
         const elapsedSec = elapsedMs / 1000;
         if (q.length >= 2) {
-            console.log('queuelen: ', q.length);
+            console.log('\nqueuelen: ', q.length);
             const cU = q[0];
             const nU = q[1];
             const elapsed = (renderTime - cU.timestamp_ms) / (nU.timestamp_ms - cU.timestamp_ms);
@@ -542,6 +553,7 @@ export class PongRemote extends Pong {
             this.pushMove(action, undefined);
         }
     }
+    #lastMoveTime = performance.now();
     /** @param {ToWorkerGameMessageTypes.GameTouchEvent} d  */
     handleMouseTouch(d) {
         let new_y;
@@ -550,8 +562,13 @@ export class PongRemote extends Pong {
         if (d.touchRect && typeof new_y === "boolean")
             pushMessageToMainThread({message: "from-worker-game-touch-valid", ident: d.touchRect.ident, valid: new_y})
         else if (typeof new_y === "number") {
-            console.log('push new y to server: ', new_y);
+            const c = performance.now();
+            const e = c - this.#lastMoveTime;
             this.pushMove(undefined, new_y);
+            if (e > 50) {
+                console.log('push new y to server: ', new_y);
+                this.#lastMoveTime = c;
+            }
         }
     }
 

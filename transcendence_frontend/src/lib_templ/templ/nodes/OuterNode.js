@@ -149,6 +149,7 @@ export default class OuterNode extends BaseNode {
         } else if (isPrimitive(value)) {
             this.setPrimitive(value);
         } else {
+            console.log(value);
             throw new Error(`Value is a function or an Object of unknown type: ${value}`);
         }
     }

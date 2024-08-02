@@ -207,7 +207,7 @@ export class GameSocket {
             this.#receivedrecentMessage = false;
         };
         this.#heartBeatIntervalStartTimeoutIdent = setTimeout(() => {
-            this.#heartBeatIntervalIdent = setInterval(onInterval, duration);
+            this.#heartBeatIntervalIdent = setInterval(onInterval, duration*0.6);
         }, duration * Math.random());
     };
 

@@ -78,6 +78,16 @@ const routes = [
         title: 'Profile ',
     },
     {
+        path: '/games/:game/tournament/create',
+        component: 'tournament-create-view',
+        title: 'Create a Tournament'
+    },
+    {
+        path: '/games/:game/tournament/:tournament_id',
+        component: 'tournament-details-view',
+        title: 'Tournament'
+    },
+    {
         path: '/games/:game/play/:schedule_id',
         component: 'game-modaln',
         title: 'Game View ',

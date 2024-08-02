@@ -209,47 +209,51 @@ export default class AvatarComponent extends BaseElement {
 }
 customElements.define('avatar-component', AvatarComponent);
 
-/**
- *
- * @param {number | undefined} id
- * @param {string | undefined} username
- * @param {string | undefined} avatar
- * @param {string | undefined} side
- * @param {string | undefined} status
- * @param {string | undefined} classes
- */
-export const renderAvatar = (id, username, avatar, side = 'after', status = 'offline', classes = '') => html`
-    <a
-        href="/profile/${id ?? 0}"
-        class="${classes ??
-        ''} link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
-    >
-        <avatar-component
-            size="40"
-            src="${avatar ?? ''}"
-            statusborder
-            status="${status ?? ''}"
-            radius="circle"
-            .text_before=${side === 'before' ?
-                html`<span class="m-2 text-truncate">${username ?? ''}</span>`
-            :   ''}
-            .text_after=${side === 'after' ?
-                html`<span class="m-2 text-truncate">${username ?? ''}</span>`
-            :   ''}
-        >
-        </avatar-component>
-    </a>
-`;
+// /**
+//  *
+//  * @param {number | undefined} id
+//  * @param {string | undefined} username
+//  * @param {string | undefined} avatar
+//  * @param {string | undefined} side
+//  * @param {string | undefined} status
+//  * @param {string | undefined} classes
+//  */
+// export const renderAvatar = (id, username, avatar, side = 'after', status = 'offline', classes = '') => html`
+//     <a
+//         href="/profile/${id ?? 0}"
+//         class="${classes ??
+//         ''} link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+//     >
+//         <avatar-component
+//             size="40"
+//             src="${avatar ?? ''}"
+//             statusborder
+//             status="${status ?? ''}"
+//             radius="circle"
+//             .text_before=${side === 'before' ?
+//                 html`<span class="m-2 text-truncate">${username ?? ''}</span>`
+//             :   ''}
+//             .text_after=${side === 'after' ?
+//                 html`<span class="m-2 text-truncate">${username ?? ''}</span>`
+//             :   ''}
+//         >
+//         </avatar-component>
+//     </a>
+// `;
 
 /**
  *
- * @param {APITypes.BasicUserData} userData
+ * @param {APITypes.BasicUserData} [userData]
  * @param {string} [linkClasses]
  */
 export const avatarLink = (userData, linkClasses) => {
     // let status = '';
     // if userData.online
-    return html`
+    if (userData && 'inviter' in userData && typeof userData.inviter === "string")
+        userData.username = userData.inviter
+    else if (userData && 'invitee' in userData && typeof userData.invitee === "string")
+        userData.username = userData.invitee
+    return userData == undefined ? '' : html`
     <a
         href="/profile/${userData.id ?? 0}"
         class="${linkClasses ?? ''} link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
@@ -272,7 +276,10 @@ export const avatarLink = (userData, linkClasses) => {
 export const avatarInfo = (userData) => {
     // let status = '';
     // if userData.online
-    
+    if (userData && 'inviter' in userData && typeof userData.inviter === "string")
+        userData.username = userData.inviter
+    else if (userData && 'invitee' in userData && typeof userData.invitee === "string")
+        userData.username = userData.invitee
     return userData ? html`
     <div>
         <avatar-component

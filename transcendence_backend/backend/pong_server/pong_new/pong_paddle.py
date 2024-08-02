@@ -4,7 +4,16 @@ from .pong_settings import PongSettings
 from enum import Enum
 import math
 from .messages_client import ClientMoveDirection
+from .messages_server import GameObjPositionDataclass
+from dataclasses import dataclass
 
+@dataclass(slots=True)
+class ClientMoveItem:
+    action: ClientMoveDirection | None
+    new_y: float | None
+    tick: int
+    timediff_ms: float
+    paddle: "PongPaddle"
 
 class PongPaddle(GameObjDataClass):
     class PaddlePos:
@@ -33,27 +42,52 @@ class PongPaddle(GameObjDataClass):
         )
 
 
-    # def update_pos_direct(self, y: float):
-    #     self.y = max(self.bound_top, min(y, self.bound_bottom - self.h))
-    #     if math.isclose(self.y, self.bound_top) or math.isclose(self.y, self.bound_bottom - self.h):
-    #         self.dy = PongPaddle.Dir.NONE.value
 
-    def __update_pos(self, y: float):
-        self.y = max(self.bound_top, min(y, self.bound_bottom - self.h))
-        # if math.isclose(self.y, self.bound_top) and self.dy == PongPaddle.Dir.UP.value:
-        #     self.dy = PongPaddle.Dir.NONE.value
-        # if math.isclose(self.y, self.bound_bottom - self.h) and self.dy == PongPaddle.Dir.DOWN.value:
-        #     self.dy = PongPaddle.Dir.NONE.value
 
-    def set_y_position(self, y: float):
-        self.dy = PongPaddle.Dir.NONE.value
-        self.__update_pos(y)
+
 
     def update_pos(self, tick: float):
         new_y = self.y + tick * self.dy * self.speed_y
         self.__update_pos(new_y)
 
-    def set_direction(self, action: ClientMoveDirection):
+    def trigger_action(self, move_item: ClientMoveItem):
+        if move_item.action is not None:
+            self.__set_direction(move_item.action)
+        elif move_item.new_y is not None:
+            self.__set_y_position(move_item.new_y)
+            
+    def reconcile_tick_list(self, oldState: GameObjPositionDataclass, move_item: list[ClientMoveItem], tick_duration_s: float):
+        pass
+
+    def reconcile_tick(self, oldState: GameObjPositionDataclass, move_item: ClientMoveItem | list[ClientMoveItem], tick_duration_s: float):
+        super().setPositionalDataFromDataclass(oldState)
+        if isinstance(move_item, ClientMoveItem):
+            if move_item.paddle == self:
+                diff_s = move_item.timediff_ms / 1000
+                self.update_pos(diff_s)
+                self.trigger_action(move_item)
+                self.update_pos(tick_duration_s - diff_s)
+            else:
+                self.update_pos(tick_duration_s)
+        else:
+            previous_timediff_s = 0
+            for item in move_item:
+                self.update_pos(current_timediff_s - previous_timediff_s)
+                current_timediff_s = item.timediff_ms / 1000
+                if item.paddle == self:
+                    self.trigger_action(item)
+                previous_timediff_s = current_timediff_s
+            self.update_pos(tick_duration_s - previous_timediff_s)
+                
+
+    def __update_pos(self, y: float):
+        self.y = max(self.bound_top, min(y, self.bound_bottom - self.h))
+
+    def __set_y_position(self, y: float):
+        self.dy = PongPaddle.Dir.NONE.value
+        self.__update_pos(y)
+
+    def __set_direction(self, action: ClientMoveDirection):
         match action:
             case "none":
                 self.dy = PongPaddle.Dir.NONE.value

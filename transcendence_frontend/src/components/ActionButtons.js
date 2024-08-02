@@ -99,6 +99,8 @@ const defaultConf = {
  * @property {ActionBtnData} acceptReq
  * @property {ActionBtnData} rejectReq
  * @property {ActionBtnData} cancelReq
+ * @property {ActionBtnData} sendGameInvite
+ * @property {ActionBtnData} pushRes
  */
 
 /** @type {DefaultConfigs} */
@@ -110,6 +112,9 @@ export const configs = {
     acceptReq: {...defaultConf, text: "accept", color: "success", icon: "check" },
     rejectReq: {...defaultConf, text: "reject", color: "danger", icon: "xmark" },
     cancelReq: {...defaultConf, text: "cancel", color: "danger", icon: "xmark" },
+
+    sendGameInvite: {...defaultConf, text: "invite to a match", color: "primary", icon: "gamepad", showText: true },
+    pushRes: {...defaultConf, text: "push random results", color: "success", icon: "check", showText: true },
 }
 
 /**
@@ -125,6 +130,7 @@ export const configs = {
  * @property {(id: number, conf?: ActionBtnData) => TplLit} cancelGameInvitation
  * @property {(id: number, conf?: ActionBtnData) => TplLit} acceptGameInvitation
  * @property {(id: number, conf?: ActionBtnData) => TplLit} rejectGameInvitation
+ * @property {(id: number, conf?: ActionBtnData) => TplLit} pushRandomGameResult
  */
 
 /** @type {ActionButtons} */
@@ -144,13 +150,13 @@ export const actions = {
     rejectFriendRequest: (requestId, conf) =>
         getBtn(sessionService.handleRequest.bind(sessionService, "friend-reject", requestId),configs.rejectReq, conf),
     sendGameInvitation: (userId, conf) =>
-        getBtn(sessionService.sendGameInvitation.bind(sessionService, userId, "1vs1", 0),configs.rejectReq, conf),
+        getBtn(sessionService.sendGameInvitation.bind(sessionService, userId),configs.sendGameInvite, conf),
     cancelGameInvitation: (invitationId, conf) =>
         getBtn(sessionService.handleRequest.bind(sessionService, "game-cancel", invitationId), configs.cancelReq, conf),
     acceptGameInvitation: (invitationId, conf) =>
         getBtn(sessionService.handleRequest.bind(sessionService, "game-accept", invitationId), configs.acceptReq, conf),
-    rejectGameInvitation: (invitationId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
+    rejectGameInvitation: (invitationId, conf) => getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
+    pushRandomGameResult: (scheduleId, conf) =>   getBtn(sessionService.finishGameUpdateData.bind(sessionService, scheduleId),           configs.pushRes,   conf),
 };
 
 

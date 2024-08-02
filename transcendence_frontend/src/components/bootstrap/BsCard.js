@@ -2,7 +2,19 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 
 export const rendListItem = (content) => {
     return html`
-        <li class="row list-group-item d-flex justify-content-between align-items-center">${content}</li>
+        <li class="row px-0 list-group-item d-flex justify-content-center align-items-center">
+            ${content}
+        </li>
+    `;
+};
+
+export const rendListItemAnchor = (href, content) => {
+    return html`
+        <li> 
+            <a href="${href ?? '#'}" class="row px-0 list-group-item d-flex justify-content-center align-items-center">
+                ${content}
+            </a>
+        </li>
     `;
 };
 
@@ -29,7 +41,7 @@ export const renderListCard = (title, icon, listItems) => {
 
 export const renderCard = (title, icon, content) => {
     return html`
-        <div class="card">
+        <div class="card text-center">
             ${title ?
                 html`
                 <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>

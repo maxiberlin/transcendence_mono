@@ -1,420 +1,245 @@
 import json
-from django.conf import settings
+import time
+import asyncio
 from datetime import datetime
-from user.models import UserAccount
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from typing import TypedDict, Literal, Unpack, Union
+
+
+from django.conf import settings
+from django.utils import timezone
 from django.core.paginator import Paginator, InvalidPage, Page
 from django.core.serializers import serialize
-from channels.db import database_sync_to_async
 from django.contrib.contenttypes.models import ContentType
-from friends.models import FriendRequest, FriendList
-from game.models import GameRequest
-from notification.utils import LazyNotificationEncoder
 from django.contrib.auth.decorators import login_required
-from notification.constants import *
-from notification.models import Notification, NotificationData
-from typing import TypedDict, Literal, Unpack, Union
-import time
 from django.db.models.query import QuerySet
 
-# class AcceptFriendRequest(TypedDict):
-# 	command: Literal['accept_friend_request']
-# 	notification_id: int
-
-# class RejectFriendRequest(TypedDict):
-# 	command: Literal['reject_friend_request']
-# 	notification_id: int
-
-# class AcceptGameInvitation(TypedDict):
-# 	command: Literal['accept_game_invitation']
-# 	notification_id: int
-
-# class RejectGameInvitation(TypedDict):
-# 	command: Literal['reject_game_invitation']
-# 	notification_id: int
-
-# class GetGeneralNotifications(TypedDict):
-# 	command: Literal['get_general_notifications']
-# 	page_number: int
-
-# class GetNewGeneralNotifications(TypedDict):
-# 	command: Literal['get_new_general_notifications']
-# 	newest_timestamp: int
-
-# class RefreshGeneralNotifications(TypedDict):
-# 	command: Literal['refresh_general_notifications']
-# 	oldest_timestamp: int
-# 	newest_timestamp: int
-
-# class MarkAllNotificationsAsRead(TypedDict):
-# 	command: Literal['mark_notifications_read']
-# 	oldest_timestamp: int
-
-# class GetUnreadNotificationCount(TypedDict):
-# 	command: Literal['get_unread_general_notifications_count']
-
-# ClientCommand = Union[
-# 	AcceptFriendRequest,
-# 	RejectFriendRequest,
-# 	AcceptGameInvitation,
-# 	RejectGameInvitation,
-# 	GetGeneralNotifications,
-# 	GetNewGeneralNotifications,
-# 	RefreshGeneralNotifications,
-# 	MarkAllNotificationsAsRead,
-# 	GetUnreadNotificationCount
-# ]
-
-# class NotificationConsumer(AsyncJsonWebsocketConsumer):
-
-# 	async def connect(self):
-# 		print("NotificationConsumer: connect: " + str(self.scope["user"]) )
-# 		self.newest_timestamp = time.time()
-# 		await self.accept()
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.db import database_sync_to_async
+from channels_redis.core import RedisChannelLayer
 
 
-# 	async def disconnect(self, code):
-# 		print("NotificationConsumer: disconnect")
+from user.models import UserAccount, Player
+from chat.models import ChatRoom, ChatMessage, ChatRoomData, ChatMessageData
 
-# 	#Fix errors
-# 	async def receive_json(self, content: ClientCommand):
-# 		command = content.get("command", None)
-# 		print("NotificationConsumer: receive_json. Command: " + command)
-# 		try:
-# 			user_account: UserAccount = self.scope['user']
-# 			match content['command']:
-# 				case 'get_general_notifications':
-# 					data = await get_general_notifications(user_account, content.get('page_number', None))
-# 					if data == None:
-# 						pass
-# 					else:
-# 						data = json.loads(data)
-# 						await self.send_general_notifications_data(data['notifications'], data['new_page_number'])
+from notification.constants import *
+from notification.models import Notification, NotificationData, get_user_notification_room
 
-# 				case "get_new_general_notifications":
-# 					self.newest_timestamp = content.get('newest_timestamp')
-# 					data = await get_new_general_notifications(user_account, content.get('newest_timestamp'))
-# 					if data == None:
-# 						pass
-# 					else:
-# 						data = json.loads(data)
-# 						await self.send_new_general_notifications_data(data['notifications'])
+def use_timeout(timeout_ms: int):
+    def get_time():
+        return time.perf_counter_ns()//1_000_000
+    
+    last = start = get_time()
+    
+    def check_timeout():
+        nonlocal last
+        now = get_time()
+        print(f"CHECK CONNECTION: STAMP: {now - start}, DIFF: {now - last}")
+        return now - last > timeout_ms
+    
+    def reset_timeout():
+        nonlocal last
+        now = get_time()
+        print(f"NEW PING: STAMP: {now - start}, DIFF: {now - last}")
+        last = now
 
-# 				case "refresh_general_notifications":
-# 					print(f"@@@---->Oldest = {content['oldest_timestamp']} || -->Newsest = {content['newest_timestamp']}")
-# 					data = await refresh_general_notifications(user_account, content['oldest_timestamp'], content['newest_timestamp'])
-# 					if data == None:
-# 						raise RuntimeError("Something went wrong. Try refreshing the browser.") #TODO:
-# 					else:
-# 						data = json.loads(data)
-# 						await self.send_general_refreshed_notifications_data(data['notifications'])
+    return check_timeout, reset_timeout
+        
 
-# 				case "mark_notifications_read":
-# 					await mark_notifications_read(user_account, self.newest_timestamp)
+class TestConnectionConsumer(AsyncJsonWebsocketConsumer):
 
+    
+    async def __heartbeat_loop(self):
+        timeout = HEARTBEAT_TIMEOUT_MS / 1000
+        while True:
+            await asyncio.sleep(timeout/2)
+            if self.check_timeout():
+                await self.close()
+                break
+    
+    async def connect(self) -> None:
+        print("TestConnectionConsumer: connected")
+        await self.accept()
+        self.check_timeout , self.reset_timeout = use_timeout(HEARTBEAT_TIMEOUT_MS)
+        await self.send_json({ "msg_type": "hello", "heartbeat_ms": HEARTBEAT_INTERVAL_MS })
+        self.user_disconnect_timeout_task = asyncio.get_running_loop().create_task(self.__heartbeat_loop())
 
-# 				case "get_unread_general_notifications_count":
-# 					count = await get_unread_general_notifications_count(user_account)
-# 					await self.send_unread_notification_count(count)
+    async def disconnect(self, code: int):
+            print("TestConnectionConsumer: disconnect, code: ", code)
 
-# 				case "accept_friend_request":
-# 					notification_id = content['notification_id']
-# 					data = await accept_friend_request(user_account, notification_id)
-# 					if data == None:
-# 						raise RuntimeError("Something went wrong. Try refreshing the browser.") #TODO:
-# 					else:
-# 						data = json.loads(data)
-# 						await self.send_updated_friend_request_notification(data['notification'])
-
-# 				case "reject_friend_request":
-# 					notification_id = content['notification_id']
-# 					data = await reject_friend_request(user_account, notification_id)
-# 					if data == None:
-# 						raise RuntimeError("Something went wrong. Try refreshing the browser.") #TODO:
-# 					else:
-# 						data = json.loads(data)
-# 						await self.send_updated_friend_request_notification(data['notification'])
-			
-# 		except Exception as e:
-# 			print("\nEXCEPTION: receive_json: " + str(e) + '\n') #TODO:
-# 			pass
-
-# 	async def send_general_notifications_data(self, notifications, new_page_number):
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_DATA,
-# 				"notifications": notifications,
-# 				"new_page_number": new_page_number,
-# 			},
-# 		)
-
-# 	class GeneralNotificationData(TypedDict):
-# 		general_msg_type: Literal[0]
-	
-# 	async def send_updated_friend_request_notification(self, notification):
-# 		"""
-# 		After a friend request is accepted or rejected, send the updated notification to template
-# 		data contains 'notification' and 'response':
-# 		1. data['notification']
-# 		2. data['response']
-# 		"""
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_UPDATED_NOTIFICATION,
-# 				"notification": notification,
-# 			},
-# 		)
-
-# 	async def general_pagination_exhausted(self):
-# 		"""
-# 		Called by receive_json when pagination is exhausted for general notifications
-# 		"""
-# 		#print("General Pagination DONE... No more notifications.")
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED,
-# 			},
-# 		)
-	
-# 	async def display_progress_bar(self, shouldDisplay):
-# 		print("NotificationConsumer: display_progress_bar: " + str(shouldDisplay)) 
-# 		await self.send_json(
-# 			{
-# 				"progress_bar": shouldDisplay,
-# 			},
-# 		)
-	
-# 	async def send_general_refreshed_notifications_data(self, notifications):
-# 		"""
-# 		Called by receive_json when ready to send a json array of the notifications
-# 		"""
-# 		#print("NotificationConsumer: send_general_refreshed_notifications_payload: " + str(notifications))
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
-# 				"notifications": notifications,
-# 			},
-# 		)
-
-# 	async def send_new_general_notifications_data(self, notifications):
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS,
-# 				"notifications": notifications,
-# 			},
-# 		)
-
-# 	async def send_unread_notification_count(self, count: int):
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT,
-# 				"count": count,
-# 			},
-# 		)
-
-# @database_sync_to_async
-# def mark_notifications_read(user_account: UserAccount, newest_timestamp: int):
-# 	friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 	friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 	game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 	notifications = Notification.objects.filter(
-# 		target=UserAccount.objects.get(pk=user_account.pk),
-# 		content_type__in=[friend_request_ct, friend_list_ct, game_request_ct],
-# 	).order_by('-timestamp')
-# 	if notifications is not None:
-# 		notifications = notifications.filter(timestamp__gte=(newest_timestamp))
-# 		if notifications is not None:
-# 			for notification in notifications:
-# 				notification.read = True
-
-# @database_sync_to_async
-# def get_unread_general_notifications_count(user_account: UserAccount):
-# 		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 		friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 		game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 		notifications_cout = Notification.objects.filter(
-# 			target=UserAccount.objects.get(pk=user_account.pk),
-# 			content_type__in=[friend_request_ct, friend_list_ct, game_request_ct],
-# 			read=False
-# 		).order_by('-timestamp').count()
-# 		return notifications_cout
-		
-# @database_sync_to_async
-# def get_general_notifications(user, page_number):
-# 	"""
-# 	Get General Notifications with Pagination (next page of results).
-# 	This is for appending to the bottom of the notifications list.
-# 	"""
-# 	if user.is_authenticated:
-# 		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 		friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 		game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 		notifications = Notification.objects.filter(
-# 			target=UserAccount.objects.get(username=user),
-# 			content_type__in=[friend_request_ct, friend_list_ct, game_request_ct]
-# 		).order_by('-timestamp')
-# 		pages = Paginator(notifications, DEFAULT_NOTIFICATION_PAGE_SIZE)
-# 		data = {}
-# 		if len(notifications) > 0:
-# 			print(f'length = {len(notifications)}')
-# 			if int(page_number) <= pages.num_pages:
-# 				item = LazyNotificationEncoder()
-# 				serialized_notifications = item.serialize(pages.page(page_number).object_list)
-# 				data['notifications'] = serialized_notifications
-# 				new_page_number = int(page_number) + 1
-# 				data['new_page_number'] = new_page_number
-# 		else:
-# 			return None
-# 		return json.dumps(data)
-# 	return None
-
-# @database_sync_to_async
-# def get_new_general_notifications(user: UserAccount, newest_timestamp: int):
-# 	if user.is_authenticated:
-# 		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 		friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 		game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 		notifications = Notification.objects.filter(
-# 			target=UserAccount.objects.get(username=user),
-# 			content_type__in=[friend_request_ct, friend_list_ct, game_request_ct]
-# 		).order_by('-timestamp')
-# 		if notifications is not None:
-# 			notifications = notifications.filter(timestamp__gte=(datetime.fromtimestamp(newest_timestamp)))
-# 			data = {}
-# 			if len(notifications) > 0:
-# 				item = LazyNotificationEncoder()
-# 				serialized_notifications = item.serialize(notifications)
-# 				data['notifications'] = serialized_notifications
-# 			else:
-# 				return None
-# 			return json.dumps(data)
-# 	return None
+    async def receive_json(self, content: ClientCommand):
+            
+            if content.get("command", None) == 'ping':
+                self.reset_timeout()
+                await self.send_json({ "msg_type": "pong" })
+     
 
 
-# @database_sync_to_async
-# def refresh_general_notifications(user, oldest_timestamp: int, newest_timestamp: int):
-# 	"""
-# 	Retrieve the general notifications newer than the oldest one on the screen and younger than the newest one the screen.
-# 	The result will be: Notifications currently visible will be updated
-# 	"""
-# 	data = {}
-# 	print(f"oldest: {oldest_timestamp}, newest: {newest_timestamp}")
-# 	if user.is_authenticated:
-# 		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 		print('Start---> 000 <<<<<<<<<<<<')
-# 		friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 		game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 		print('Start---> 111 <<<<<<<<<<<<')
-# 		notifications = Notification.objects.filter(
-# 			target=user, content_type__in=[friend_request_ct, friend_list_ct, game_request_ct], read=False,
-# 			timestamp__gte=datetime.fromtimestamp(oldest_timestamp),
-# 			timestamp__lte=datetime.fromtimestamp(oldest_timestamp)
-# 		).order_by('-timestamp')
-# 		print('Start---> 222 <<<<<<<<<<<<')
-# 		item = LazyNotificationEncoder()
-# 		print('Start---> ==+== <<<<<<<<<<<<')
-# 		data['notifications'] = item.serialize(notifications)
-# 	else:
-# 		raise RuntimeError("User must be authenticated to get notifications.") #TODO:
-
-# 	return json.dumps(data) 
 
 
-# @database_sync_to_async
-# def accept_friend_request(user, notification_id):
-#     data = {}
-#     if user.is_authenticated:
-#         try:
-#             notification = Notification.objects.get(pk=notification_id)
-#             friend_request: FriendRequest | None = notification.content_object
-#             if friend_request and friend_request.receiver == user:
-#                 updated_notification = friend_request.accept()
-#                 item = LazyNotificationEncoder()
-#                 data['notification'] = item.serialize([updated_notification])[0]
-#                 return json.dumps(data)
-#         except Notification.DoesNotExist:
-#             raise RuntimeError("An error occurred with that notification. Try refreshing the browser.") #TODO:
-#     return None
+def sync_get_user_rooms(user: UserAccount | int):
+    rooms = ChatRoom.objects.filter(users__pk=user, is_active=True).distinct()
+    return [(room.pk, room.group_name) for room in rooms]
 
-
-# @database_sync_to_async
-# def reject_friend_request(user, notification_id):
-#     data = {}
-#     if user.is_authenticated:
-#         try:
-#             notification = Notification.objects.get(pk=notification_id)
-#             friend_request: FriendRequest | None = notification.content_object
-#             if friend_request and friend_request.receiver == user:
-#                 updated_notification = friend_request.reject()
-#                 item = LazyNotificationEncoder()
-#                 data['notification'] = item.serialize([updated_notification])[0]
-#                 return json.dumps(data)
-#         except Notification.DoesNotExist:
-#             raise RuntimeError("An error occurred with that notification. Try refreshing the browser.") #TODO:
-#     return None
+@database_sync_to_async
+def get_user_rooms(user: UserAccount):
+    rooms = ChatRoom.objects.filter(users=user, is_active=True).distinct()
+    return [(room.pk, room.group_name) for room in rooms]
 
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
+    async def __heartbeat_loop(self):
+        timeout = HEARTBEAT_TIMEOUT_MS / 1000
+        while True:
+            await asyncio.sleep(timeout)
+            currtime = time.perf_counter()*1000
+            # print(f"CHECK CONNECTION: {currtime - self.lastpong}")
+            if currtime - self.lastpong > HEARTBEAT_TIMEOUT_MS:
+                print(f"CHECK CONNECTION took too long: {currtime - self.lastpong}")
+                await self.close()
+                break
+
     async def connect(self) -> None:
         print("NotificationConsumer: connect: " + str(self.scope["user"]) )
+        self.scope: AuthenticatedWebsocketScope
+        self.channel_layer: RedisChannelLayer
+        if not isinstance(self.scope["user"], UserAccount):
+            return await self.close(code=WebsocketCloseCodes.NOT_AUTHENTICATED)
+        self.user: UserAccount = self.scope["user"]
+        
         self.newest_timestamp = time.time()
-        self.user: UserAccount | None = self.scope["user"] if "user" in self.scope else None
-        if not isinstance(self.user, UserAccount):
-            await self.close()
+        self.user_room = get_user_notification_room(self.user)
+        self.chatrooms: list[tuple[int, str]] = await get_user_rooms(self.user)
+        await self.channel_layer.group_add(self.user_room, self.channel_name)
         await self.accept()
+        await self.send_json({ "msg_type": "hello", "heartbeat_ms": HEARTBEAT_INTERVAL_MS })
+        self.lastpong = time.perf_counter()*1000
+        self.user_disconnect_timeout_task = asyncio.get_running_loop().create_task(self.__heartbeat_loop())
 
+    async def disconnect(self, code: int):
+        print("NotificationConsumer: disconnect, code: ", code)
+        if code == WebsocketCloseCodes.NOT_AUTHENTICATED or code == 1006:
+            return
+        self.user_disconnect_timeout_task.cancel()
+        await self.channel_layer.group_discard(self.user_room, self.channel_name)
 
-    async def disconnect(self, code):
-        print("NotificationConsumer: disconnect")
+    # CHAT HANDLING
+
+    
+    async def chat_room_add(self, event):
+        data: ChatRoomData = event['data']
+        group_name: str = event['group_name']
+        self.chatrooms.append((data["room_id"], group_name))
+        await self.send_json({
+            "general_msg_type": 'chat_room_add',
+            "chat_message": data,
+        })
+
+    async def chat_room_remove(self, event):
+        data: ChatRoomData = event['data']
+        group_name: str = event['group_name']
+        self.chatrooms.remove((data["room_id"], group_name))
+        await self.send_json({
+            "general_msg_type": 'chat_room_remove',
+            "chat_message": data,
+        })
+    
+    async def chat_message_new(self, event):
+        print(f"HIER: new chat message: {event}")
+        await self.send_json({
+            "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS.value,
+            "chat_message": event['data'],
+        })
+    
+    @database_sync_to_async
+    def get_unread_count(self):
+        return Notification.objects.filter(target=self.user, read=False).count()
+    
+    async def notification_new(self, event):
+        print(f"HIER: new notification: {event}")
+        count = await self.get_unread_count()
+        await self.send_json({
+            "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS.value,
+            "notification": event['data'],
+            "count": count
+        })
+    
+    async def notification_update(self, event):
+        print(f"HIER: updated notification: {event}")
+        await self.send_json({
+                "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_UPDATED_NOTIFICATION.value,
+                "notification": event['data']
+            })
+    
 
     #Fix errors
     async def receive_json(self, content: ClientCommand):
         
-        if content.get("cmd") == "ping":
-            await self.send_json({ "tag": "pong" })
-            return
-        
-        
         command = content.get("command", None)
-        print(f"NotificationConsumer: receive_json. Command: {command}")
+        if command != "ping":
+            print(f"NotificationConsumer: receive_json. Command: {command}")
+        # if content.get("module", None) == 'chat':
+        #     await self.handle_chat_command(content)
+        #     return
         try:
-            data = None
             match content['command']:
+                case 'ping':
+                    self.lastpong = time.perf_counter()*1000
+                    # print(f"PONG")
+                    data = { "msg_type": "pong" }
+
+
                 case 'get_general_notifications':
                     data = await self.get_general_notifications(content.get('page_number', None))
 
-                case "get_new_general_notifications":
-                    self.newest_timestamp = content.get('newest_timestamp')
-                    data = await self.get_new_general_notifications(content.get('newest_timestamp'))
-
-                case "refresh_general_notifications":
-                    print(f"@@@---->Oldest = {content['oldest_timestamp']} || -->Newsest = {content['newest_timestamp']}")
-                    data = await self.refresh_general_notifications(content['oldest_timestamp'], content['newest_timestamp'])
-
                 case "mark_notifications_read":
-                    data = await self.mark_notifications_read(self.newest_timestamp)
+                    data = await self.mark_notifications_read(content['oldest_timestamp'])
 
                 case "get_unread_general_notifications_count":
                     data = await self.get_unread_general_notifications_count()
-
-                case "accept_friend_request":
-                    data = await self.handle_friend_request( content['notification_id'], "accept")
-
-                case "reject_friend_request":
-                    data = await self.handle_friend_request( content['notification_id'], "reject")
+                
+                case _:
+                    return
 
             await self.send_json(data)
         except Exception as e:
             print("\nEXCEPTION: receive_json: " + str(e) + '\n') #TODO:
             pass
+        
+    async def handle_notification_command(self):
+        pass
+
+    # async def handle_chat_command(self, content):
+    #     command = content.get("command", None)
+    #     if command == 'send':
+    #         if len(content['message'].lstrip()) == 0:
+    #             raise ClientError('EMPTY_STRING', 'Cannot send an empty string!')
+    #         await self.send_room(content['room_id'], content['message'])
+    #     elif command == 'join':
+    #         await self.join_room(content['room'], content['type'])
+    #     elif command == 'leave':
+    #         await self.leave_room(content['room'])
+    #     elif command == 'get_room_chat_messages':
+    #         print(f"PublicChatConsumer: get_room_chat_messages with p.{content['page_number']}")
+    #         room = await get_room_or_error(content['room_id'])
+    #         data = await get_room_chat_messages(room, content['page_number'])
+    #         if data != None:
+    #             data = json.loads(data)
+    #             await self.send_messages_data(data['messages'], data['new_page_number'])
+    #     pass
 
     @database_sync_to_async
-    def mark_notifications_read(self, newest_timestamp: int) -> None:
-        notifications = (Notification.objects.filter(target=self.user)
-                         .order_by('-timestamp')
-                         .filter(timestamp__gte=(newest_timestamp)))
+    def mark_notifications_read(self, newest_timestamp: int):
+        print(f"MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+        ts = datetime.fromtimestamp(newest_timestamp)
+        notifications = Notification.objects.filter(target=self.user, read=False).order_by('-timestamp').filter(timestamp__lte=(ts))
+        
         for notification in notifications:
             notification.read = True
+            notification.save(send_notification=False)
+        return {
+                "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT.value,
+                "count": Notification.objects.filter(target=self.user, read=False).count()
+            }
 
     @database_sync_to_async
     def get_unread_general_notifications_count(self) -> GeneralNotoficationsUnreadCount:
@@ -428,6 +253,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def get_general_notifications(self, page_number: int) -> GeneralNotificationsData | PageinationExhausted:
         notifications = Notification.objects.filter(target=self.user).order_by('-timestamp')
+        # print(f"page: {page_number}, all notifications: {notifications}")
         pages = Paginator(notifications, DEFAULT_NOTIFICATION_PAGE_SIZE)
         try:
             page = pages.page(page_number)
@@ -438,253 +264,9 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 "new_page_number": page_number + 1
             }
         except InvalidPage:
+            print(f"page {page_number} out of bounds")
             return {
                 "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED.value,
             }
 
 
-    @database_sync_to_async
-    def get_new_general_notifications(self, newest_timestamp: int) -> NewGeneralNotifications:
-        notifications = (Notification.objects.filter(target=self.user, read=False)
-                         .order_by('-timestamp')
-                         .filter(timestamp__gte=(datetime.fromtimestamp(newest_timestamp))))
-        return {
-            "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS.value,
-            "notifications": [ e.get_notification_data() for e in notifications]
-        }
-
-
-    @database_sync_to_async
-    def refresh_general_notifications(self, oldest_timestamp: int, newest_timestamp: int) -> NotificationsRefreshPayload:
-        notifications = (Notification.objects.filter(target=self.user, read=False)
-                         .order_by('-timestamp')
-                         .filter(timestamp__gte=datetime.fromtimestamp(oldest_timestamp),
-                                timestamp__lte=datetime.fromtimestamp(newest_timestamp)))
-        return {
-            "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD.value,
-            "notifications": [ e.get_notification_data() for e in notifications]
-        }
-
-
-    @database_sync_to_async
-    def handle_friend_request(self, notification_id: int, action: Literal["accept", "reject"]) -> UpdatedNotification | None:
-        try:
-            notification: Notification = Notification.objects.get(pk=notification_id)
-            friend_request: FriendRequest | None = notification.content_object
-            if not friend_request or friend_request.receiver != self.user:
-                raise RuntimeError("friend request")
-            if action == "accept":
-                updated_notification = friend_request.accept()
-            elif action == "reject":
-                updated_notification = friend_request.reject()
-            else:
-                raise RuntimeError("Invalid action")
-            return {
-                "general_msg_type": NotificationMessages.GENERAL_MSG_TYPE_UPDATED_NOTIFICATION.value,
-                "notification": updated_notification.get_notification_data()
-            }
-        except Exception as e:
-            raise RuntimeError("An error occurred with that notification. Try refreshing the browser.") #TODO:
-        return None
-
-
-# class NotificationConsumer(AsyncJsonWebsocketConsumer):
-
-# 	async def connect(self):
-# 		print("NotificationConsumer: connect: " + str(self.scope["user"]) )
-# 		await self.accept()
-
-
-# 	async def disconnect(self, code):
-# 		print("NotificationConsumer: disconnect")
-
-# 	#Fix errors
-# 	async def receive_json(self, content):
-# 		command = content.get("command", None)
-# 		print("NotificationConsumer: receive_json. Command: " + command)
-# 		try:
-# 			user_account = self.scope['user']
-# 			if command == "get_general_notifications":
-# 				data = await get_general_notifications(user_account, content.get('page_number', None))
-# 				if data == None:
-# 					pass
-# 				else:
-# 					data = json.loads(data)
-# 					await self.send_general_notifications_data(data['notifications'], data['new_page_number'])
-# 			elif command == "accept_friend_request":
-# 				notification_id = content['notification_id']
-# 				data = await accept_friend_request(user_account, notification_id)
-# 				if data == None:
-# 					raise RuntimeError("Something went wrong. Try refreshing the browser.") #TODO:
-# 				else:
-# 					data = json.loads(data)
-# 					await self.send_updated_friend_request_notification(data['notification'])
-# 			elif command == "reject_friend_request":
-# 				notification_id = content['notification_id']
-# 				data = await reject_friend_request(user_account, notification_id)
-# 				if data == None:
-# 					raise RuntimeError("Something went wrong. Try refreshing the browser.") #TODO:
-# 				else:
-# 					data = json.loads(data)
-# 					await self.send_updated_friend_request_notification(data['notification'])
-# 			elif command == "refresh_general_notifications":
-# 				print(f"@@@---->Oldest = {content['oldest_timestamp']} || -->Newsest = {content['newest_timestamp']}")
-# 				data = await refresh_general_notifications(user_account, content['oldest_timestamp'], content['newest_timestamp'])
-# 				if data == None:
-# 					raise RuntimeError("Something went wrong. Try refreshing the browser.") #TODO:
-# 				else:
-# 					data = json.loads(data)
-# 					await self.send_general_refreshed_notifications_data(data['notifications'])
-# 		except Exception as e:
-# 			print("\nEXCEPTION: receive_json: " + str(e) + '\n') #TODO:
-# 			pass
-
-# 	async def send_general_notifications_data(self, notifications, new_page_number):
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_DATA,
-# 				"notifications": notifications,
-# 				"new_page_number": new_page_number,
-# 			},
-# 		)
-	
-# 	async def send_updated_friend_request_notification(self, notification):
-# 		"""
-# 		After a friend request is accepted or rejected, send the updated notification to template
-# 		data contains 'notification' and 'response':
-# 		1. data['notification']
-# 		2. data['response']
-# 		"""
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_UPDATED_NOTIFICATION,
-# 				"notification": notification,
-# 			},
-# 		)
-
-# 	async def general_pagination_exhausted(self):
-# 		"""
-# 		Called by receive_json when pagination is exhausted for general notifications
-# 		"""
-# 		#print("General Pagination DONE... No more notifications.")
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED,
-# 			},
-# 		)
-	
-# 	async def display_progress_bar(self, shouldDisplay):
-# 		print("NotificationConsumer: display_progress_bar: " + str(shouldDisplay)) 
-# 		await self.send_json(
-# 			{
-# 				"progress_bar": shouldDisplay,
-# 			},
-# 		)
-	
-# 	async def send_general_refreshed_notifications_data(self, notifications):
-# 		"""
-# 		Called by receive_json when ready to send a json array of the notifications
-# 		"""
-# 		#print("NotificationConsumer: send_general_refreshed_notifications_payload: " + str(notifications))
-# 		await self.send_json(
-# 			{
-# 				"general_msg_type": GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD,
-# 				"notifications": notifications,
-# 			},
-# 		)
-
-# @database_sync_to_async
-# def get_general_notifications(user, page_number):
-# 	"""
-# 	Get General Notifications with Pagination (next page of results).
-# 	This is for appending to the bottom of the notifications list.
-# 	"""
-# 	if user.is_authenticated:
-# 		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 		friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 		game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 		notifications = Notification.objects.filter(
-# 			target=UserAccount.objects.get(username=user),
-# 			content_type__in=[friend_request_ct, friend_list_ct, game_request_ct]
-# 		).order_by('-timestamp')
-# 		pages = Paginator(notifications, DEFAULT_NOTIFICATION_PAGE_SIZE)
-# 		data = {}
-# 		if len(notifications) > 0:
-# 			print(f'length = {len(notifications)}')
-# 			if int(page_number) <= pages.num_pages:
-# 				item = LazyNotificationEncoder()
-# 				serialized_notifications = item.serialize(pages.page(page_number).object_list)
-# 				data['notifications'] = serialized_notifications
-# 				new_page_number = int(page_number) + 1
-# 				data['new_page_number'] = new_page_number
-# 		else:
-# 			return None
-# 		return json.dumps(data)
-# 	return None
-
-
-# @database_sync_to_async
-# def accept_friend_request(user, notification_id):
-#     """
-#     Accept a friend request from within the notification
-#     """
-#     data = {}
-#     if user.is_authenticated:
-#         try:
-#             notification = Notification.objects.get(pk=notification_id)
-#             friend_request: FriendRequest | None = notification.content_object
-#             if friend_request and friend_request.receiver == user:
-#                 updated_notification = friend_request.accept()
-#                 item = LazyNotificationEncoder()
-#                 data['notification'] = item.serialize([updated_notification])[0]
-#                 return json.dumps(data)
-#         except Notification.DoesNotExist:
-#             raise RuntimeError("An error occurred with that notification. Try refreshing the browser.") #TODO:
-#     return None
-
-
-# @database_sync_to_async
-# def reject_friend_request(user, notification_id):
-#     """
-#     Dccept a friend request from within the notification
-#     """
-#     data = {}
-#     if user.is_authenticated:
-#         try:
-#             notification = Notification.objects.get(pk=notification_id)
-#             friend_request: FriendRequest | None = notification.content_object
-#             if friend_request and friend_request.receiver == user:
-#                 updated_notification = friend_request.reject()
-#                 item = LazyNotificationEncoder()
-#                 data['notification'] = item.serialize([updated_notification])[0]
-#                 return json.dumps(data)
-#         except Notification.DoesNotExist:
-#             raise RuntimeError("An error occurred with that notification. Try refreshing the browser.") #TODO:
-#     return None
-
-# @database_sync_to_async
-# def refresh_general_notifications(user, oldest_timestamp, newest_timestamp):
-# 	"""
-# 	Retrieve the general notifications newer than the oldest one on the screen and younger than the newest one the screen.
-# 	The result will be: Notifications currently visible will be updated
-# 	"""
-# 	data = {}
-# 	if user.is_authenticated:
-# 		friend_request_ct = ContentType.objects.get_for_model(FriendRequest)
-# 		print('Start---> 000 <<<<<<<<<<<<')
-# 		friend_list_ct = ContentType.objects.get_for_model(FriendList)
-# 		game_request_ct = ContentType.objects.get_for_model(GameRequest)
-# 		print('Start---> 111 <<<<<<<<<<<<')
-# 		notifications = Notification.objects.filter(
-# 			target=user, content_type__in=[friend_request_ct, friend_list_ct, game_request_ct], read=False).order_by('-timestamp')
-# 		# 	timestamp__gte=oldest_ts,
-# 		# 	timestamp__lte=newest_ts
-# 		# ).order_by('-timestamp')
-# 		print('Start---> 222 <<<<<<<<<<<<')
-# 		item = LazyNotificationEncoder()
-# 		print('Start---> ==+== <<<<<<<<<<<<')
-# 		data['notifications'] = item.serialize(notifications)
-# 	else:
-# 		raise RuntimeError("User must be authenticated to get notifications.") #TODO:
-
-# 	return json.dumps(data) 

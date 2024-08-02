@@ -34,6 +34,7 @@ export default class ProfileSearch extends BaseElement {
         this.discardprev = false;
         this.discarted = [];
         this.props.todiscard = [];
+        this.session = sessionService.subscribe(this);
     }
 
     connectedCallback() {
@@ -59,7 +60,7 @@ export default class ProfileSearch extends BaseElement {
                 const data = await userAPI.searchUser(inpt.value);
                 if (!(data.data instanceof Array) || data.data.length === 0)
                     this.#searchData = 'Nothing Found';
-                else this.#searchData = data.data;
+                else this.#searchData = data.data.filter(i => i.id !== this.session.value?.user?.id)
                 super.requestUpdate();
             } catch (error) {
                 sessionService.handleFetchError(error);

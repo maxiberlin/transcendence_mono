@@ -193,7 +193,7 @@ export class VerticalNav extends BaseElement {
         <div class="d-flex flex-row justify-content-evenly align-items-center w-100">
             ${this.notification ? html`
                 <div>
-                    <!-- <notification-view></notification-view> -->
+                    <notification-view></notification-view>
                 </div>
             ` : ''}
             <ul

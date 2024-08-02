@@ -1,7 +1,6 @@
 
 # chat/routing.py
 from django.urls import re_path
-
 from .pong_new.consumer_player import PlayerConsumer
 
 websocket_urlpatterns = [

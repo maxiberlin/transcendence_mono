@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 declare namespace APITypes {
 
-    type JSONValue = string | number | boolean | null | { [x: string]: JSONValue; } | Array<JSONValue>;
+    type JSONValue = string | number | boolean | null | undefined | { [x: string]: JSONValue; } | Array<JSONValue>;
 
     export interface ApiResponse<T extends JSONValue> {
         success: boolean;
@@ -15,12 +15,39 @@ declare namespace APITypes {
         user_id: number;
     }
 
+    // [key: string]: string | number | boolean | null;
     export interface BasicUserData {
+        [key: string]: JSONValue;
         id: number;
         avatar: string;
         username: string;
         online: boolean | null;
     }
+
+    // [key: string]: string | number | APITypes.BasicUserData[];
+    export interface ChatRoomData {
+        [key: string]: JSONValue;
+        room_id: number;
+        type: 'tournament' | 'private';
+        users: APITypes.BasicUserData[];
+    }
+
+    export interface ChatMessageData {
+        [key: string]: JSONValue;
+        user_id: number;
+        username: string;
+        avatar: string;
+        message: string;
+        timestamp: string;
+    }
+
+    export interface ChatMessageList {
+        [key: string]: JSONValue;
+        room_id: number;
+        ChatMessageData: ChatMessageData[];
+        next_page: number;
+    }
+
 
     export interface FriendUserData extends BasicUserData {
         [key: string]: JSONValue;
@@ -43,13 +70,19 @@ declare namespace APITypes {
         request_id: number;
     }
 
+    export type gameId = 0 | 1;
+    export type GameIdString = "Pong" | "Other";
+    export type GameMode = "1vs1" | "tournament";
 
     export interface GameInvitationItem extends BasicUserData {
-        [key: string]: JSONValue;
+        [key: string]: string | number | boolean | null | undefined;
         alias: string;
         invite_id: number;
-        game_id: number;
-        game_mode: string;
+        invitee?: number;
+        inviter?: number;
+        game_id: GameIdString;
+        game_mode: GameMode;
+        tournament: number;
     }
 
     export interface PlayerData extends BasicUserData {
@@ -57,17 +90,59 @@ declare namespace APITypes {
         alias: string;
     }
 
-    export type gameMode = "1vs1" | "tournament";
-    export type gameID = 0 | 1;
-
     export interface GameScheduleItem {
-        [key: string]: number | string | PlayerData | gameID | gameMode;
+        [key: string]: number | string | null | PlayerData | GameMode;
         schedule_id: number;
-        game_id: gameID;
-        game_mode: gameMode;
+        game_id: GameIdString;
+        game_mode: GameMode;
+        tournament: number | null;
         duration: number;
         player_one: PlayerData;
         player_two: PlayerData;
+    }
+
+    export interface GameResultItem {
+        [key: string]: number | string | PlayerData;
+        match_id: number;
+        game_id: GameIdString;
+        game_mode: GameMode;
+        tournament: number;
+        player_one: PlayerData;
+        player_two: PlayerData;
+        player_one_score: number;
+        player_two_score: number;
+        date: string;
+        winner: string;
+    }
+
+    export type TournamentStatus = "waiting" | "in progress" | "finished";
+    export type TournamentMode = "single elimination" | "round robin";
+
+    export interface TournamentItem {
+        id: number,
+        name: string,
+        game_id: GameIdString,
+        status: TournamentStatus;
+    }
+
+    export interface TournamentData {
+        [key: string]: number | string | null | PlayerData | GameMode | PlayerData[] | GameScheduleItem[];
+        id: number;
+        name: string;
+        game_id: GameIdString;
+        mode: GameMode,
+        creator: string,
+        nb_player: number | null,
+        rounds: number,
+        status: TournamentStatus,
+        stage: string,
+        started: string | null,
+        ended: string | null,
+        winner: string | null,
+        players: PlayerData[];
+        schedules: GameScheduleItem[] | null;
+        results: [] | null;
+        leaderboard: [] | null;
     }
 
     export interface SearchResult extends BasicUserData {
@@ -100,6 +175,7 @@ declare namespace APITypes {
         game_invitations_received?: GameInvitationItem[];
         game_invitations_sent?: GameInvitationItem[];
         game_schedule?: GameScheduleItem[];
+        game_results?: GameResultItem[];
         friend_requests_received?: FriendRequestItem[];
         friend_requests_sent?: FriendRequestItem[];
     }

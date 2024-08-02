@@ -2,7 +2,9 @@ import BaseBase from '../BaseBase.js';
 import PubSubConsumer from './PubSubConsumer.js';
 
 
-
+/**
+ * @template T
+ */
 export default class PubSub extends EventTarget {
     static #nbr = 0;
 
@@ -19,7 +21,6 @@ export default class PubSub extends EventTarget {
     }
 
     /**
-     * @template T
      * @param {any} initialValue initial value
      * @param {BaseBase} [host] host element, that triggers a rerender
      * @param {boolean} [force] force update, event if values are same
@@ -29,10 +30,7 @@ export default class PubSub extends EventTarget {
         return new PubSubConsumer(this, initialValue, force, host);
     }
 
-    /**
-     * @template T
-     * @param {T} data data to publish
-     */
+    /** @param {T} data data to publish */
     publish(data) {
         // console.log('publish: data: ', data);
         // console.log('eventType: ', this.eventType);

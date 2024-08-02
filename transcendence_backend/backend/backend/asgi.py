@@ -1,43 +1,27 @@
-"""
-ASGI config for backend project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/
-"""
-
 import os
 from django.core.asgi import get_asgi_application
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter, ChannelNameRouter
 from channels.security.websocket import AllowedHostsOriginValidator
-# from public_chat.consumers import *
-
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 django_asgi_app = get_asgi_application()
 
-# from public_chat import routing as pb_routing
-from pong_server import routing as ps_routing
-from notification import routing as nf_routing
-
-# from pong_server.pong_old.consumer_game import GameConsumer
+from chat import routing as ch_routing
+from pong_server.pong_new.consumer_player import PlayerConsumer
+from notification.consumers import NotificationConsumer, TestConnectionConsumer
 from pong_server.pong_new.consumer_game import GameConsumer
-
-# application = ProtocolTypeRouter({
-#     "channel": ChannelNameRouter({
-#         "game_engine": GameConsumer.as_asgi(),
-#     })
-# })
+from django.urls import re_path
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
     'websocket': AllowedHostsOriginValidator(
         AuthMiddlewareStack(
-            # URLRouter(pb_routing.websocket_urlpatterns + ps_routing.websocket_urlpatterns)
-            URLRouter(ps_routing.websocket_urlpatterns + nf_routing.websocket_urlpatterns)
+            URLRouter([
+                re_path(r"ws/game/(?P<schedule_id>\w+)/$", PlayerConsumer.as_asgi()),
+                re_path(r'ws/$', NotificationConsumer.as_asgi()),
+            ])
         )
     ),
     'channel': ChannelNameRouter({
@@ -45,3 +29,19 @@ application = ProtocolTypeRouter({
     })
 })
 
+# from chat import routing as ch_routing
+# from pong_server import routing as ps_routing
+# from notification import routing as nf_routing
+# from pong_server.pong_new.consumer_game import GameConsumer
+
+# application = ProtocolTypeRouter({
+#     'http': django_asgi_app,
+#     'websocket': AllowedHostsOriginValidator(
+#         AuthMiddlewareStack(
+#             URLRouter(ch_routing.websocket_urlpatterns + ps_routing.websocket_urlpatterns + nf_routing.websocket_urlpatterns)
+#         )
+#     ),
+#     'channel': ChannelNameRouter({
+#         'game_engine': GameConsumer.as_asgi(),
+#     })
+# })

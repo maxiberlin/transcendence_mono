@@ -1,8 +1,9 @@
-import { actionButtonGroups, configs, getBtn } from '../../components/ActionButtons';
+import { actionButtonGroups, actions, configs, getBtn } from '../../components/ActionButtons';
 import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { sessionService } from '../../services/api/API_new';
 import { Popover } from 'bootstrap';
+import { messageSocketService } from '../../services/api/GlobalSockHandler';
 
 const GENERAL_NOTIFICATION_INTERVAL = 4000
 const GENERAL_NOTIFICATION_TIMEOUT = 5000
@@ -21,8 +22,9 @@ export class NotificationView extends BaseElement {
     static observedAttributes = [];
     constructor() {
         super();
+        this.notifications = messageSocketService.subscribeNotifications(this);
     }
-    /** @type {NotificationTypes.NotificationData[]} */
+    // /** @type {NotificationTypes.NotificationData[]} */
     #notificationDataList = [];
     /** @type {WebSocket | null} */
     #notificationSocket = null;
@@ -31,134 +33,127 @@ export class NotificationView extends BaseElement {
     #newestTmeStamp = Math.round(Date.now() / 1000);
     #unreadCount = 0;
 
-    /** @param {NotificationTypes.NotificationData} notification @param {boolean} [front]  */
-    setNotification(notification, front=false) {
-        const i = this.#notificationDataList.findIndex(i => i.notification_id === notification.notification_id)
-        console.log('set Notification: ', notification);
-        console.log('set Notification index: ', i);
-        if (i === -1 && !front) this.#notificationDataList.push(notification);
-        else if (i === -1 && front) this.#notificationDataList.unshift(notification);
-        else this.#notificationDataList[i] = notification;
-    }
+    // /** @param {NotificationTypes.NotificationData} notification @param {boolean} [front]  */
+    // setNotification(notification, front=false) {
+    //     const i = this.#notificationDataList.findIndex(i => i.notification_id === notification.notification_id)
+    //     console.log('set Notification: ', notification);
+    //     console.log('set Notification index: ', i);
+    //     if (i === -1 && !front) this.#notificationDataList.push(notification);
+    //     else if (i === -1 && front) this.#notificationDataList.unshift(notification);
+    //     else this.#notificationDataList[i] = notification;
+    // }
 
-    /** @param {number} timestamp */
-    updateTimeStamps(timestamp) {
-        this.#newestTmeStamp = Math.max(timestamp, this.#newestTmeStamp);
-        this.#oldesTimeStamp = Math.min(timestamp, this.#oldesTimeStamp);
-    }
+    // /** @param {number} timestamp */
+    // updateTimeStamps(timestamp) {
+    //     this.#newestTmeStamp = Math.max(timestamp, this.#newestTmeStamp);
+    //     this.#oldesTimeStamp = Math.min(timestamp, this.#oldesTimeStamp);
+    // }
 
     /** @param {Event} e */
     onNotificationSocketMessage = (e) => {
-        console.log("Got notification websocket message.");
-        if (!(e instanceof MessageEvent)) return;
-        /** @type {NotificationMessageTypes.NotificationMessage} */
-        const data = JSON.parse(e.data);
-        console.log(data);
-        if(data.general_msg_type === GENERAL_MSG_TYPE_NOTIFICATIONS_DATA) {
-            data.notifications.forEach(notification => {
-                this.setNotification(notification);
-                this.updateTimeStamps(notification.timestamp);
-            });
-            console.log('old page: ', this.#pageNo);
-            this.#pageNo = data.new_page_number;
-            console.log('new page: ', this.#pageNo);
-        } else if(data.general_msg_type === GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS) {
-            data.notifications.forEach(notification => {
-                this.setNotification(notification, true);
-                this.updateTimeStamps(notification.timestamp);
-            });
-        } else if(data.general_msg_type === GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD) {
-            data.notifications.forEach(notification => {
-                this.setNotification(notification);
-                this.updateTimeStamps(notification.timestamp);
-            });
-        } else if(data.general_msg_type === GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED) {
-            this.#pageNo = -1;
-        } else if(data.general_msg_type === GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT) {
-            this.#unreadCount = data.count;
-        } else if(data.general_msg_type === GENERAL_MSG_TYPE_UPDATED_NOTIFICATION) {
-            this.setNotification(data.notification);
-        }
+        // console.log("Got notification websocket message.");
+        // if (!(e instanceof MessageEvent)) return;
+        // /** @type {NotificationMessageTypes.NotificationMessage} */
+        // const data = JSON.parse(e.data);
+        // console.log(data);
+        // if (!data) return;
+        // if(data.general_msg_type === GENERAL_MSG_TYPE_NOTIFICATIONS_DATA) {
+        //     data.notifications.forEach(notification => {
+        //         this.setNotification(notification);
+        //         this.updateTimeStamps(notification.timestamp);
+        //     });
+        //     console.log('old page: ', this.#pageNo);
+        //     this.#pageNo = data.new_page_number;
+        //     console.log('new page: ', this.#pageNo);
+        // } else if(data.general_msg_type === GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS) {
+        //     data.notifications.forEach(notification => {
+        //         this.setNotification(notification, true);
+        //         if (this.DrowdownIsOpen === true)
+        //             this.#unreadCount = 0;
+        //         else
+        //             this.#unreadCount = data.count ?? this.#unreadCount;
+        //         this.updateTimeStamps(notification.timestamp);
+        //     });
+        // } else if(data.general_msg_type === GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD) {
+        //     data.notifications.forEach(notification => {
+        //         this.setNotification(notification);
+        //         this.updateTimeStamps(notification.timestamp);
+        //     });
+        // } else if(data.general_msg_type === GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED) {
+        //     this.#pageNo = -1;
+        // } else if(data.general_msg_type === GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT) {
+        //     this.#unreadCount = data.count;
+        // } else if(data.general_msg_type === GENERAL_MSG_TYPE_UPDATED_NOTIFICATION) {
+        //     this.setNotification(data.notification);
+        // }
 
-        super.requestUpdate();
+        // super.requestUpdate();
     }
 
     connectedCallback() {
         super.connectedCallback();
 
-        
-
-        const refreshNotifications = () => {
-            console.log('send: ', {
-                command: "refresh_general_notifications",
-                oldest_timestamp: this.#oldesTimeStamp,
-                newest_timestamp: this.#newestTmeStamp,
-            });
-            sessionService.pushToNotificationSocket({
-                command: "refresh_general_notifications",
-                oldest_timestamp: this.#oldesTimeStamp,
-                newest_timestamp: this.#newestTmeStamp,
-            })
-        };
-        const getNewNotifications = () => {
-            sessionService.pushToNotificationSocket({
-                command: "get_new_general_notifications",
-                newest_timestamp: this.#newestTmeStamp,
-            })
-        };
-        const getUnreadNotificationCount = () => {
-            sessionService.pushToNotificationSocket({
-                command: "get_unread_general_notifications_count"
-            });
-        };
-        let refreshtInterval, getInterval, getCountInterval;
-
-        sessionService.addNotificationMessageHandler("message", this.onNotificationSocketMessage);
-        sessionService.addNotificationMessageHandler("error", (e) => { console.log('Notification Socket error', e) });
-        sessionService.addNotificationMessageHandler("open", (e) => {
-            console.log("Notification Socket on open: " + e)
-            sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: this.#pageNo});
-            refreshtInterval = setInterval(refreshNotifications, GENERAL_NOTIFICATION_INTERVAL)
-			getInterval = setInterval(getNewNotifications, GENERAL_NOTIFICATION_INTERVAL)
-			getCountInterval = setInterval(getUnreadNotificationCount, GENERAL_NOTIFICATION_INTERVAL)
-        });
-        sessionService.addNotificationMessageHandler("close", (e) => {
-            console.error('Notification Socket closed');
-            clearInterval(refreshtInterval);
-            clearInterval(getInterval);
-            clearInterval(getCountInterval);
-        });
+        // sessionService.addNotificationMessageHandler("message", this.onNotificationSocketMessage);
+        // sessionService.addNotificationMessageHandler("error", (e) => { console.log('Notification Socket error', e) });
+        // sessionService.addNotificationMessageHandler("open", (e) => {
+        //     console.log("Notification Socket on open: " + e)
+        //     sessionService.pushToNotificationSocket({
+        //         command: "get_general_notifications",
+        //         page_number: this.#pageNo}
+        //     );
+        //     sessionService.pushToNotificationSocket({
+        //         command: "get_unread_general_notifications_count"
+        //     });
+        // });
+        // sessionService.addNotificationMessageHandler("close", (e) => {
+        // });
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
-        this.#notificationSocket?.close();
+        // this.#notificationSocket?.close();
     }
 
+    scrolltimeout
+    /** @param {Event} e */
+    onMenuScroll = (e) => {
+        if (this.#pageNo === -1 || this.scrolltimeout !== undefined)
+            return;
+        const menu = e.currentTarget;
+        this.scrolltimeout = setTimeout(() => {
+            if (menu && menu instanceof HTMLElement && menu.scrollTop + 10 >= menu.scrollHeight - menu.offsetHeight)
+                messageSocketService.getNextMessagePage()
+                // sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: this.#pageNo})
+            this.scrolltimeout = undefined;
+          }, 300);
+    }
+
+    /** @param {MessageSocketTypes.NotificationData} n */
+    getAction = (n) => n.notification_type === "friendrequest" ? actionButtonGroups.receivedFriendInvitation(n.action_id, true)
+        : n.notification_type === "gamerequest" ? actionButtonGroups.receivedGameInvitation(n.action_id, true)
+        : ''
+
     /**
-     * @param {NotificationTypes.NotificationData} notification 
+     * @param {MessageSocketTypes.NotificationData} notification 
      */
     renderNotificationItem = (notification) =>  {
-        // console.log('notification render: ', notification);
-        // console.log('active?!?!: ', notification.is_active);
-        // console.log('typeof: ', typeof notification.is_active);
         return html`
-        <a style="${"max-width: 500px;"}"
+        <a 
             href="/profile/${notification.user.id}"
             class="dropdown-item m-0 p-0 d-flex flex-column flex-column align-items-start p-3 w-100">
-            <div class="d-flex flex-row align-items-start" style="${"max-width: 500px;"}">
+            <div class="d-flex flex-column align-items-start w-100" >
                 ${avatarLink(notification.user)}
-                ${(notification.is_active === true) ? html`
-                    <div class="d-flex flex-column  align-items-center justify-content-between">
-                        <span class="m-auto d-inline-block text-truncate">
+                ${(notification.is_active === true && notification.action_id !== -1) ? html`
+                    <div class="d-flex flex-column ">
+                        <span class="text-truncate">
                             ${notification.description}
                         </span>
                         <div class="d-flex ms-2">
-                            ${this.websocketActionButtonGroups.receivedFriendInvitation(notification.notification_id, true)}
+                            ${ this.getAction(notification) }
                         </div>
                     </div>
                 ` : html`
-                    <span class="m-auto d-inline-block text-truncate">
+                    <span class="text-truncate">
                         ${notification.description}
                     </span>
                 ` }
@@ -175,32 +170,25 @@ export class NotificationView extends BaseElement {
         </div>
     `
 
-    scrolltimeout
-    /** @param {Event} e */
-    onMenuScroll = (e) => {
-        if (this.#pageNo === -1 || this.scrolltimeout !== undefined)
-            return;
-        const menu = e.currentTarget;
-        this.scrolltimeout = setTimeout(() => {
-            if (menu && menu instanceof HTMLElement && menu.scrollTop >= menu.scrollHeight - menu.offsetHeight) {
-                sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: this.#pageNo})
-                this.scrolltimeout = undefined;
-            }
-          }, 300);
-    }
-    // btn-group dropend
     render() {
-        console.log('render: notification list data: ', this.#notificationDataList);
+        // console.log('render: notification list data: ', this.notifications?.value);
+        // console.log('render: notification list data?!: ', this.notifications?.value.messages);
+        // console.log('render: notification list data?!: ', this.notifications?.value.unreadCount);
         const isMobile = window.innerWidth <= 576;
         return html`
         <div class=" ${isMobile ? 'btn-group dropup' : 'dropdown'} ">
-
-        
             <button
                 @shown.bs.dropdown=${ () => {
+                    this.DrowdownIsOpen = true;
+                    // console.log('DROPDOWN OPEN');
+                    
+                    messageSocketService.setNotificationsAsReadUntil(Math.round(Date.now() / 1000))
+                    messageSocketService.updateNotificationNaturalTime()
+                    // sessionService.pushToNotificationSocket({command: "mark_notifications_read", oldest_timestamp: this.#newestTmeStamp});
                     document.body.classList.add("overflow-hidden");
                 } }
                 @hidden.bs.dropdown=${ () => {
+                    this.DrowdownIsOpen = false;
                     document.body.classList.remove("overflow-hidden");
                 } }
                 
@@ -210,90 +198,27 @@ export class NotificationView extends BaseElement {
                 aria-expanded="false"
             >
                 <i class="fa-solid fa-bell"></i>
-                ${this.#notificationDataList.length === 0 ? '' : html`
+                ${this.notifications?.value.messages.length === 0 ? '' : html`
                     <span class="position-absolute top-0 start-100 px-1 translate-middle badge rounded-pill bg-danger">
-                        ${this.#unreadCount}
+                        ${this.notifications?.value.unreadCount}
                         <span class="visually-hidden">unread notifications</span>
                     </span>
                 `}
             </button>
             <div
                 @scroll=${ (e) => { this.onMenuScroll(e) } }
-                style="${"max-width: 500px;  height: 30em;"}"
+                style="${"max-width: 100vw; max-height: 30em;"}"
                 class="overflow-scroll dropdown-menu scrollable-menu"
                 aria-labelledby="id_notification_dropdown_toggle"
             >
-                ${this.#notificationDataList.length === 0 ? this.renderNoNotification()
-                    :  this.#notificationDataList.map((n) => this.renderNotificationItem(n))
+                ${this.notifications?.value.messages.length === 0 ? this.renderNoNotification()
+                    :  this.notifications?.value.messages.map((n) => this.renderNotificationItem(n))
                 }
             </div>
 
         </div>
         `
     }
-
-    /**
-     * @typedef {import('../../components/ActionButtons').ActionBtnData} ActionBtnData
-     */
-
-    /**
-     * @typedef {import('../../components/ActionButtons').TplLit} TplLit
-     */
-
-    /**
-     * @typedef {Object} WebsocketActionButtons
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} sendFriendRequest
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} cancelFriendRequest
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} acceptFriendRequest
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} rejectFriendRequest
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} sendGameInvitation
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} cancelGameInvitation
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} acceptGameInvitation
-     * @property {(id: number, conf?: ActionBtnData) => TplLit} rejectGameInvitation
-     */
-
-    /** @type {WebsocketActionButtons} */
-    websocketActions = {
-        sendFriendRequest: (userId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "friend-cancel", userId), configs.addFriend, conf),
-        cancelFriendRequest: (requestId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "friend-cancel", requestId), configs.cancelReq, conf),
-        acceptFriendRequest: (requestId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "friend-accept", requestId),configs.acceptReq, conf),
-        rejectFriendRequest: (requestId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "friend-reject", requestId),configs.rejectReq, conf),
-        sendGameInvitation: (userId, conf) =>
-            getBtn(sessionService.sendGameInvitation.bind(sessionService, userId, "1vs1", 0),configs.rejectReq, conf),
-        cancelGameInvitation: (invitationId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "game-cancel", invitationId), configs.cancelReq, conf),
-        acceptGameInvitation: (invitationId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "game-accept", invitationId), configs.acceptReq, conf),
-        rejectGameInvitation: (invitationId, conf) =>
-            getBtn(sessionService.handleRequestWebsocket.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
-    };
-
-    /**
-     * @typedef {Object} WebsocketActionButtonGroups
-     * @property {(id: number, showText: boolean) => TplLit} receivedGameInvitation
-     * @property {(id: number, showText: boolean) => TplLit} receivedFriendInvitation
-     */
-
-    /** @type {WebsocketActionButtonGroups} */
-    websocketActionButtonGroups = {
-        receivedGameInvitation: (invitationId, showText) => html`
-            <div>
-                ${this.websocketActions.acceptGameInvitation(invitationId, { showText })}
-                ${this.websocketActions.rejectGameInvitation(invitationId, { showText })}
-            </div>
-        `,
-        receivedFriendInvitation: (requestId, showText) => html`
-            <div>
-                ${this.websocketActions.acceptFriendRequest(requestId, { showText })}
-                ${this.websocketActions.rejectFriendRequest(requestId, { showText })}
-            </div>
-        `
-    }
-
 }
 customElements.define("notification-view", NotificationView);
 
@@ -513,7 +438,7 @@ customElements.define("notification-view", NotificationView);
 //         sendFriendRequest: (userId, conf) =>
 //             getBtn((e) => {this.pushToNotificationSocket({command: "accept_friend_request", notification_id})}, configs.addFriend, conf),
 //         cancelFriendRequest: (requestId, conf) =>
-//             getBtn(sessionService.handleRequest.bind(sessionService, "friend-cancel", requestId), configs.cancelReq, conf),
+// //             getBtn(sessionService.handleRequest.bind(sessionService, "friend-cancel", requestId), configs.cancelReq, conf),
 //         acceptFriendRequest: (requestId, conf) =>
 //             getBtn(sessionService.handleRequest.bind(sessionService, "friend-accept", requestId),configs.acceptReq, conf),
 //         rejectFriendRequest: (requestId, conf) =>

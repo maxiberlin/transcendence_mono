@@ -38,7 +38,43 @@ $offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
 $body-color: #333;
 $body-bg: #fff;
 $border-radius: 0.4rem;
-$primary: #7952b3;
+// $primary: #7952b3;
+
+$primary-light: #b797e8;
+$primary-dark: #7952b3;
+$primary: $primary-dark;
+
+[data-bs-theme='dark'] {
+    $primary: $primary-light;
+
+    // .btn-primary {
+    //     background-color: $primary;
+    //     border-color: $primary;
+    // }
+
+    // Weitere Komponenten überschreiben, falls erforderlich
+    .btn-outline-primary {
+        $btn-color: $primary;
+    }
+
+    .btn-dark {
+        @extend .btn-light !optional;
+    }
+    .btn-outline-dark {
+        @extend .btn-outline-light !optional;
+    }
+
+    // .btn-dark {
+    //   --bs-btn-bg: #{mix($gray-600, $blue-400, .5)};
+    //   --bs-btn-border-color: #{rgba($white, .25)};
+    //   --bs-btn-hover-bg: #{darken(mix($gray-600, $blue-400, .5), 5%)};
+    //   --bs-btn-hover-border-color: #{rgba($white, .25)};
+    //   --bs-btn-active-bg: #{darken(mix($gray-600, $blue-400, .5), 10%)};
+    //   --bs-btn-active-border-color: #{rgba($white, .5)};
+    //   --bs-btn-focus-border-color: #{rgba($white, .5)};
+    //   --bs-btn-focus-box-shadow: 0 0 0 .25rem rgba(255, 255, 255, .2);
+    // }
+}
 
 // Required
 @import 'bootstrap/scss/variables';
@@ -84,6 +120,49 @@ $primary: #7952b3;
 
 // Utilities
 @import 'bootstrap/scss/utilities/api';
+
+.pong-navigation {
+    height: auto;
+    max-height: 15vh;
+    min-width: 100vw;
+    max-width: 100vw;
+    position: fixed;
+    z-index: 1030;
+    padding: 0.5em 0.5em calc(0.5em + env(safe-area-inset-bottom)) 0.5em;
+}
+
+.pong-content {
+    padding: 0; /* Default padding for small screens */
+    transition: padding 0.3s ease;
+    width: 100%;
+}
+
+/* Navigation on top for wider screens */
+@media (min-width: 577px) {
+    .pong-navigation {
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+    .pong-content {
+        padding-top: 4em; /* Adjust padding to avoid overlap with the top navigation */
+        padding-bottom: 1em;
+    }
+}
+
+/* Navigation on bottom for narrower screens */
+@media (max-width: 576px) {
+    .pong-navigation {
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+    .pong-content {
+        padding-bottom: calc(
+            5em + env(safe-area-inset-bottom)
+        ); /* Adjust padding to avoid overlap with the bottom navigation */
+    }
+}
 
 .pong-spacer {
     height: 15vh;

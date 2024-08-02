@@ -3,6 +3,7 @@ import Template from './templ/Template.js';
 
 export { html, css } from './templ/TemplateAsLiteral.js';
 export {ref, createRef} from './templ/nodes/FuncNode.js';
+export { BaseBase }
 
 /**
  * @template {HTMLElement} T
@@ -15,93 +16,18 @@ export {ref, createRef} from './templ/nodes/FuncNode.js';
  * @property {object} oVal
  */
 
+/**
+ * @template {import('./BaseBase.js').BaseBaseProps} K
+ * @extends BaseBase<K>
+ */
 export class BaseElement extends BaseBase {
-    static #colorModeEvent = 'base-elem-toggle-color';
-
-    static #colorModePubSub = new EventTarget();
-
-    static #currentColorMode = 'light';
-
-    static toggleColorMode() {
-        const ht = document.querySelector('html');
-        const newColor = this.#currentColorMode === 'light' ? 'dark' : 'light';
-        if (ht) ht.dataset.bsTheme = newColor;
-        this.#currentColorMode = newColor;
-        const color = BaseElement.#currentColorMode;
-        const revColor = color === 'light' ? 'dark' : 'light';
-        document.querySelectorAll('button').forEach((btn) => {
-            this.#toggleBtnColor(btn, color, revColor);
-        });
-        document.querySelectorAll('input').forEach((btn) => {
-            this.#toggleBtnColor(btn, color, revColor);
-        });
-        document.querySelectorAll('a').forEach((btn) => {
-            this.#toggleBtnColor(btn, color, revColor);
-        });
-        this.#colorModePubSub.dispatchEvent(new CustomEvent(this.#colorModeEvent, { detail: newColor }));
-    }
-
-    static #changeDocumentBtnColors() {
-        const color = BaseElement.#currentColorMode;
-        const revColor = color === 'light' ? 'dark' : 'light';
-        document.querySelectorAll('button').forEach((btn) => {
-            this.#toggleBtnColor(btn, color, revColor);
-        });
-        document.querySelectorAll('input').forEach((btn) => {
-            this.#toggleBtnColor(btn, color, revColor);
-        });
-        document.querySelectorAll('a').forEach((btn) => {
-            this.#toggleBtnColor(btn, color, revColor);
-        });
-    }
-
-    #changeBtnColors(color, revColor, toggleTheme) {
-        if (this.shadowRoot) {
-            Array.from(this.shadowRoot.children).forEach((e) => {
-                if (e instanceof HTMLElement) {
-                    if (toggleTheme) e.dataset.bsTheme = color;
-                    BaseElement.#toggleBtnColor(e, color, revColor);
-                }
-                e.querySelectorAll('button').forEach((btn) => {
-                    BaseElement.#toggleBtnColor(btn, color, revColor);
-                });
-                e.querySelectorAll('input').forEach((btn) => {
-                    BaseElement.#toggleBtnColor(btn, color, revColor);
-                });
-                e.querySelectorAll('a').forEach((btn) => {
-                    BaseElement.#toggleBtnColor(btn, color, revColor);
-                });
-            });
-        }
-    }
-
-    static #toggleBtnColor = (elem, color, revColor) => {
-        if (elem.classList.contains(`btn-outline-${color}`)) {
-            elem.classList.remove(`btn-outline-${color}`);
-            elem.classList.add(`btn-outline-${revColor}`);
-        } else if (elem.classList.contains(`btn-${color}`)) {
-            elem.classList.remove(`btn-${color}`);
-            elem.classList.add(`btn-${revColor}`);
-        }
-    };
-
-    /**
-     * @param {CustomEvent} ev The custom event object.
-     */
-    #changeColorMode(ev) {
-        const color = ev.detail;
-        const revColor = color === 'light' ? 'dark' : 'light';
-        /** @param {HTMLElement} elem */
-        this.#changeBtnColors(color, revColor, true);
-        this.onColorChange();
-    }
-
-    onColorChange() {}
 
     /** @type {Map<string, AttrProp>} */
     #attrPropMapRef;
 
+
     #initAttrPropMap() {
+        
         // @ts-ignore
         const obs = this.constructor.observedAttributes;
         if (this.#attrPropMapRef !== undefined || !(obs instanceof Array)) return;
@@ -145,6 +71,10 @@ export class BaseElement extends BaseBase {
         this.onAttributeChange(name);
         if (this.#isConnected) this.update();
     }
+
+    onBeforeUpdate() {}
+
+    onAfterUpdate() {}
 
     requestUpdate() {
         // console.log("request Update");
@@ -227,10 +157,6 @@ export class BaseElement extends BaseBase {
         this.#isConnected = true;
         
         this.shadowRoot?.addEventListener('slotchange', this.onSlotChange.bind(this));
-        BaseElement.#colorModePubSub.addEventListener(
-            BaseElement.#colorModeEvent,
-            this.#changeColorMode.bind(this),
-        );
         this.update();
     }
 
@@ -242,10 +168,7 @@ export class BaseElement extends BaseBase {
         }
         this.shadowRoot?.removeEventListener('slotchange', this.onSlotChange.bind(this));
 
-        BaseElement.#colorModePubSub.removeEventListener(
-            BaseElement.#colorModeEvent,
-            this.#changeColorMode.bind(this),
-        );
+       
         // console.log("BASE ELEM DISCONNECT!!!!", this)
     }
 
@@ -261,18 +184,16 @@ export class BaseElement extends BaseBase {
 
     update() {
         const res = this.render();
+        this.onBeforeUpdate();
 
         if (res === null || res === undefined) return;
         if (this.#templ === undefined) {
-            // this.#templ = Template.getInstance(res.strings);
-            // this.#templ.mountMe(this.root, null, res.values);
             this.#templ = Template.createLiveAppendElement(this.root, res);
         } else {
             this.#templ.update(res.values);
-            // // console.log("UPDATE COMPLETED: ", this);
         }
-        // this.#adjustBtnColors();
-        BaseElement.#changeDocumentBtnColors();
+
+        this.onAfterUpdate();
     }
 
     /** @returns {import('./templ/TemplateAsLiteral.js').TemplateAsLiteral | null}  */

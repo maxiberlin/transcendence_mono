@@ -1,0 +1,5 @@
+games.views:
+    - send game invite: duplicate tournament invites allowed -> check for double invitation only mode "1vs1"
+    - match history: fetch match history for other users + use pageination to get part of items
+    - use tournament id when sending inviation or result instead of name, so the frontend can fetch details about the tournament
+    - use 

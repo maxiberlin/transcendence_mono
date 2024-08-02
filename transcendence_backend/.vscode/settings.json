@@ -1,5 +1,7 @@
 {
     "python.analysis.typeCheckingMode": "basic",
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
     "[python]": {
         "diffEditor.ignoreTrimWhitespace": false,
         "editor.formatOnType": false,

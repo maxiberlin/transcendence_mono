@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style type="text/css">
+        .image-container {
+            max-width: 250px;
+            height: auto;
+        }
+
+        .field-heading {
+            color: var(--secondary-text-color);
+        }
+
+        .icon-container:hover {
+            opacity: 0.3;
+            cursor: pointer;
+        }
+
+        .friends-icon {
+            color: #4287f5;
+            font-size: 40px;
+        }
+
+        .person-add-icon {
+            color: #4287f5;
+            font-size: 40px;
+        }
+
+        .friend-text {
+            font-weight: 500;
+            color: black;
+        }
+
+        .friends-btn {
+            background-color: #cccccc;
+            border-color: #cccccc;
+            color: #000;
+            font-weight: 500;
+        }
+
+        .friends-btn:hover {
+            background-color: #bfbfbf;
+            border-color: #bfbfbf;
+        }
+
+        .dropdown-toggle::after {
+            content: none;
+        }
+
+        .card {
+            border-radius: 12px;
+        }
+
+        .material-icons {
+            font-size: 30px;
+        }
+
+        .material-icons:hover {
+            cursor: pointer;
+        }
+
+        .confirm-friend-request {
+            color: green;
+        }
+
+        .confirm-friend-request:hover {
+            opacity: 0.3;
+        }
+
+        .decline-friend-request:hover {
+            opacity: 0.3;
+        }
+
+        .decline-friend-request {
+            color: red;
+        }
+
+        .message-btn-text {
+            font-weight: 500;
+        }
+
+        .chat-window {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 300px;
+            height: 400px;
+            border: 1px solid #ccc;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .chat-header {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .chat-control-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .chat-control-btn:hover {
+            color: #ccc;
+        }
+
+        .chat-body {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .chat-footer {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+        }
+
+        #id_chat_message_input {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #id_chat_message_submit {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #id_chat_message_submit:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <label for="chat_user_id">Enter User id to chat with</label>
+    <input type="text" id="chat_user_id">
+    <div class="d-flex flex-row align-items-center btn btn-primary m-2 px-4" id="sendMessageBtn" style="display: none;">
+        <span class="material-icons m-auto" id="sendMessageBtn">
+            message
+        </span>
+    </div>
+    <!-- Chat window container -->
+    <div id="chatWindow" class="chat-window" style="display: flex;">
+        <div class="chat-header">
+            Chat
+            <button id="minimizeChatBtn" class="chat-control-btn">_</button>
+            <button id="closeChatBtn" class="chat-control-btn">X</button>
+        </div>
+        <div class="chat-body" id="chatLog">
+
+        </div>
+        <div class="chat-footer" id="chatFooter">
+            <input type="text" id="id_chat_message_input" placeholder="Type a message..." />
+            <button id="id_chat_message_submit">Send</button>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <!-- <script src="{ static 'js/send_friend_request.js'}"></script> -->
+
+    <span class="d-none page-number" id="id_page_number">1</span>
+    <script>
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        document.getElementById('sendMessageBtn').addEventListener('click', function (event) {
+            event.preventDefault();
+            // function createOrReturnPrivateChat() {
+            const inpt = document.getElementById("chat_user_id");
+            if (!(inpt instanceof HTMLInputElement))
+                throw new Error("WRONG INPUT ELEMENT?!");
+            const user_id_s = inpt.value;
+            const user_id = Number(user_id_s);
+            if (isNaN(user_id))
+                throw new Error("INVALID USER ID");
+
+
+            console.log(user_id);
+            fetch("https://api.pong42.com/chat/room/" + user_id, {
+                method: 'GET',
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken")
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(data.data.room_id);
+                    openChatWindow();
+                    webSocketConnection(data.data.room_id);
+                })
+                .catch(error => {
+                });
+
+
+        });
+
+        function webSocketConnection(room_id) {
+            var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+            var ws_path = ws_scheme + '://' + window.location.host + "/chat/private/" + room_id + "/"; // development
+            var private_chat_socket = new WebSocket(ws_path);
+
+            private_chat_socket.onmessage = function (message) {
+                console.log("Got chat websocket message " + message.data);
+                var data = JSON.parse(message.data);
+                if (data.error) {
+                    console.error(data.error + ": " + data.message);
+                    showClientErrorModal(data.message);
+                    return;
+                }
+                if (data.join) {
+                    console.log("Joining private room " + data.join);
+                    getRoomChatMessages();
+                }
+                if (data.msg_type == 0) {
+                    appendChatMessage(data, true, true);
+                }
+                else if (data.msg_type == 1) {
+                    setConnectedUsersCount(data.connected_user_count);
+                }
+                if (data.messages_data) {
+                    console.log("PAYLOAD");
+                    handleMessagesPayload(data.messages, data.new_page_number);
+                }
+            };
+
+            private_chat_socket.addEventListener("open", function (e) {
+                console.log("private ChatSocket OPEN");
+                private_chat_socket.send(JSON.stringify({
+                    "command": "join",
+                    "room": room_id,
+                    "type": "private"
+                }));
+            });
+
+            private_chat_socket.onclose = function (e) {
+                console.error('private ChatSocket closed.');
+            };
+
+            private_chat_socket.onOpen = function (e) {
+                console.log("private ChatSocket onOpen", e);
+            };
+
+            private_chat_socket.onerror = function (e) {
+                console.log('private ChatSocket error', e);
+            };
+
+            if (private_chat_socket.readyState == WebSocket.OPEN) {
+                console.log("private ChatSocket OPEN");
+            } else if (private_chat_socket.readyState == WebSocket.CONNECTING) {
+                console.log("private ChatSocket connecting..");
+            }
+
+            document.getElementById('id_chat_message_input').focus();
+            document.getElementById('id_chat_message_input').onkeyup = function (e) {
+                if (e.keyCode === 13 && e.shiftKey) {  // enter + return
+                    // Handled automatically by textarea
+                }
+                else if (e.keyCode === 13 && !e.shiftKey) { // enter + !return
+                    document.getElementById('id_chat_message_submit').click();
+                }
+            };
+
+            document.getElementById('id_chat_message_submit').onclick = function (e) {
+                const messageInputDom = document.getElementById('id_chat_message_input');
+                const message = messageInputDom.value;
+                private_chat_socket.send(JSON.stringify({
+                    "command": "send",
+                    "message": message,
+                    "room_id": room_id
+                }));
+                messageInputDom.value = '';
+            };
+
+            function appendChatMessage(data, maintainPosition, isNewMessage) {
+                message = data['message'];
+                uName = data['username'];
+                user_id = data['user_id'];
+                avatar = data['avatar'];
+                timestamp = data['timestamp'];
+
+                var msg = message + '\n';
+                var username = uName + ": ";
+                createChatMessageElement(msg, username, avatar, user_id, timestamp, maintainPosition, isNewMessage);
+            }
+
+            function handleMessagesPayload(messages, new_page_number) {
+                if (messages != null && messages != "undefined" && messages != "None") {
+                    setPageNumber(new_page_number);
+                    messages.forEach(function (message) {
+                        appendChatMessage(message, true, false);
+                    });
+                }
+                else {
+                    setPaginationExhausted(); // no more messages
+                }
+            }
+
+            function setPageNumber(pageNumber) {
+                document.getElementById("id_page_number").innerHTML = pageNumber;
+                console.log("PageNumber SET!");
+            }
+
+            function setPaginationExhausted() {
+                setPageNumber("-1");
+            }
+
+            /*
+                Retrieve the chat room messages given the page number.
+            */
+            function getRoomChatMessages() {
+                var pageNumber = document.getElementById("id_page_number").innerHTML;
+                if (pageNumber != "-1") {
+                    setPageNumber("-1"); // Do not allow any other queries while one is in progress
+                    private_chat_socket.send(JSON.stringify({
+                        "command": "get_room_chat_messages",
+                        "room_id": room_id,
+                        "page_number": pageNumber,
+                    }));
+                }
+            }
+
+            /*
+                Get the next page of chat messages when scrolls to bottom
+            */
+            document.getElementById("chatLog").addEventListener("scroll", function (e) {
+                var chatLog = document.getElementById("chatLog");
+                chatLog.addEventListener("scroll", function (e) {
+                    if ((Math.abs(chatLog.scrollTop) + 2) >= (chatLog.scrollHeight - chatLog.offsetHeight)) {
+                        getRoomChatMessages();
+                    }
+                });
+            });
+
+
+
+            function createChatMessageElement(msg, username, avatar, user_id, timestamp, maintainPosition, isNewMessage) {
+                var chatLog = document.getElementById("chatLog");
+
+                var newMessageDiv = document.createElement("div");
+                newMessageDiv.classList.add("d-flex");
+                newMessageDiv.classList.add("flex-row");
+
+                var profileImage = document.createElement("img");
+                profileImage.classList.add("profile-image");
+                profileImage.classList.add("rounded-circle");
+                profileImage.classList.add("img-fluid");
+                profileImage.src = avatar;
+                newMessageDiv.appendChild(profileImage);
+
+                var div1 = document.createElement("div");
+                div1.classList.add("d-flex");
+                div1.classList.add("flex-column");
+
+                var div2 = document.createElement("div");
+                div2.classList.add("d-flex");
+                div2.classList.add("flex-row");
+
+                var usernameSpan = document.createElement("span");
+                usernameSpan.innerHTML = username;
+                div2.appendChild(usernameSpan);
+
+                var timestampSpan = document.createElement("span");
+                timestampSpan.innerHTML = timestamp;
+                timestampSpan.classList.add("timestamp-span");
+                timestampSpan.classList.add("d-flex");
+                timestampSpan.classList.add("align-items-center");
+                timestampSpan.addEventListener("click", function (e) {
+                    selectUser(user_id);
+                });
+                div2.appendChild(timestampSpan);
+
+                div1.appendChild(div2);
+
+                var msgP = document.createElement("p");
+                msgP.innerHTML = msg;
+                msgP.classList.add("msg-p");
+                div1.appendChild(msgP);
+
+                newMessageDiv.appendChild(div1);
+                if (isNewMessage) {
+                    chatLog.insertBefore(newMessageDiv, chatLog.firstChild);
+                }
+                else {
+                    chatLog.appendChild(newMessageDiv);
+                }
+
+                if (!maintainPosition) {
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                }
+                // chatLog.insertBefore(newMessageDiv, chatLog.firstChild)
+            }
+
+            function showClientErrorModal(message) {
+                document.getElementById("id_client_error_modal_body").innerHTML = message;
+                document.getElementById("id_trigger_client_error_modal").click();
+            }
+
+            function setConnectedUsersCount(count) {
+                element = document.getElementById("id_connected_users");
+                element.innerHTML = count;
+            }
+        }
+
+        function openChatWindow() {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.style.display = 'flex'; // Show the chat window
+        }
+
+        // Close chat window
+        document.getElementById('closeChatBtn').addEventListener('click', function () {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.style.display = 'none'; // Hide the chat window
+        });
+
+        // Minimize chat window
+        document.getElementById('minimizeChatBtn').addEventListener('click', function () {
+            const chatBody = document.getElementById('chatBody');
+            const chatFooter = document.getElementById('chatFooter');
+            if (chatBody.style.display === 'none') {
+                chatBody.style.display = 'block';
+                chatFooter.style.display = 'flex';
+            } else {
+                chatBody.style.display = 'none';
+                chatFooter.style.display = 'none';
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>

@@ -162,13 +162,10 @@ export const gameAPI = {
     
     /**
      * @param {number} user_id 
-     * @param {0 | 1} game_id 
-     * @param {"1vs1" | "tournament"} game_mode 
-     * @param {number} tournament_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
-    sendInvite: async (user_id, game_id, game_mode, tournament_id) =>
-        await fetcher.$post(`/game/invite/${user_id}`, { bodyData: { game_id, game_mode, tournament: tournament_id } }),
+    sendInvite: async (user_id) =>
+        await fetcher.$post(`/game/invite/${user_id}`, { bodyData: { game_id: 0, game_mode: "1vs1", tournament: null } }),
     
     /**
      * @param {number} invite_id
@@ -193,37 +190,52 @@ export const gameAPI = {
     
     /**
      * @param {string} name
-     * @param {"round robin" | "single elimination" | "double elimination"} mode
-     * @param {0 | 1} game_id 
+     * @param {APITypes.TournamentMode} mode
      * @param {number[]} players 
-     * @param {number} nb_rounds
-     * @returns {Promise<APITypes.ApiResponse<null>>}
+     * @returns {Promise<APITypes.ApiResponse<{tournament_id: number}>>}
      */
-    createTournament: async (name, mode, game_id, players, nb_rounds=1) =>
-        await fetcher.$post(`/game/tournament-create`, {
-            bodyData: { name, mode, game_id, players, nb_players: players.length, nb_rounds }
-        }),
+    createTournament: async (name, mode, players) => {
+        return await fetcher.$post(`/game/tournament-create`, {
+            bodyData: { name, mode, game_id: 0, players }
+        })
+    },
     
     /**
-     * @returns {Promise<APITypes.ApiResponse<null>>}
+     * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentItem[]>>}
      */
     getTournaments: async () =>
         await fetcher.$get(`/game/tournaments`),
     
     /**
      * @param {number} tournament_id
-     * @returns {Promise<APITypes.ApiResponse<null>>}
+     * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentData>>}
      */
     getTournamentDetails: async (tournament_id) =>
         await fetcher.$get(`/game/tournament-details/${tournament_id}`),
     
+
     /**
-     * @param {number} tournament_id
+     * @param {number} schedule_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
-    startTournament: async (tournament_id) =>
-        await fetcher.$post(`/game/tournament-start/${tournament_id}`),
-    
+    pushRandomResults: async (schedule_id, max_score) => {
+        let score_one, score_two;
+        const rand = Math.random();
+        if (rand < 0.5) {
+            score_one = max_score;
+            score_two = Math.trunc(Math.random() * max_score);
+        } else {
+            score_two = max_score;
+            score_one = Math.trunc(Math.random() * max_score);
+        }
+        console.log('score one: ', score_one);
+        console.log('score two: ', score_two);
+        return (await fetcher.$post(`/game/result`, {bodyData: {
+                schedule_id,
+                score_one,
+                score_two
+            }}));
+    },
     /**
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem[]>>}
      */
@@ -231,30 +243,26 @@ export const gameAPI = {
         await fetcher.$post(`/game/schedule`),
     
     /**
-     * @returns {Promise<APITypes.ApiResponse<null>>}
+     * @returns {Promise<APITypes.ApiResponse<APITypes.GameResultItem[]>>}
      */
-    getHistory: async () =>
-        await fetcher.$get(`/game/history`),
-    
+    getHistory: async (username) =>
+        username == undefined ? await fetcher.$get(`/game/history`)
+        : await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ user: username }) } ),
+        
     /**
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     getStats: async () =>
         await fetcher.$get(`/game/stats`),
     
-    /**
-     * @param {number} schedule_id
-     * @returns {Promise<APITypes.ApiResponse<null>>}
-     */
-    startGame: async (schedule_id) =>
-        await fetcher.$post(`/game/play/${schedule_id}`),
+
 };
 
 
 export class SessionStore {
 
     constructor() {
-        this.#initNotificationSocket();
+        // this.#initNotificationSocket();
     }
 
     #isLoggedIn = false;
@@ -288,7 +296,7 @@ export class SessionStore {
             return await this.login(username, password);
         } catch (error) {
             this.handleFetchError(error);
-            return error;
+            return null;
         }
     }
 
@@ -316,6 +324,7 @@ export class SessionStore {
             return loginData;
         } catch (error) {
             this.handleFetchError(error);
+            return null;
         }
     }
 
@@ -361,22 +370,75 @@ export class SessionStore {
     // else if (list == "friends" && this.#sessionData.user) item = this.#sessionData.user.friends;
     // else if (list == "blocked" && this.#sessionData.user) item = this.#sessionData.user.blocked;
 
-    getFriendReqRec = (user_id) => this.#sessionData?.friend_requests_received?.find((i)=> i.id === user_id);
-    getFriendReqSent = (user_id) => this.#sessionData?.friend_requests_sent?.find((i)=> i.id === user_id);
-    getGameInvitRec = (user_id) => this.#sessionData?.game_invitations_received?.find((i)=> i.id === user_id);
-    getGameInvitSent = (user_id) => this.#sessionData?.game_invitations_sent?.find((i)=> i.id === user_id);
+    /** @param {number} user_id */
+    getReceivedFriendRequest = (user_id) => this.#sessionData?.friend_requests_received?.find((i)=> i.id === user_id);
+    /** @param {number} user_id */
+    getSentFriendRequest = (user_id) => this.#sessionData?.friend_requests_sent?.find((i)=> i.id === user_id);
+    /** @param {number} user_id */
     getFriend = (user_id) => this.#sessionData?.user?.friends?.find((i)=> i.id === user_id);
+    /** @param {number} user_id */
     getBlocked = (user_id) => this.#sessionData?.user?.blocked?.find((i)=> i.id === user_id);
+    /** @param {number} user_id @param {APITypes.GameMode} mode */
+    getReceivedGameInvitation = (user_id, mode) => this.#sessionData?.game_invitations_received?.find((i)=> i.game_mode === "1vs1" && i.id === user_id);
+    /** @param {number} user_id @param {"received" | "sent"} type @param {APITypes.GameMode} mode */
+    getGameInvitations = (user_id, type, mode) => {
+        if (type === "received") return this.#sessionData?.game_invitations_received?.filter(item => item.game_mode === mode && item.id === user_id);
+        if (type === "sent") return this.#sessionData?.game_invitations_sent?.filter(item => item.game_mode === mode && item.id === user_id);
+        return undefined;
+    }
+
+    /** @param {number} schedule_id */
+    getGameByScheduleId = (schedule_id) =>
+        this.#sessionData?.game_schedule?.find((i)=> i.schedule_id === schedule_id);
+
+    /** @param {"all" | APITypes.GameMode} mode */
+    getGamesByGameMode = (mode) =>
+        mode === "all" ? this.#sessionData?.game_schedule : this.#sessionData?.game_schedule?.find((i)=> i.game_mode === mode);
+
+    /** @param {number} user_id @param {"all" | APITypes.GameMode} mode */
+    getGamesWithUser = (user_id, mode) => {
+        const filt = /** @param {APITypes.GameScheduleItem} game */ ( game) => {
+            if (mode === "all")
+                return game.player_one.id === user_id || game.player_two.id === user_id;
+            if (mode !== game.game_mode) return (false);
+            return game.player_one.id === user_id || game.player_two.id === user_id;
+        }
+        return this.#sessionData?.game_schedule?.filter(filt);
+            
+    }
+
+    /** @param {number} user_id */
+    canSend1vs1GameInvitation = (user_id) => {
+        console.log('canSend1vs1GameInvitation: user_id: ', user_id);
+        console.log('canSend1vs1GameInvitation: getReceivedGameInvitation: ', this.getGameInvitations(user_id, "received", "1vs1"));
+        console.log('canSend1vs1GameInvitation: getSentGameInvitation: ', this.getGameInvitations(user_id, "received", "1vs1"));
+        console.log('canSend1vs1GameInvitation: getGamesWithUser: ', this.getGamesWithUser(user_id, "1vs1"));
+        const rec = this.getGameInvitations(user_id, "received", "1vs1");
+        if (rec && rec.length > 0) return false;
+        const sent = this.getGameInvitations(user_id, "sent", "1vs1");
+        if (sent && sent.length > 0) return false;
+        const games = this.getGamesWithUser(user_id, "1vs1");
+        if (games && games.length > 0) return false;
+        return true;
+    }
+
+    /** @param {number} user_id  */
+    async sendGameInvitation(user_id) {
+        if (!this.#isLoggedIn || !this.#sessionData) return;
+        await gameAPI.sendInvite(user_id);
+        await this.updateData(["game_invitations_sent"]);
+    }
 
     /**
-     * @param {number} user_id 
-     * @param {"1vs1" | "tournament"} game_mode 
-     * @param {0 | 1} game_id 
-     */
-    async sendGameInvitation(user_id, game_mode, game_id = 0) {
+     * @param {string} tournamentName
+     * @param {APITypes.TournamentMode} mode
+     * @param {number[]} players
+    */
+    async createTournament(tournamentName, mode, players) {
         if (!this.#isLoggedIn || !this.#sessionData) return;
-        await gameAPI.sendInvite(user_id, game_id, game_mode, 0);
+        const d = await gameAPI.createTournament(tournamentName, mode, players);
         await this.updateData(["game_invitations_sent"]);
+        return d;
     }
 
     async updateUserData(formData) {
@@ -403,21 +465,23 @@ export class SessionStore {
     async updateData(lists, user_id) {
         if (this.#sessionData?.user) user_id = this.#sessionData.user.id;
         if (!user_id) throw new Error("unable to fetch data without the user id");
-        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]>> []} */
+        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<APITypes.GameResultItem[]> > []} */
         let promises = [];
         if (lists.length == 1 && lists[0] == "all") {
             // console.log('fetch all');
-            lists = ["user", "friend_requests_received", "friend_requests_sent", "game_invitations_received", "game_invitations_sent", "game_schedule"]
+            lists = ["user", "friend_requests_received", "friend_requests_sent", "game_invitations_received", "game_invitations_sent", "game_schedule", "game_results"]
             promises = [
                 userAPI.getProfile(user_id),
                 friendAPI.getRequestsReceived(user_id),
                 friendAPI.getRequestsSent(user_id),
                 gameAPI.getInvitesReceived(),
                 gameAPI.getInvitesSent(),
-                gameAPI.getGameSchedule()
+                gameAPI.getGameSchedule(),
+                gameAPI.getHistory()
             ]
         } else {
             for (const list of lists) {
+                console.log('UPDATE: ', list);
                 switch (list) {
                     case "user":
                         promises.push(userAPI.getProfile(user_id));
@@ -436,6 +500,10 @@ export class SessionStore {
                         break;
                     case "game_schedule":
                         promises.push(gameAPI.getGameSchedule());
+                        break;
+                    case "game_results":
+                        promises.push(gameAPI.getHistory());
+                        break;
                     default:
                         throw new Error("INVALID UPDATE ITEM");
                 }
@@ -487,6 +555,18 @@ export class SessionStore {
         }
     }
 
+    async finishGameUpdateData(schedule_id) {
+        const item = this.getGameByScheduleId(schedule_id);
+        if (item == undefined)
+            throw new Error("SessionService: finishGameUpdateData: invalid schedule_id -> not found");
+        try {
+            const d = await gameAPI.pushRandomResults(schedule_id, 10);
+            this.updateData(["game_schedule"]);
+        } catch (error) {
+            this.handleFetchError(error)
+        }
+    }
+
 
     /**
      * @param {"friend-reject" | "friend-accept" | "friend-cancel" | "game-reject" | "game-accept" | "game-cancel"} action
@@ -531,46 +611,11 @@ export class SessionStore {
             this.handleFetchError(error)
         }
     }
-    /**
-     * @param {"friend-reject" | "friend-accept" | "friend-cancel" | "game-reject" | "game-accept" | "game-cancel"} action
-     * @param {number} request_id 
-     */
-    async handleRequestWebsocket(action, request_id) {
-        if (!this.#isLoggedIn || !this.#sessionData) return;
-        let toUpdate = [];
-        if (action === "game-accept") {
-            this.pushToNotificationSocket({command: "accept_game_invitation", notification_id: request_id});
-            toUpdate = ["game_invitations_received", "game_schedule"];
-        
-        } else if (action === "game-reject") {
-            this.pushToNotificationSocket({command: "reject_game_invitation", notification_id: request_id});
-            toUpdate = ["game_invitations_received"]
-        
-        } else if (action === "game-cancel") {
-            toUpdate = ["game_invitations_sent"]
-        
-        } else if (action === "friend-accept") {
-            this.pushToNotificationSocket({command: "accept_friend_request", notification_id: request_id});
-            toUpdate = ["friend_requests_received", "user"]
-        
-        } else if (action === "friend-reject") {
-            this.pushToNotificationSocket({command: "reject_friend_request", notification_id: request_id});
-            toUpdate = ["friend_requests_received"]
-        
-        } else if (action === "friend-cancel") {
-            toUpdate = ["friend_requests_sent"]
-        }
-        setTimeout(async () => {
-            await this.updateData(toUpdate);
-        }, 1000);
-    }
-
 
     /**
-     * 
      * @param {BaseBase} [host]
-     * @param {boolean} force 
-     * @returns {PubSubConsumer<APITypes.UserSession | undefined>}
+     * @param {boolean} [force] 
+     * @returns {PubSubConsumer<APITypes.UserSession>}
      */
     subscribe(host, force = false) {
         // // console.log('subscribe to sessionService');
@@ -580,59 +625,93 @@ export class SessionStore {
     #pubsub = new PubSub();
 
     /**
-     * @typedef {"message" | "open" | "close" | "error"} SocketEventType
-     */
-    /**
-     * @typedef {((e: Event) => void)} SocketHandler
-     */
+    //  * @param {"friend-reject" | "friend-accept" | "friend-cancel" | "game-reject" | "game-accept" | "game-cancel"} action
+    //  * @param {number} request_id 
+    //  */
+    // async handleRequestWebsocket(action, request_id) {
+    //     if (!this.#isLoggedIn || !this.#sessionData) return;
+    //     let toUpdate = [];
+    //     if (action === "game-accept") {
+    //         this.pushToNotificationSocket({command: "accept_game_invitation", notification_id: request_id});
+    //         toUpdate = ["game_invitations_received", "game_schedule"];
+        
+    //     } else if (action === "game-reject") {
+    //         this.pushToNotificationSocket({command: "reject_game_invitation", notification_id: request_id});
+    //         toUpdate = ["game_invitations_received"]
+        
+    //     } else if (action === "game-cancel") {
+    //         toUpdate = ["game_invitations_sent"]
+        
+    //     } else if (action === "friend-accept") {
+    //         this.pushToNotificationSocket({command: "accept_friend_request", notification_id: request_id});
+    //         toUpdate = ["friend_requests_received", "user"]
+        
+    //     } else if (action === "friend-reject") {
+    //         this.pushToNotificationSocket({command: "reject_friend_request", notification_id: request_id});
+    //         toUpdate = ["friend_requests_received"]
+        
+    //     } else if (action === "friend-cancel") {
+    //         toUpdate = ["friend_requests_sent"]
+    //     }
+    //     setTimeout(async () => {
+    //         await this.updateData(toUpdate);
+    //     }, 1000);
+    // }
 
-    /** @type {Map<SocketEventType, SocketHandler>} */
-    #socketHandlerMap = new Map();
-    /**
-     * @param {SocketEventType} type 
-     * @param {SocketHandler} handler
-     */
-    addNotificationMessageHandler(type, handler) {
-        console.log('addNotificationMessageHandler');
-        this.#socketHandlerMap.set(type, handler);
-        if (type === "open" && this.#openSockerEvent)
-            handler(this.#openSockerEvent);
-    }
+    // /**
+    //  * @typedef {"message" | "open" | "close" | "error"} SocketEventType
+    //  */
+    // /**
+    //  * @typedef {((e: Event) => void)} SocketHandler
+    //  */
 
-    /** @param {Event | MessageEvent} e */
-    onSocketEvent = (e) => {
-        const jo = e.type;
-        console.log('socket event: ', e);
-        if (jo === "close" || jo === "error" || jo === "open" || jo === "message") {
-            if (jo === "open")
-                this.#openSockerEvent = e;
-            const hh = this.#socketHandlerMap.get(jo);
-            console.log(hh);
-            if (hh) hh(e);
-        }
-    }
-    #openSockerEvent;
+    // /** @type {Map<SocketEventType, SocketHandler>} */
+    // #socketHandlerMap = new Map();
+    // /**
+    //  * @param {SocketEventType} type 
+    //  * @param {SocketHandler} handler
+    //  */
+    // addNotificationMessageHandler(type, handler) {
+    //     console.log('addNotificationMessageHandler');
+    //     this.#socketHandlerMap.set(type, handler);
+    //     if (type === "open" && this.#openSockerEvent)
+    //         handler(this.#openSockerEvent);
+    // }
 
-    /** @type {WebSocket | null} */
-    notificationSocket = null;
-    #initNotificationSocket() {
-        this.notificationSocket = new WebSocket(`wss://api.${window.location.host}/`);
-        if (this.notificationSocket.readyState == WebSocket.OPEN)
-            console.log("Notification Socket OPEN complete.")
-        else if (this.notificationSocket.readyState == WebSocket.CONNECTING)
-            console.log("Notification Socket connecting..")
-      
-        this.notificationSocket.addEventListener("open", this.onSocketEvent);
-        this.notificationSocket.addEventListener("error", this.onSocketEvent);
-        this.notificationSocket.addEventListener("message", this.onSocketEvent);
-        this.notificationSocket.addEventListener("close", this.onSocketEvent);
-    }
+    // /** @param {Event | MessageEvent} e */
+    // onSocketEvent = (e) => {
+    //     const jo = e.type;
+    //     // console.log('socket event: ', e);
+    //     if (jo === "close" || jo === "error" || jo === "open" || jo === "message") {
+    //         if (jo === "open")
+    //             this.#openSockerEvent = e;
+    //         const hh = this.#socketHandlerMap.get(jo);
+    //         // console.log(hh);
+    //         if (hh) hh(e);
+    //     }
+    // }
+    // #openSockerEvent;
 
-     /** @param {NotificationTypes.NotificationCommand} command */
-    pushToNotificationSocket(command) {
-        if (this.notificationSocket)
-            this.notificationSocket.send(JSON.stringify(command));
-    }
+    // /** @type {WebSocket | null} */
+    // notificationSocket = null;
+    // #initNotificationSocket() {
+    //     this.notificationSocket = new WebSocket(`wss://api.${window.location.host}/`);
+    //     if (this.notificationSocket.readyState == WebSocket.OPEN)
+    //         console.log("Notification Socket OPEN complete.")
+    //     else if (this.notificationSocket.readyState == WebSocket.CONNECTING)
+    //         console.log("Notification Socket connecting..")
+
+    //     this.notificationSocket.addEventListener("open", this.onSocketEvent);
+    //     this.notificationSocket.addEventListener("error", this.onSocketEvent);
+    //     this.notificationSocket.addEventListener("message", this.onSocketEvent);
+    //     this.notificationSocket.addEventListener("close", this.onSocketEvent);
+    // }
+
+    //  /** @param {NotificationTypes.NotificationCommand} command */
+    // pushToNotificationSocket(command) {
+    //     if (this.notificationSocket)
+    //         this.notificationSocket.send(JSON.stringify(command));
+    // }
 }
 
 export const sessionService = new SessionStore();

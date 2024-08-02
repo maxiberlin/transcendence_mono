@@ -7,3 +7,8 @@ export const rRow = (classes, content) => html`
 export const rCol = (classes, content) => html`
     <div class="${classes}">${content}</div>
 `;
+
+/**
+ * @param {string} [date]
+ */
+export const humanizedDate = (date) => date == undefined ? '-' : new Date(date).toLocaleDateString()

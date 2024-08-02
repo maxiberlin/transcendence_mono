@@ -2,10 +2,17 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { sessionService } from '../../services/api/API_new.js';
 import { actions, actionButtonDropdowns } from '../../components/ActionButtons.js';
 import router from '../../services/router.js';
-import { renderAvatar, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
+import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 
 /**
  * @typedef {"fv$friends" | "fv$rec" | "fv$sent" | "fv$blocked"} ListType
+ */
+
+/**
+ * @typedef {APITypes.BlockedUserData[] | APITypes.FriendUserData[] | APITypes.FriendRequestItem[]} SocialUserDataList
+ */
+/**
+ * @typedef {APITypes.BlockedUserData | APITypes.FriendUserData | APITypes.FriendRequestItem} SocialUserData
  */
 
 export default class FriendsView extends BaseElement {
@@ -70,10 +77,16 @@ export default class FriendsView extends BaseElement {
 
 
     /**
-     * @param {APITypes.UserData} data 
+     * @param {SocialUserData} data 
      * @returns 
      */
     getUserBtn = (data) => {
+        // console.log('sent 1vs1 game invitations: ', sessionService.getSentGameInvitations(data.id, "1vs1"));
+        // console.log('sent all game invitations: ', sessionService.getSentGameInvitations(data.id, "all"));
+        // console.log('sent tournament game invitations: ', sessionService.getSentGameInvitations(data.id, "tournament"));
+        // console.log('received 1vs1 game invitations: ', sessionService.getReceivedGameInvitations(data.id, "1vs1"));
+        // console.log('received all game invitations: ', sessionService.getReceivedGameInvitations(data.id, "all"));
+        // console.log('received tournament game invitations: ', sessionService.getReceivedGameInvitations(data.id, "tournament"));
         if (this.#lCurr === "fv$rec" && 'request_id' in data && typeof data.request_id === "number")
             return html`
                 <div class="d-flex">
@@ -85,10 +98,11 @@ export default class FriendsView extends BaseElement {
             return actions.cancelFriendRequest(data.request_id, { host: this, showText: true } );
         if (this.#lCurr === "fv$blocked")
             return actions.unBlockUser(data.id, { host: this });
+        
         if (this.#lCurr === "fv$friends")
             return html`
                 <div class="d-flex" >
-                    ${sessionService.getGameInvitSent(data.id) !== undefined ? '' :
+                    ${sessionService.canSend1vs1GameInvitation(data.id) === false ? '' :
                         actions.sendGameInvitation(data.id, { host: this, showText: false })}
                     ${actionButtonDropdowns.friendActions(data.id)}
                 </div>
@@ -116,7 +130,7 @@ export default class FriendsView extends BaseElement {
     }
 
     /**
-     * @param {APITypes.UserData} userData
+     * @param {SocialUserData} userData
      * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral}
      */
     renderFriendlistEntry = (userData) => {

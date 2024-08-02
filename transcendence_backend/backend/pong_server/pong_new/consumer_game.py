@@ -1,12 +1,9 @@
-# import os
-# os.environ["PYTHONASYNCIODEBUG"] = "1"
+import os
+os.environ["PYTHONASYNCIODEBUG"] = "1"
 # from .game_async import PongGame
-from .game_async_new import PongGame
+from .game_async_new import PongGame, GameData
 from .pong_settings import PongSettings
 import logging
-import queue
-import concurrent.futures
-import functools
 from . import messages_client as msg_client
 from . import messages_server as msg_server
 from channels.layers import get_channel_layer, InMemoryChannelLayer
@@ -36,6 +33,7 @@ logHandler = logging.StreamHandler(sys.stdout)
 logFormatter = logging.Formatter(fmt='%(levelname)-8s:: Game Engine: %(message)s')
 logHandler.setFormatter(logFormatter)
 logger.addHandler(logHandler)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
 
@@ -170,7 +168,7 @@ class GameHandle:
         self.idle_timeout_task: asyncio.Task | None = None
         self.start_game_timeout_task: asyncio.Task | None = None
         self.game: PongGame | None = None
-        self.gameScheduleObj: GameSchedule | None = None
+        self.gameData: GameData | None = None
         self.last_action = time.time()
         self.removed = False
 
@@ -218,12 +216,19 @@ class GameHandle:
         except UserAccount.DoesNotExist:
             logger.error(f"__add_user_to_game: user_id: {user_id} not found")
             raise msg_server.CommandError(f"join game: user_id: {user_id} not found", error_code=msg_server.WebsocketErrorCode.INVALID_USER_ID)
-        if not self.gameScheduleObj:
-            try:
-                self.gameScheduleObj = GameSchedule.objects.get(pk=schedule_id)
-            except GameSchedule.DoesNotExist:
-                logger.error(f"__add_user_to_game: user_id: {user_id}, Game for schedule_id: {schedule_id} not found")
-                raise msg_server.CommandError(f"join game: Game for schedule_id: {schedule_id} not found", error_code=msg_server.WebsocketErrorCode.INVALID_SCHEDULE_ID)
+        try:
+            gameScheduleObj = GameSchedule.objects.get(pk=schedule_id)
+        except GameSchedule.DoesNotExist:
+            logger.error(f"__add_user_to_game: user_id: {user_id}, Game for schedule_id: {schedule_id} not found")
+            raise msg_server.CommandError(f"join game: Game for schedule_id: {schedule_id} not found", error_code=msg_server.WebsocketErrorCode.INVALID_SCHEDULE_ID)
+        if not self.gameData:
+            self.gameData = GameData(
+                schedule_id=gameScheduleObj.pk,
+                player_one_pk=gameScheduleObj.player_one.user.pk,
+                player_two_pk=gameScheduleObj.player_two.user.pk,
+                player_one_score=0,
+                player_two_score=0
+            )
         
         # logger.debug(f"GameHandle: __add_user_to_game: Sessions: {GameHandle.__running_user_sessions}")
         
@@ -234,7 +239,7 @@ class GameHandle:
         #     logger.error(f"__add_user_to_game: user_id: {user_id} has a running game session")
         #     raise msg_server.CommandError(f"join game: user_id: {user_id} has a running game session", error_code=msg_server.WebsocketErrorCode.ALREADY_RUNNING_GAME_SESSION)
         
-        if self.gameScheduleObj.player_one.user == user or self.gameScheduleObj.player_two.user == user:
+        if gameScheduleObj.player_one.user == user or gameScheduleObj.player_two.user == user:
             self.connected_user_ids.add(user.pk)
             self.__running_user_sessions[user.pk] = self.game_group_name
         else:
@@ -246,8 +251,8 @@ class GameHandle:
         logger.debug(f"GameHandle: __start_game")
         logger.debug(f"self.game: {self.game}")
         # logger.debug(f"self.game.is_alive(): {self.game.is_alive()}")
-        logger.debug(f"self.gameScheduleObj: {self.gameScheduleObj}")
-        if self.game and not self.game.is_running() and self.gameScheduleObj:
+        logger.debug(f"self.gameData: {self.gameData}")
+        if self.game and not self.game.is_running() and self.gameData:
             if (self.join_timeout_task):
                 self.join_timeout_task.cancel()
             self.last_action = time.time()
@@ -305,10 +310,10 @@ class GameHandle:
             ):
                 logger.error(f"player_join: {self.game_group_name}: unable to send to consumer")
         
-            if self.all_players_connected() and self.start_game_timeout_task is None:
+            if self.all_players_connected() and self.start_game_timeout_task is None and self.gameData:
                 logger.info(f"GameHandle: player_join: all users connected, start start_game_timeout. users: {self.connected_user_ids}")
                 self.start_game_timeout_task = asyncio.get_running_loop().create_task(start_game_timeout(self))
-                self.game = PongGame(self.settings, self.game_group_name, self.gameScheduleObj, self.channel_alias)
+                self.game = PongGame(self.settings, self.game_group_name, self.gameData, self.channel_alias)
                 jooda = self.game.get_initial_game_data(START_GAME_TIMEOUT, RECONNECT_TIMEOUT)
                 # print(f"jodaa", jooda.to_dict())
                 await msg_server.async_send_to_consumer(jooda, group_name=self.game_group_name)
@@ -322,7 +327,7 @@ class GameHandle:
         elif self.game and self.game.is_running():
             # logger.info(f"GameHandle: push_action: user: {user_id}, command: {action}")
             self.last_action = time.time()
-            self.game.process_command(action)
+            await self.game.process_command(action)
             # self.game
             # self.q.put_nowait(action)
         else:
@@ -334,9 +339,9 @@ class GameHandle:
         if self.game and self.game.is_running():
             logger.info(f"GameHandle: __quit: quit the game {self.game_group_name}, user: {user_id}")
             if not user_id:
-                self.game.process_command(self.__messenger.timeout())
+                await self.game.process_command(self.__messenger.timeout())
             else:
-                self.game.process_command(self.__messenger.leave_game(user_id))
+                await self.game.process_command(self.__messenger.leave_game(user_id))
             self.game.stop_game_loop()
             del self.game
             self.game = None
@@ -352,7 +357,7 @@ class GameHandle:
         logger.debug(f"debug game_handle members: connected_user_ids: {self.connected_user_ids}")
         logger.debug(f"debug game_handle members: game: {self.game}")
         logger.debug(f"debug game_handle members: game_group_name: {self.game_group_name}")
-        logger.debug(f"debug game_handle members: gameScheduleObj: {self.gameScheduleObj}")
+        logger.debug(f"debug game_handle members: gameData: {self.gameData}")
         logger.debug(f"debug game_handle members: idle_timeout_task: {self.idle_timeout_task}")
         logger.debug(f"debug game_handle members: join_timeout_task: {self.join_timeout_task}")
         logger.debug(f"debug game_handle members: reconnect_tasks: {self.reconnect_tasks}")

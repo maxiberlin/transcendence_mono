@@ -44,18 +44,19 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'oauth2_provider',
 
     'corsheaders',
     'channels',
     # 'django_extensions',
 
     'user',
+    'chat',
+    'public_chat',
     'friends',
     'game',
     'pong_server',
     'notification'
-    # 'public_chat',
-    # 'chat',
     
     
 ]
@@ -142,6 +143,17 @@ DATABASES = {
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'pongdb',
+#         'USER': 'postgres',
+#         'PASSWORD': 'asd',
+#         'HOST': 'postgres',
+#         'PORT': '5432',
+#     }
+# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -161,6 +173,21 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+#Oauth Provider
+OAUTH2_PROVIDER = {
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 600,
+    'AUTHORIZATION_CODE_EXPIRE_SECONDS': 600,
+    'CLIENT_ID_GENERATOR_CLASS': 'oauth2_provider.generators.ClientIdGenerator',
+    'CLIENT_SECRET_GENERATOR_CLASS': 'oauth2_provider.generators.ClientSecretGenerator',
+    'SCOPES': {
+        'read': 'Read scope',
+        'write': 'Write scope',
+        'openid': 'OpenID Connect scope',
+    }
+}
+
+CLIENT_ID = 'u-s4t2ud-90c38235b093f31b4c39038283dd818335b0a8c06c68d9d557c489c343346a55'
+CLIENT_SECRET = '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'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/

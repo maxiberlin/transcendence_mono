@@ -3,7 +3,7 @@
 /* eslint-disable no-console */
 import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
 import GameHub from '../../gaming/manager/gameHub.js';
-import { avatarInfo, avatarLink, renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
+import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { sessionService } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
 import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent } from '../../components/bootstrap/BsToasts.js';
@@ -165,9 +165,10 @@ export default class GameModal2 extends BaseElement {
             this.#paused = false;
         })
         this.currentGame?.setWorkerMessageHandler("from-worker-error", (msg) => {
-            this.currentGame?.quitGame();
-            document.dispatchEvent(new ToastNotificationErrorEvent(msg.error));
-            router.redirect('/')
+            console.log('worker error: ', msg);
+            // this.currentGame?.quitGame();
+            // document.dispatchEvent(new ToastNotificationErrorEvent(msg.error));
+            // router.redirect('/')
         })
         this.currentGame?.setWorkerMessageHandler("from-worker-player-scored", (msg) => {
             
@@ -227,9 +228,41 @@ export default class GameModal2 extends BaseElement {
     #startGameModal = createRef();
     #gameLoaded = false;
     renderGameScreen = () => html`
-        <div ${ref(this.#wrapper)} class="w-100 h-100">
-            
+        <div ${ref(this.#wrapper)} class="w-100 h-100 d-flex justify-content-center align-items-center">
             <canvas ${ref(this.#canvas)} ></canvas>
+        </div>
+    `;
+// z-index:10000
+// 
+    render() {
+        
+        return html`
+            <div class="modal show" tabindex="-1" style="${'display: block;'}" >
+                <div class="modal-dialog modal-fullscreen">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div class="d-flex flex-row">
+                                <button @click=${() => {
+                                    this.currentGame?.quitGame();
+                                    router.redirect("/");
+                                }} type="button" class="btn-close btn-lg"  aria-label="Close"
+                                >
+                                </button>
+                                <button type="button" class=" btn btn-outline-dark"
+                                    @click=${() => {
+                                        if (!this.#paused) this.currentGame?.pauseGame();
+                                        else this.currentGame?.continueGame();
+                                        super.requestUpdate();
+                                    }}
+                                >
+                                    <i class="fa-solid fa-${this.#paused ? 'play' : 'pause'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="modal-body">${this.renderGameScreen()}</div>
+                    </div>
+                </div>
+            </div>
             <bs-modal ${ref(this.#startGameModal)}
                 centered
                 .header=${html`
@@ -271,44 +304,6 @@ export default class GameModal2 extends BaseElement {
             `}
             >
             </bs-modal>
-            
-            ${ this.#gameReady ? '': html`
-                    <div>
-                        <div class="spinner-border text-secondary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        Connecting to the Server...
-                    </div>
-            `}
-        </div>
-    `;
-// z-index:10000
-// 
-    render() {
-        
-        return html`
-            <div class="p-3 bg-white position-fixed top-0 left-0 vh-100 vw-100" style="${"z-index:10000"}"  >
-                <div class="d-flex flex-column">
-                    <div class="d-flex flex-row">
-                        <button @click=${() => {
-                            this.currentGame?.quitGame();
-                            router.redirect("/");
-                        }} type="button" class="btn-close btn-lg"  aria-label="Close"></button>
-                        <button type="button" class=" btn btn-outline-dark"
-                            @click=${() => {
-                                if (!this.#paused) this.currentGame?.pauseGame();
-                                else this.currentGame?.continueGame();
-                                super.requestUpdate();
-                            }} >
-                            <i class="fa-solid fa-${this.#paused ? 'play' : 'pause'}"></i>
-                        </button>
-                    </div>
-                    <div class="">
-                        ${this.renderGameScreen()}
-                    </div>
-                </div>
-
-            </div>
         `;
     }
 

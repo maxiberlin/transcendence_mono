@@ -4,7 +4,7 @@ import dataclasses
 from .messages_server import ServeMode, ServeSide
 
 # speeeeeed_ball = 5000
-speeeeeed_ball = 20000
+speeeeeed_ball = 14000
 speeeeeed_paddle = 18000
 @dataclasses.dataclass
 class PongSettings:

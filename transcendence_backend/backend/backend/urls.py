@@ -21,19 +21,27 @@ from django.conf.urls.static import static
 
 from .errorhandler import error_404
 from django.views.defaults import page_not_found
+from user.views2 import callback, login_auth
+from django.urls import include, path
+from oauth2_provider import urls as oauth2_urls
 
 handler404 = error_404
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('user.urls')),
+
+    path('o/', include(oauth2_urls)),
+    # path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+    path('o/login', login_auth, name='oauth2-login'),
+    path('callback/', callback, name='login-callback'),
+
     path('friend/', include('friends.urls')),
     path('game/', include('game.urls')),
-    # path('public_chat/', include('public_chat.urls')),
-
-    # path('remote', include('pong_server.urls')),
+    path('public_chat/', include('public_chat.urls')),
+    path('chat/', include('chat.urls')),
 ]
-
+    # path('remote', include('pong_server.urls')),
 
 
 

@@ -6,7 +6,7 @@ from .models import *
 class GameResultAdmin(admin.ModelAdmin):
     list_display = ['game_id', 'game_mode', 'player_one', 'player_two', 'player_one_score', 'player_two_score', 'winner', 'timestamp']
     list_search = ['game_id', 'game_mode', 'player_one', 'player_two']
-    list_filter = ['game_id', 'game_mode', 'player_one', 'player_two']
+    list_filter = ['tournament', 'game_id', 'game_mode', 'player_one', 'player_two']
     readonly_fields = ['game_id', 'game_mode', 'player_one', 'player_two', 'player_one_score', 'player_two_score', 'winner', 'loser', 'timestamp']
 
     class Meta:
@@ -18,8 +18,8 @@ admin.site.register(GameResults, GameResultAdmin)
 class GameRequestAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'invitee', 'is_active']
     list_search = ['user', 'invitee']
-    list_filter = ['user', 'invitee', 'is_active']
-    readonly_fields = ['user', 'invitee', 'is_active']
+    list_filter = ['tournament', 'is_active']
+    readonly_fields = ['user', 'invitee']#, 'is_active']
 
     class Meta:
         model = GameRequest
@@ -28,7 +28,7 @@ admin.site.register(GameRequest, GameRequestAdmin)
 
 
 class GameScheduleAdmin(admin.ModelAdmin):
-    list_display = ['id', 'player_one', 'player_two', 'is_active', 'scheduled', 'timestamp']
+    list_display = ['id', 'player_one', 'player_two', 'round', 'is_active']
     list_filter = ['tournament', 'is_active']
 
     class Meta:
@@ -38,7 +38,7 @@ admin.site.register(GameSchedule, GameScheduleAdmin)
 
 
 class TournamentAdmin(admin.ModelAdmin):
-    list_display = ['name', 'mode', 'creator', 'nb_player', 'status', 'winner']
+    list_display = ['name', 'mode', 'creator', 'rounds', 'stage', 'status', 'winner']
     readonly_fields = ['id']
 
     class Meta:

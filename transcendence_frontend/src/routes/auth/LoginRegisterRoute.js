@@ -1,5 +1,5 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { sessionService } from '../../services/api/API_new.js';
+import { fetcher, sessionService } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
 
 /**
@@ -113,17 +113,17 @@ export default class LoginRegisterRoute extends BaseElement {
         try {
             this.showSpinner = true;
             super.requestUpdate();
-            /** @type {APITypes.LoginData} */
+            /** @type {APITypes.ApiResponse<APITypes.LoginData> | APITypes.ApiResponse<null> | null} */
             // console.log("credentials: ", formData.get("username"), formData.get("currentPassword"))
-            const loginData = await sessionService.register(
+            const data = await sessionService.registerAndLogin(
                 formData.get('username'),
                 formData.get('email'),
                 formData.get('password'),
                 formData.get('confirmPassword'),
             );
             // console.log('login : login data received: ', loginData);
-            if (loginData.success) router.redirect('/');
-            else this.toggleErrorMessage(loginData.message);
+            if (data && data.success) router.redirect('/');
+            else if (data) this.toggleErrorMessage(data.message);
         } catch (error) {
             this.toggleErrorMessage('error register');
         }
@@ -134,7 +134,7 @@ export default class LoginRegisterRoute extends BaseElement {
         try {
             this.showSpinner = true;
             super.requestUpdate();
-            /** @type {APITypes.LoginData} */
+            /** @type {APITypes.ApiResponse<APITypes.LoginData> | null} */
 
             // console.log(
             //     'credentials: ',
@@ -142,12 +142,12 @@ export default class LoginRegisterRoute extends BaseElement {
             //     formData.get('currentPassword'),
             // );
             const loginData = await sessionService.login(
-                formData.get('username'),
-                formData.get('currentPassword'),
+                formData.get('username')?.toString(),
+                formData.get('currentPassword')?.toString(),
             );
             // console.log('login : login data received: ', loginData);
-            if (loginData.success) router.redirect('/');
-            else this.toggleErrorMessage(loginData.message);
+            if (loginData && loginData.success) router.redirect('/');
+            else if (loginData) this.toggleErrorMessage(loginData.message);
         } catch (error) {
             // console.log("login error: ", error);
             // console.log("login error name: ", error.name);
@@ -358,7 +358,7 @@ export default class LoginRegisterRoute extends BaseElement {
     render() {
         const val = this.routes.get(this.#currRoute);
         if (!val) return null;
-
+        
         return html/* html */ `
             <pong-bg></pong-bg>
             <div class="modal d-block" tabindex="-1">
@@ -414,6 +414,10 @@ export default class LoginRegisterRoute extends BaseElement {
                                     class="needs-validation"
                                 >
                                     ${val.func(val.link, this.showSpinner)}
+                                    <bs-button ._async_handler=${async () => {
+                                        const data = await fetcher.$get('/o/login');
+                                        console.log('data: ', data);
+                                    }}>Login with 42</bs-button>
                                 </form>
                             </div>
                         </div>

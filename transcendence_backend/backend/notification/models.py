@@ -1,28 +1,29 @@
 from django.db import models
-from user.models import UserAccount
+from user.models import UserAccount, BasicUserData
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType, ContentTypeManager
 from typing import TypeVar, Protocol, Generic, TypedDict
 from django.contrib.humanize.templatetags.humanize import naturaltime
-import abc
+from django.dispatch import receiver
+from django.db.models.signals import post_save, pre_save
+from channels.layers import get_channel_layer
+from channels_redis.core import RedisChannelLayer
+from asgiref.sync import async_to_sync
+from django.utils import timezone
 
-class BasicUserData(TypedDict):
-    id: int
-    username: str
-    avatar: str
+
 
 class NotificationData(TypedDict):
     notification_type: str
     notification_id: int
     description: str
+    action_id: int
     is_active: bool
     is_read: bool
     natural_timestamp: str
     timestamp: int
     redirect_url: str | None
     user: BasicUserData | None
-
-
 
 
 class Notification(models.Model):
@@ -38,39 +39,65 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.description
-
-    def get_content_object_type(self) -> str:
-        if self.content_object and hasattr(self.content_object, "get_cname"):
-            return str(self.content_object.get_cname)
-        return "unknown"
+    
+    def save(self, send_notification=False, **kwargs):
+        self.send_notification = send_notification
+        super().save(**kwargs)
+        print(f"CUSTOM SAVE - AFTER")
     
     def get_notification_data(self) -> "NotificationData":
         model = self.content_object
         notification_type = "unkown"
+        active = False
+        if self.content_object and hasattr(self.content_object, 'is_active') and isinstance(self.content_object.is_active, bool):
+            active = self.content_object.is_active
         if isinstance(model, models.Model):
             notification_type = str(model._meta.model_name)
-        item = None
-        if self.content_object and hasattr(self.content_object, "get_notification_data"):
-            item = self.content_object.get_notification_data(self)
-        is_active = False
-        if self.content_object and hasattr(self.content_object, "has_active_action"):
-            is_active = self.content_object.has_active_action
-        userdata: BasicUserData | None = {
-                "id": self.from_user.pk,
-                "avatar": self.from_user.avatar.url,
-                "username": self.from_user.username
-            } if self.from_user else None
+        # userdata: BasicUserData | None = {
+        #         "id": int(self.from_user.pk),
+        #         "avatar": str(self.from_user.avatar.url),
+        #         "username": str(self.from_user.username)
+        #     } if self.from_user else None
+        
         return {
-            "notification_id": self.pk,
-            "notification_type": notification_type,
+            "notification_id": int(self.pk),
+            "notification_type": str(notification_type),
             "description": str(self.description),
-            "is_read": self.read,
+            "is_read": bool(self.read),
             "timestamp": int(self.timestamp.timestamp()),
-            "natural_timestamp": naturaltime(self.timestamp),
-            "is_active": is_active,
-            "redirect_url": self.redirect_url.rstrip('/') if self.redirect_url else None,
-            "user": userdata
+            "natural_timestamp": str(naturaltime(self.timestamp)),
+            "action_id": int(model.pk if model and active else -1),
+            "is_active": active,
+            "redirect_url": str(self.redirect_url.rstrip('/')) if self.redirect_url else None,
+            "user": self.from_user.get_basic_user_data() if self.from_user else None
         }
+
+
+def get_user_notification_room(user: UserAccount):
+    return f"user-room-{hash(user)}"
+
+
+@receiver(post_save, sender=Notification)
+def create_notification(sender, instance: Notification, created, **kwargs):
+    room = get_user_notification_room(instance.target)
+    layer = get_channel_layer()
+    if not created and not instance.send_notification:
+        return
+    msg_type = "notification.new" if created else "notification.update"
+    try:
+        if isinstance(layer, RedisChannelLayer):
+            async_to_sync(layer.group_send)(
+                room,
+                {
+                    "type": msg_type,
+                    "data": instance.get_notification_data()
+                }
+            )
+    except Exception as e:
+        print(f"error: {e}")
+
+
+
 
 
 # class Notification(models.Model):

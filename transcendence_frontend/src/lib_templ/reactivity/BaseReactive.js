@@ -27,12 +27,15 @@ export default class BaseReactive {
      * @param {boolean} force - Whether to force the update.
      */
     onNewValue(value, force) {
-        // console.log('update value');
-        if (!Object.is(this.#value, value) || force) {
-            this.#value = value;
-            if (this.#host && typeof this.#host.requestUpdate === 'function')
-                this.#host.requestUpdate();
-        }
+        // console.log('update value, host?: ', this.#host);
+        this.#value = value;
+        if (this.#host && typeof this.#host.requestUpdate === 'function')
+            this.#host.requestUpdate();
+        // if (!Object.is(this.#value, value) || force) {
+        //     this.#value = value;
+        //     if (this.#host && typeof this.#host.requestUpdate === 'function')
+        //         this.#host.requestUpdate();
+        // }
     }
 
     onConnected() {}

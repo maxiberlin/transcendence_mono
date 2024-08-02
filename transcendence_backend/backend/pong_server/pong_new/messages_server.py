@@ -180,10 +180,10 @@ class GameObjPositionDataclass(BaseBroadcastBin):
 class GameSnapshotDataclass(BaseBroadcastBin):
     tickno: int
     timestamp_ms: float
+    tick_duration_s: float
     ball: GameObjPositionDataclass
     paddle_left: GameObjPositionDataclass
     paddle_right: GameObjPositionDataclass
-    score: int
     
     def print(self):
         print(f"tickno: {self.tickno}")

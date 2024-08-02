@@ -1,3 +1,4 @@
 .env
 tmp
 backend_jacob
+postgres-data

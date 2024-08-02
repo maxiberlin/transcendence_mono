@@ -3,7 +3,6 @@
 /* eslint-disable no-console */
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import GameHub from '../../gaming/manager/gameHub.js';
-import { renderAvatar } from '../../components/bootstrap/AvatarComponent.js';
 
 /**
  *

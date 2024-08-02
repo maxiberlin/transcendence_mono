@@ -2,11 +2,12 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.conf import settings
 from user.utils import model_object_serializer
-from .models import *
+from .models import PublicChatRoom, PublicChatMessage
 
 def public_chat_view(request):
 	context = {}
 	context['debug_mode'] = settings.DEBUG
+	context['room_type'] = 'public'
 	context['room_id'] = 1
 	user = request.user
 	room_id = context['room_id']

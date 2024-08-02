@@ -26,6 +26,7 @@ class PlayerConsumer(AsyncWebsocketConsumer):
 
     async def __heartbeat_loop(self):
         timeout = msg_server.HEARTBEAT_INTERVAL_MS / 1000
+        
         await asyncio.sleep(1)
         while True:
             await asyncio.sleep(timeout)
@@ -61,8 +62,7 @@ class PlayerConsumer(AsyncWebsocketConsumer):
         self.last_update = time.perf_counter()
         self.started_unix_ms = time.time() * 1000
         self.started_perf = time.perf_counter()
-        self.player_disconnect_timeout_task: asyncio.Task | None = None
-        self.recentMessage = False
+        
 
         if not self.channel_layer:
             logger.error("Channel layer not found")
@@ -88,6 +88,7 @@ class PlayerConsumer(AsyncWebsocketConsumer):
                     "heartbeat_ms": msg_server.HEARTBEAT_INTERVAL_MS
         }
         await self.send(json.dumps(res))
+        self.recentMessage = False
         self.player_disconnect_timeout_task = asyncio.get_running_loop().create_task(self.__heartbeat_loop())
         
     async def disconnect(self, close_code):
