@@ -241,6 +241,7 @@ export class ReconnectingSocket {
             if (typeof e.data === "string") {
                 // console.log('NEW SOCKET MESSAGE: ', e.data);
                 data = JSON.parse(e.data);
+                
                 if (this.#checkHeartBeatData(data) || data.msg_type === "pong")
                     return;
             } else if (e.data instanceof ArrayBuffer) {

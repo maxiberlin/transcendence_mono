@@ -32,11 +32,10 @@ export class Ref {
 
 /** 
  * @template {HTMLElement} T
+ * @returns {Ref<T>}
  */
 export function createRef() {
-    /** @type {Ref<T>} */
-    const ref = new Ref();
-    return (ref);
+    return (new Ref());
 }
 
 /**

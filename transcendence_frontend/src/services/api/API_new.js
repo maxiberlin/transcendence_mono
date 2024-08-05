@@ -201,10 +201,13 @@ export const gameAPI = {
     },
     
     /**
+     * @param {string | 'all'} [username]
      * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentItem[]>>}
      */
-    getTournaments: async () =>
-        await fetcher.$get(`/game/tournaments`),
+    getTournaments: async (username) =>
+        !username ? await fetcher.$get(`/game/tournaments`)
+        : username == 'all' ? await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: ''})})
+        : await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: username})}),
     
     /**
      * @param {number} tournament_id
@@ -465,11 +468,11 @@ export class SessionStore {
     async updateData(lists, user_id) {
         if (this.#sessionData?.user) user_id = this.#sessionData.user.id;
         if (!user_id) throw new Error("unable to fetch data without the user id");
-        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<APITypes.GameResultItem[]> > []} */
+        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<APITypes.GameResultItem[]> | APITypes.ApiResponse<APITypes.TournamentItem[]> > []} */
         let promises = [];
         if (lists.length == 1 && lists[0] == "all") {
             // console.log('fetch all');
-            lists = ["user", "friend_requests_received", "friend_requests_sent", "game_invitations_received", "game_invitations_sent", "game_schedule", "game_results"]
+            lists = ["user", "friend_requests_received", "friend_requests_sent", "game_invitations_received", "game_invitations_sent", "game_schedule", "game_results", "tournaments"]
             promises = [
                 userAPI.getProfile(user_id),
                 friendAPI.getRequestsReceived(user_id),
@@ -477,7 +480,8 @@ export class SessionStore {
                 gameAPI.getInvitesReceived(),
                 gameAPI.getInvitesSent(),
                 gameAPI.getGameSchedule(),
-                gameAPI.getHistory()
+                gameAPI.getHistory(),
+                gameAPI.getTournaments(),
             ]
         } else {
             for (const list of lists) {
@@ -503,6 +507,9 @@ export class SessionStore {
                         break;
                     case "game_results":
                         promises.push(gameAPI.getHistory());
+                        break;
+                    case "tournaments":
+                        promises.push(gameAPI.getTournaments());
                         break;
                     default:
                         throw new Error("INVALID UPDATE ITEM");
@@ -579,7 +586,7 @@ export class SessionStore {
             let toUpdate = [];
             if (action === "game-accept") {
                 data = await gameAPI.acceptInvite(request_id);
-                toUpdate = ["game_invitations_received", "game_schedule"];
+                toUpdate = ["game_invitations_received", "game_schedule", "tournaments"];
             
             } else if (action === "game-reject") {
                 data = await gameAPI.rejectInvite(request_id);

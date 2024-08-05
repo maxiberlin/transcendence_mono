@@ -1,12 +1,23 @@
+
 declare namespace MessageSocketTypes {
-    export interface GetGeneralNotifications {
-        command: 'get_general_notifications';
+    export type ModuleType = 'notification' | 'chat';
+
+    export interface ModuleNotification {
+        module: 'notification';
+    }
+    export interface ModuleChat {
+        module: 'chat';
+    }
+
+
+    export interface GetGeneralNotifications extends ModuleNotification {
+        command: 'get_notifications';
         page_number: number;
     }
-    export interface GetUnreadNotificationCount {
-        command: 'get_unread_general_notifications_count';
+    export interface GetUnreadNotificationCount extends ModuleNotification {
+        command: 'get_unread_notifications_count';
     }
-    export interface MarkAllNotificationsAsRead {
+    export interface MarkAllNotificationsAsRead extends ModuleNotification {
         command: 'mark_notifications_read';
         oldest_timestamp: number;
     }
@@ -15,13 +26,7 @@ declare namespace MessageSocketTypes {
         | GetUnreadNotificationCount
         | MarkAllNotificationsAsRead;
 
-    export enum NotificationMessageTypes {
-        GENERAL_MSG_TYPE_NOTIFICATIONS_DATA = 0, // New 'general' notifications data payload incoming
-        GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED = 1, // No more 'general' notifications to retrieve
-        GENERAL_MSG_TYPE_NEW_NOTIFICATION = 3,
-        GENERAL_MSG_TYPE_UNREAD_NOTIFICATIONS_COUNT = 4, // Send the number of unread "general" notifications to the template
-        GENERAL_MSG_TYPE_UPDATED_NOTIFICATION = 5
-    }
+
     export interface NotificationData {
         notification_type: string;
         notification_id: number;
@@ -36,26 +41,45 @@ declare namespace MessageSocketTypes {
         };
         user: APITypes.BasicUserData;
     }
-    export interface NotificationsList {
-        general_msg_type: NotificationMessageTypes.GENERAL_MSG_TYPE_NOTIFICATIONS_DATA;
-        notifications: NotificationData[];
-        new_page_number: number;
+
+    export enum NotificationMessageTypes {
+        MSG_TYPE_NOTIFICATIONS_DATA = 0, // New 'general' notifications data payload incoming
+        MSG_TYPE_PAGINATION_EXHAUSTED = 1, // No more 'general' notifications to retrieve
+        MSG_TYPE_NEW_NOTIFICATION = 3,
+        MSG_TYPE_UNREAD_NOTIFICATIONS_COUNT = 4, // Send the number of unread "general" notifications to the template
+        MSG_TYPE_UPDATED_NOTIFICATION = 5
     }
-    export interface NewNotification {
-        general_msg_type: NotificationMessageTypes.GENERAL_MSG_TYPE_NEW_NOTIFICATION;
-        notification: NotificationData;
-        count: number;
+
+
+    export interface NotificationsList extends ModuleNotification {
+        msg_type: NotificationMessageTypes.MSG_TYPE_NOTIFICATIONS_DATA;
+        payload: {
+            notifications: NotificationData[];
+            new_page_number: number;
+        };
     }
-    export interface NotificationUpdate {
-        general_msg_type: NotificationMessageTypes.GENERAL_MSG_TYPE_UPDATED_NOTIFICATION;
-        notification: NotificationData;
+    export interface NewNotification extends ModuleNotification {
+        msg_type: NotificationMessageTypes.MSG_TYPE_NEW_NOTIFICATION;
+        payload: {
+            notification: NotificationData;
+            count: number;
+        };
     }
-    export interface PaginationExhausted {
-        general_msg_type: NotificationMessageTypes.GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED;
+    export interface NotificationUpdate extends ModuleNotification {
+        msg_type: NotificationMessageTypes.MSG_TYPE_UPDATED_NOTIFICATION;
+        payload: {
+            notification: NotificationData;
+        };
     }
-    export interface NotificationCount {
-        general_msg_type: NotificationMessageTypes.GENERAL_MSG_TYPE_UNREAD_NOTIFICATIONS_COUNT;
-        count: number;
+    export interface PaginationExhausted extends ModuleNotification {
+        msg_type: NotificationMessageTypes.MSG_TYPE_PAGINATION_EXHAUSTED;
+        payload: null;
+    }
+    export interface NotificationCount extends ModuleNotification {
+        msg_type: NotificationMessageTypes.MSG_TYPE_UNREAD_NOTIFICATIONS_COUNT;
+        payload: {
+            count: number;
+        };
     }
     export type NotificationMessages = NotificationsList
         | NewNotification
@@ -63,7 +87,146 @@ declare namespace MessageSocketTypes {
         | NotificationCount
         | PaginationExhausted;
 
+    export type NotificationEventMsgType = NotificationMessages['msg_type'];
+
+    export interface CommandSendChatMessage extends ModuleChat {
+        command: 'send_chat_message';
+        room_id: number;
+        message: string;
+    }
+    export interface CommandGetChatMessagesPage extends ModuleChat {
+        command: 'get_chatmessages_page';
+        room_id: number;
+        page_number: number;
+    }
+    export interface CommandGetChatMessagesTimespen extends ModuleChat {
+        command: 'get_chatmessages_timespan';
+        room_id: number;
+        oldest_timestamp: number;
+        newest_timestamp: number;
+    }
+    export interface CommandGetUnreadChatMessagesCount extends ModuleChat {
+        command: 'get_unread_chatmessages_count';
+        room_id: number;
+    }
+    export interface CommandMarkAllChatMessages extends ModuleChat {
+        command: 'mark_chatmessages_read';
+        room_id: number;
+        oldest_timestamp: number;
+    }
+    export type ChatCommands =
+        | CommandSendChatMessage
+        | CommandGetChatMessagesPage
+        | CommandGetChatMessagesTimespen
+        | CommandGetUnreadChatMessagesCount
+        | CommandMarkAllChatMessages;
+
+    export enum ChatEventTypes {
+        MSG_TYPE_CHAT_ROOM_ADD = 100,
+        MSG_TYPE_CHAT_ROOM_REMOVE = 101,
+        MSG_TYPE_CHAT_USER_ADD = 102,
+        MSG_TYPE_CHAT_USER_REMOVE = 103,
+        MSG_TYPE_CHAT_MESSAGE_NEW = 104,
+        MSG_TYPE_CHAT_MESSAGE_UPDATED = 105,
+        MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT = 106,
+        MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED = 107,
+        MSG_TYPE_CHAT_MESSAGE_PAGE = 108,
+    }
+
+
+    export interface EventChatMessageNew extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_MESSAGE_NEW;
+        payload: {
+            room_id: number;
+            chat_message: APITypes.ChatMessageData;
+        };
+    }
+    export interface EventChatRoomAdd extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_ROOM_ADD;
+        payload: {
+            room: APITypes.ChatRoomData;
+        };
+    }
+    export interface EventChatRoomRemove extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_ROOM_REMOVE;
+        payload: {
+            room: APITypes.ChatRoomData;
+        };
+    }
+    export interface EventChatUserAdd extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_USER_ADD;
+        payload: {
+            room: APITypes.ChatRoomData;
+            user: APITypes.BasicUserData;
+        };
+    }
+    export interface EventChatUserRemove extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_USER_REMOVE;
+        payload: {
+            room: APITypes.ChatRoomData;
+            user: APITypes.BasicUserData;
+        };
+    }
+    export interface EventChatMessageList extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_MESSAGE_PAGE;
+        payload: {
+            room_id: number;
+            chat_messages: APITypes.ChatMessageData[];
+            new_page_number: number;
+        };
+    }
+    export interface EventChatMessageUpdate extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_MESSAGE_UPDATED;
+        payload: {
+            room_id: number;
+            chat_message: APITypes.ChatMessageData;
+        };
+    }
+    export interface EventChatMessagePaginationExhausted extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED;
+        payload: {
+            room_id: number;
+        };
+    }
+    export interface EventChatMessageUnreadCount extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT;
+        payload: {
+            room_id: number;
+            count: number;
+        };
+    }
+    export type ChatEvents =
+        | EventChatMessageNew
+        | EventChatRoomAdd
+        | EventChatRoomRemove
+        | EventChatUserAdd
+        | EventChatUserRemove
+        | EventChatMessageList
+        | EventChatMessageUpdate
+        | EventChatMessagePaginationExhausted
+        | EventChatMessageUnreadCount;
+
+    export type ChatEventMsgType = ChatEvents['msg_type'];
 }
+// export enum NotificationMessageTypes {
+//     MSG_TYPE_NOTIFICATIONS_DATA = 'MSG_TYPE_NOTIFICATIONS_DATA', // New 'general' notifications data payload incoming
+//     MSG_TYPE_PAGINATION_EXHAUSTED = 'MSG_TYPE_PAGINATION_EXHAUSTED', // No more 'general' notifications to retrieve
+//     MSG_TYPE_NEW_NOTIFICATION = 'MSG_TYPE_NEW_NOTIFICATION',
+//     MSG_TYPE_UNREAD_NOTIFICATIONS_COUNT = 'MSG_TYPE_UNREAD_NOTIFICATIONS_COUNT', // Send the number of unread "general" notifications to the template
+//     MSG_TYPE_UPDATED_NOTIFICATION = 'MSG_TYPE_UPDATED_NOTIFICATION'
+// }
+// export enum ChatEventTypes {
+//     MSG_TYPE_CHAT_ROOM_ADD = 'MSG_TYPE_CHAT_ROOM_ADD',
+//     MSG_TYPE_CHAT_ROOM_REMOVE = 'MSG_TYPE_CHAT_ROOM_REMOVE',
+//     MSG_TYPE_CHAT_USER_ADD = 'MSG_TYPE_CHAT_USER_ADD',
+//     MSG_TYPE_CHAT_USER_REMOVE = 'MSG_TYPE_CHAT_USER_REMOVE',
+//     MSG_TYPE_CHAT_MESSAGE_NEW = 'MSG_TYPE_CHAT_MESSAGE_NEW',
+//     MSG_TYPE_CHAT_MESSAGE_UPDATED = 'MSG_TYPE_CHAT_MESSAGE_UPDATED',
+//     MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT = 'MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT',
+//     MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED = 'MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED',
+//     MSG_TYPE_CHAT_MESSAGE_PAGE = 'MSG_TYPE_CHAT_MESSAGE_PAGE',
+// }
+
 
 // declare namespace NotificationTypes {
 //     export interface AcceptFriendRequest {
@@ -83,20 +246,20 @@ declare namespace MessageSocketTypes {
 //         notification_id: number;
 //     }
 //     export interface GetGeneralNotifications {
-//         command: 'get_general_notifications';
+//         command: 'get_notifications';
 //         page_number: number;
 //     }
 //     export interface GetNewGeneralNotifications {
-//         command: 'get_new_general_notifications';
+//         command: 'get_new_notifications';
 //         newest_timestamp: number;
 //     }
 //     export interface RefreshGeneralNotifications {
-//         command: 'refresh_general_notifications';
+//         command: 'refresh_notifications';
 //         oldest_timestamp: number;
 //         newest_timestamp: number;
 //     }
 //     export interface GetUnreadNotificationCount {
-//         command: 'get_unread_general_notifications_count';
+//         command: 'get_unread_notifications_count';
 //     }
 //     export interface MarkAllNotificationsAsRead {
 //         command: 'mark_notifications_read';
@@ -152,40 +315,40 @@ declare namespace MessageSocketTypes {
 // declare namespace NotificationMessageTypes {
 //     // eslint-disable-next-line no-shadow
 //     export enum NotificationMessageEnum {
-//         GENERAL_MSG_TYPE_NOTIFICATIONS_DATA = 0, // New 'general' notifications data payload incoming
-//         GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED = 1, // No more 'general' notifications to retrieve
-//         GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT = 4, // Send the number of unread "general" notifications to the template
+//         MSG_TYPE_NOTIFICATIONS_DATA = 0, // New 'general' notifications data payload incoming
+//         MSG_TYPE_PAGINATION_EXHAUSTED = 1, // No more 'general' notifications to retrieve
+//         MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT = 4, // Send the number of unread "general" notifications to the template
 //     }
-//     // GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2, // Retrieved all 'general' notifications newer than the oldest visible on screen
-//     // GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS = 3, // Get any new notifications
-//     // GENERAL_MSG_TYPE_UPDATED_NOTIFICATION = 5, // Update a notification that has been altered
+//     // MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD = 2, // Retrieved all 'general' notifications newer than the oldest visible on screen
+//     // MSG_TYPE_GET_NEW_NOTIFICATIONS = 3, // Get any new notifications
+//     // MSG_TYPE_UPDATED_NOTIFICATION = 5, // Update a notification that has been altered
 
 //     export interface NotificationsList {
-//         general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_NOTIFICATIONS_DATA;
+//         msg_type: NotificationMessageEnum.MSG_TYPE_NOTIFICATIONS_DATA;
 //         notifications: NotificationTypes.NotificationData[];
 //         new_page_number: number;
 //     }
 //     export interface PaginationExhausted {
-//         general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_PAGINATION_EXHAUSTED;
+//         msg_type: NotificationMessageEnum.MSG_TYPE_PAGINATION_EXHAUSTED;
 //     }
 //     export interface NotificationCount {
-//         general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT;
+//         msg_type: NotificationMessageEnum.MSG_TYPE_GET_UNREAD_NOTIFICATIONS_COUNT;
 //         count: number;
 //     }
 //     export interface ProgressBarDisplay {
 //         progress_bar: boolean;
 //     }
 //     // export interface RefreshNotificationsList {
-//     //     general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD;
+//     //     msg_type: NotificationMessageEnum.MSG_TYPE_NOTIFICATIONS_REFRESH_PAYLOAD;
 //     //     notifications: NotificationTypes.NotificationData[];
 //     // }
 //     // export interface NewNotificationsList {
-//     //     general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS;
+//     //     msg_type: NotificationMessageEnum.MSG_TYPE_GET_NEW_NOTIFICATIONS;
 //     //     notifications: NotificationTypes.NotificationData[];
 //     //     count?: number;
 //     // }
 //     // export interface NotificationUpdate {
-//     //     general_msg_type: NotificationMessageEnum.GENERAL_MSG_TYPE_UPDATED_NOTIFICATION;
+//     //     msg_type: NotificationMessageEnum.MSG_TYPE_UPDATED_NOTIFICATION;
 //     //     notification: NotificationTypes.NotificationData;
 //     // }
 
@@ -197,6 +360,6 @@ declare namespace MessageSocketTypes {
 //     // | RefreshNotificationsList
 //     // | NewNotificationsList
 
-//     export type NotificationMessageTags = NotificationMessage['general_msg_type'];
+//     export type NotificationMessageTags = NotificationMessage['msg_type'];
 
 // }

@@ -87,9 +87,9 @@ class PlayerConsumer(AsyncWebsocketConsumer):
                     "tag": "hello",
                     "heartbeat_ms": msg_server.HEARTBEAT_INTERVAL_MS
         }
-        await self.send(json.dumps(res))
+        # await self.send(json.dumps(res))
         self.recentMessage = False
-        self.player_disconnect_timeout_task = asyncio.get_running_loop().create_task(self.__heartbeat_loop())
+        # self.player_disconnect_timeout_task = asyncio.get_running_loop().create_task(self.__heartbeat_loop())
         
     async def disconnect(self, close_code):
         print("closeeeed...disconnected?!?")

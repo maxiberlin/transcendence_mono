@@ -8,9 +8,9 @@ from typing import Literal,TypedDict
 class ChatRoomData(TypedDict):
     room_id: int
     type: Literal['tournament', 'private', 'UNKNOWN']
+    title: str
     users: list[BasicUserData]
 
-    # msg_type: str
 class ChatMessageData(TypedDict):
     user_id: int
     username: str
@@ -53,8 +53,9 @@ class ChatRoom(models.Model):
         users = self.users.all()
         userdata = [u.get_basic_user_data() for u in users if isinstance(u, UserAccount)]
         return {
-            'room_id': str(self.pk),
+            'room_id': int(self.pk),
             'type': str(self.type), # type: ignore
+            'title': self.title,
             'users': userdata
         }
 
@@ -67,11 +68,9 @@ class ChatRoom(models.Model):
 
 
 class ChatMessageManager(models.Manager["ChatMessage"]):
-    def by_room(self, room):
-        # qs = ChatMessage.objects.filter(room=room).order_by("-timestamp")
-        qs = ChatMessage.objects.filter(room=room, room__is_active=True).order_by("-timestamp")
-        return qs
-
+    def by_room(self, room_id: int):
+        return super().get_queryset().filter(room_id=room_id, room__is_active=True).order_by("-timestamp")
+       
 
 class ChatMessage(models.Model):
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
@@ -91,10 +90,16 @@ class ChatMessage(models.Model):
             'user_id': userdata['id'],
             'avatar': userdata['avatar'],
             'username': userdata['username'],
-            'timestamp': int(self.timestamp.timestamp()),
+            'timestamp': int(self.timestamp.timestamp()*1000),
             'message': str(self.content)
         }
+
     
+ # return super().get_queryset().filter(room=room, room__is_active=True).order_by("timestamp")
+        # qs = ChatMessage.objects.filter(room=room).order_by("-timestamp")
+        # # qs = ChatMessage.objects.filter(room=room, room__is_active=True).order_by("-timestamp")
+        # return qs
+
 # class MessageUser(models.Model):
 #     user = models.ForeignKey(UserAccount, related_name='user_messages', on_delete=models.CASCADE)
 #     message = models.ForeignKey(ChatMessage, related_name='message_users', on_delete=models.CASCADE)

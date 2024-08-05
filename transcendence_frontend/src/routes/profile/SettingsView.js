@@ -1,6 +1,6 @@
-import { BaseElement, html } from '../../lib_templ/BaseElement.js';
+import { BaseElement, html, ifDefined } from '../../lib_templ/BaseElement.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
-import { getNavItem, SelectedNavLink } from '../../components/Navs.js';
+import { SelectedNavLink } from '../../components/Navs.js';
 import { sessionService } from '../../services/api/API_new.js';
 import { getPreferredTheme, setStoredTheme, setTheme } from '../../services/themeSwitcher.js';
 import { Offcanvas } from 'bootstrap';
@@ -175,7 +175,7 @@ export class SettingsView extends BaseElement {
                     status="online"
                     statusborder
                     radius="5"
-                    src="${this.sessionUser.value?.user?.avatar}"
+                    src="${ifDefined(this.sessionUser.value?.user?.avatar)}"
                     size="150"
                 ></avatar-component>
             </div>
@@ -188,7 +188,10 @@ export class SettingsView extends BaseElement {
                     try {
                         /** @type {FileList} */
                         const fileList = await new Promise( function (resolve, reject) {
-                            /** @param {Event} ev */
+                            /**
+                             * @param {Event} ev
+                             * @this {any}
+                             */
                             function handleUpload(ev) {
                                 inpt.removeEventListener('change', handleUpload);
                                 resolve(this.files);

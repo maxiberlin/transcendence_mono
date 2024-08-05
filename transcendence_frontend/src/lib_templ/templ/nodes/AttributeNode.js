@@ -22,6 +22,13 @@ import BaseNode from './BaseNode.js';
 //     value;
 // }
 
+const isNotDefinedSymbol = Symbol('TEMPL_ATTRIBUTE_IS_NOT_DEFINED');
+
+export function ifDefined(value) {
+    if (value == undefined) return isNotDefinedSymbol;
+    else return value;
+}
+
 export default class AttributeMultiNode extends BaseNode {
     /**
      * @param {HTMLElement} element
@@ -97,7 +104,7 @@ export default class AttributeMultiNode extends BaseNode {
         // console.log("AttributeNode: res: ", res);
         if (this.attrName === 'style') {
             this.#setStyleAttribute(res);
-        } else {
+        } else if (this.element instanceof HTMLElement) {
             if (res.length > 0) {
                 // console.log('set regular attribute: ', this.attrName, ' to: ', res);
                 this.element.setAttribute(this.attrName, res);
@@ -115,19 +122,20 @@ export default class AttributeMultiNode extends BaseNode {
     #noneC = 0;
 
     /**
-     * @param {string} value
+     * @param {any} value
      * @param {number} index
      */
     setValue(value, index) {
         // // // console.log("SET ATTRIBUTE MULTLI: ATTRNAME: ", this.attrName, " VALUE: ", value)
+
+        if (value === isNotDefinedSymbol && this.element instanceof HTMLElement) {
+            this.element.removeAttribute(this.attrName);
+            return;
+        }
+
         const i = index - this.index;
         let val = value;
-        if (
-            val === null ||
-            val === undefined ||
-            typeof val === 'object' ||
-            typeof val === 'function'
-        ) {
+        if ( val === null || val === undefined || typeof val === 'object' || typeof val === 'function') {
             val = '';
         } else if (typeof val !== 'string') {
             val = String(val);

@@ -81,6 +81,8 @@ def serializer_inviter_invitee_details(invite, account, player, inviter: bool):
         'game_id': invite.get_game_id_display(), # type: ignore
         'game_mode': invite.game_mode,
         'tournament': invite.tournament.pk if invite.tournament else None,
+        'tournament_name': invite.tournament.name if invite.tournament else None,
+        'status': invite.status,
         'id': account.pk,
         'alias': player.alias,
         'avatar': account.avatar.url,
@@ -92,14 +94,14 @@ def serializer_inviter_invitee_details(invite, account, player, inviter: bool):
     return data
 
 def serialize_player_details(account, player_object):
-    print(f'---> Start')
+    # print(f'---> Start')
     data = {
         'id': account.pk,
         'username': account.username,
         'avatar': account.avatar.url,
         'alias': player_object.alias,
     }
-    print(f'--------> Done')
+    # print(f'--------> Done')
     return data
 
 

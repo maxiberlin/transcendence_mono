@@ -293,9 +293,10 @@ class PongGame:
             return
             raise msg_server.CommandError("invalid action", msg_server.WebsocketErrorCode.INVALID_COMMAND)
         
-        item = ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle)
+        # item = ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle)
         try:
-            self.move_items.append(item)
+            # self.move_items.append(item)
+
             # task = asyncio.get_running_loop().create_task(self.__start_reconcile(item))
             # self.background_msg_send_tasks.add(task)
             # def on_msg_done(task: asyncio.Task):
@@ -305,7 +306,7 @@ class PongGame:
             #     self.background_msg_send_tasks.discard(task)
             # task.add_done_callback(on_msg_done)
 
-            # self.game_state.reconcile(ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle))
+            self.game_state.reconcile(ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle))
         except Exception as e:
             print(f"error reconcile: {e}")
             

@@ -3,6 +3,7 @@ import Template from './templ/Template.js';
 
 export { html, css } from './templ/TemplateAsLiteral.js';
 export {ref, createRef} from './templ/nodes/FuncNode.js';
+export { ifDefined } from './templ/nodes/AttributeNode.js';
 export { BaseBase }
 
 /**

@@ -18,6 +18,22 @@ from django.shortcuts import get_object_or_404
 from chat.utils import handle_tournament_chatroom_message_consumer
 
 
+def query_players_with_status(tournament: "Tournament"):
+    players = tournament.players.prefetch_related('user').all().order_by('-xp')  # Holt alle Spieler des Turniers
+
+    players = players.annotate(game_request_status=models.Subquery(
+        GameRequest.objects.filter(
+            invitee_id=models.OuterRef('user_id'),
+            tournament=tournament,
+            is_active=True
+        ).values('status')[:1]
+    ))
+    return players
+    # print(f"\nplayers: {players}")
+    # for player in players:
+    #     print(f"Player: {player.user.username}, GameRequest Status: {getattr(player, 'game_request_status', 'No Request')}")
+    # print("\n", players.query)
+
 class Tournament(models.Model):
     class GameID(models.IntegerChoices):
         Pong = 0, 'Pong'
@@ -191,6 +207,12 @@ class GameResults(models.Model):
     winner = models.ForeignKey(UserAccount, related_name='winner', on_delete=models.SET_NULL, null=True)
     loser = models.ForeignKey(UserAccount, related_name='loser', on_delete=models.SET_NULL, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    # game_schedule = models.ForeignKey("GameSchedule", related_name='tournament_name', on_delete=models.SET_NULL, null=True, blank=True)
+    # player_one_score = models.IntegerField()
+    # player_two_score = models.IntegerField()
+    # winner = models.ForeignKey(UserAccount, related_name='winner', on_delete=models.SET_NULL, null=True)
+    # loser = models.ForeignKey(UserAccount, related_name='loser', on_delete=models.SET_NULL, null=True)
+    # timestamp = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         if not self.winner or not self.loser:
@@ -216,6 +238,132 @@ class GameSchedule(models.Model):
     is_active = models.BooleanField(blank=True, null=False, default=True)
     scheduled = models.DateTimeField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+class GameRequest(models.Model):
+
+    class GameID(models.IntegerChoices):
+        Pong = 0, 'Pong'
+        Other = 1, 'Other'
+    game_id = models.IntegerField(choices=GameID.choices, null=True)
+    game_mode = models.CharField(max_length=20, null=True)
+    tournament = models.ForeignKey(Tournament, related_name='tournament_gr', on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(UserAccount, related_name='inviter', on_delete=models.CASCADE)
+    invitee = models.ForeignKey(UserAccount, related_name='invitee', on_delete=models.CASCADE)
+    is_active = models.BooleanField(blank=True, null=False, default=True)
+    status = models.CharField(max_length=20, default='pending')
+    notifications = GenericRelation(Notification)
+    timestamp = models.DateTimeField(auto_now_add=True)
+ 
+    def _handle_tournament(self, accepted: bool):
+        if self.game_mode != 'tournament' or self.tournament is None:
+            return
+        if accepted == False:
+            self.tournament.players.remove(Player.objects.get(user=self.invitee))
+            handle_tournament_chatroom_message_consumer('remove_player', self.tournament.name, self.invitee)
+        else:
+            handle_tournament_chatroom_message_consumer('add_player', self.tournament.name, self.invitee)
+            # add_user_to_chat_room(self.invitee, self.tournament.name)
+            try:
+                TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=Player.objects.get(user=self.invitee), round=1)
+            except Exception as e:
+                raise ValueError(e)
+        if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
+            self.tournament.update(True, False)
+
+   
+    def _update_status(self, state: Literal["accepted", "rejected", "cancelled"]):
+        self.status = state
+        self.is_active = False
+        self.save()
+
+    def accept(self):
+        if not self.is_active: return
+        if self.tournament:
+            self._handle_tournament(True)
+        else:
+            GameSchedule.objects.create(
+                player_one=get_object_or_404(Player, user=self.user),
+                player_two=get_object_or_404(Player, user=self.invitee),
+                game_id=self.game_id,
+                game_mode=self.game_mode,
+                tournament=None
+            )
+        self._update_status("accepted")
+        self._update_notification(f"You accepted {self.user.username}'s game invite.")
+        return self._create_notification(self.user, f"{self.invitee.username} accepted your game request.")
+
+
+    def reject(self):
+        if not self.is_active: return
+        if self.tournament:
+            self._handle_tournament(False)
+        self._update_status("rejected")
+        self._update_notification(f"You declined {self.user}'s game request.")
+        return self._create_notification(self.user, f"{self.invitee.username} declined your game request.")
+    
+
+    def cancel(self):
+        if not self.is_active: return
+        if self.tournament:
+            self._handle_tournament(False)
+        self._update_status("cancelled")
+        self._update_notification( f"{self.user.username} cancelled the game request.")
+        return self._create_notification(self.user, f"You cancelled the game request to {self.invitee.username}.")
+
+        
+    def _update_notification(self, description: str):
+        notification: Notification | None = self.notifications.first()
+        if notification is None:
+            print(f"NOTIFICATION IS NONE?!")
+            return None
+        notification.read = True
+        notification.description = description
+        notification.timestamp = timezone.now()
+        notification.save(send_notification=True)
+        return notification
+  
+    def _create_notification(self, target: UserAccount, description: str):
+        content_type = ContentType.objects.get_for_model(self)
+        n: Notification = self.notifications.create(
+            target=target,
+            from_user=self.user if target == self.invitee else self.invitee,
+            description=description,
+            content_type=content_type,
+            object_id=self.pk,
+            timestamp=timezone.now()
+        )
+        return n
+
+
+def add_user_to_chat_room(user: UserAccount, tournament_name: str):
+    from chat.models import ChatRoom
+    try:
+        room = ChatRoom.objects.get(title=tournament_name)
+        room.users.add(user)
+        room.save()
+    except:
+        pass
+
+
+    
+@receiver(post_save, sender=GameRequest)
+def create_notification(sender, instance: GameRequest, created, **kwargs):
+    if created:
+        instance._create_notification(instance.invitee, f"{instance.user.username} sent you a game request.")
+
+
+
+
+@receiver(post_save, sender=Tournament)
+def create_tournament_chat_room(sender, instance: Tournament, created, **kwargs):
+    from chat.models import ChatRoom
+    if created:
+        handle_tournament_chatroom_message_consumer('add_player', instance.name, instance.creator)
+        # room = ChatRoom.objects.create(title=instance.name)
+        # room.type = 'tournament'
+        # room.users.add(instance.creator)
+        # room.save()
+
 
 
 # class GameRequest(models.Model):
@@ -373,129 +521,4 @@ class GameSchedule(models.Model):
 # 		room.users.add(instance.creator)
 # 		room.save()
 
-
-class GameRequest(models.Model):
-
-    class GameID(models.IntegerChoices):
-        Pong = 0, 'Pong'
-        Other = 1, 'Other'
-    game_id = models.IntegerField(choices=GameID.choices, null=True)
-    game_mode = models.CharField(max_length=20, null=True)
-    tournament = models.ForeignKey(Tournament, related_name='tournament_gr', on_delete=models.SET_NULL, null=True, blank=True)
-    user = models.ForeignKey(UserAccount, related_name='inviter', on_delete=models.CASCADE)
-    invitee = models.ForeignKey(UserAccount, related_name='invitee', on_delete=models.CASCADE)
-    is_active = models.BooleanField(blank=True, null=False, default=True)
-    status = models.CharField(max_length=20, default='pending')
-    notifications = GenericRelation(Notification)
-    timestamp = models.DateTimeField(auto_now_add=True)
- 
-    def _handle_tournament(self, accepted: bool):
-        if self.game_mode != 'tournament' or self.tournament is None:
-            return
-        if accepted == False:
-            self.tournament.players.remove(Player.objects.get(user=self.invitee))
-            handle_tournament_chatroom_message_consumer('remove_player', self.tournament.name, self.invitee)
-        else:
-            handle_tournament_chatroom_message_consumer('add_player', self.tournament.name, self.invitee)
-            # add_user_to_chat_room(self.invitee, self.tournament.name)
-            try:
-                TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=Player.objects.get(user=self.invitee), round=1)
-            except Exception as e:
-                raise ValueError(e)
-        if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
-            self.tournament.update(True, False)
-
-   
-    def _update_status(self, state: Literal["accepted", "rejected", "cancelled"]):
-        self.status = state
-        self.is_active = False
-        self.save()
-
-    def accept(self):
-        if not self.is_active: return
-        if self.tournament:
-            self._handle_tournament(True)
-        else:
-            GameSchedule.objects.create(
-                player_one=get_object_or_404(Player, user=self.user),
-                player_two=get_object_or_404(Player, user=self.invitee),
-                game_id=self.game_id,
-                game_mode=self.game_mode,
-                tournament=None
-            )
-        self._update_status("accepted")
-        self._update_notification(f"You accepted {self.user.username}'s game invite.")
-        return self._create_notification(self.user, f"{self.invitee.username} accepted your game request.")
-
-
-    def reject(self):
-        if not self.is_active: return
-        if self.tournament:
-            self._handle_tournament(False)
-        self._update_status("rejected")
-        self._update_notification(f"You declined {self.user}'s game request.")
-        return self._create_notification(self.user, f"{self.invitee.username} declined your game request.")
-    
-
-    def cancel(self):
-        if not self.is_active: return
-        if self.tournament:
-            self._handle_tournament(False)
-        self._update_status("cancelled")
-        self._update_notification( f"{self.user.username} cancelled the game request.")
-        return self._create_notification(self.user, f"You cancelled the game request to {self.invitee.username}.")
-
-        
-    def _update_notification(self, description: str):
-        notification: Notification | None = self.notifications.first()
-        if notification is None:
-            print(f"NOTIFICATION IS NONE?!")
-            return None
-        notification.read = True
-        notification.description = description
-        notification.timestamp = timezone.now()
-        notification.save(send_notification=True)
-        return notification
-  
-    def _create_notification(self, target: UserAccount, description: str):
-        content_type = ContentType.objects.get_for_model(self)
-        n: Notification = self.notifications.create(
-            target=target,
-            from_user=self.user if target == self.invitee else self.invitee,
-            description=description,
-            content_type=content_type,
-            object_id=self.pk,
-            timestamp=timezone.now()
-        )
-        return n
-
-
-def add_user_to_chat_room(user: UserAccount, tournament_name: str):
-    from chat.models import ChatRoom
-    try:
-        room = ChatRoom.objects.get(title=tournament_name)
-        room.users.add(user)
-        room.save()
-    except:
-        pass
-
-
-    
-@receiver(post_save, sender=GameRequest)
-def create_notification(sender, instance: GameRequest, created, **kwargs):
-    if created:
-        instance._create_notification(instance.invitee, f"{instance.user.username} sent you a game request.")
-
-
-
-
-@receiver(post_save, sender=Tournament)
-def create_tournament_chat_room(sender, instance: Tournament, created, **kwargs):
-    from chat.models import ChatRoom
-    if created:
-        handle_tournament_chatroom_message_consumer('add_player', instance.name, instance.creator)
-        # room = ChatRoom.objects.create(title=instance.name)
-        # room.type = 'tournament'
-        # room.users.add(instance.creator)
-        # room.save()
 

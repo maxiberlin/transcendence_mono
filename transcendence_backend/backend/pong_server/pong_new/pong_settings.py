@@ -23,7 +23,7 @@ class PongSettings:
     serve_mode: ServeMode = dataclasses.field(default="serve-loser")
     initial_serve_to: ServeSide = dataclasses.field(default="serve-left")
     max_score: int = dataclasses.field(default=30)
-    tick_rate: int = dataclasses.field(default=50)
+    tick_rate: int = dataclasses.field(default=30)
 
 
 # class PongSettings:

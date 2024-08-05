@@ -3,3 +3,20 @@ games.views:
     - match history: fetch match history for other users + use pageination to get part of items
     - use tournament id when sending inviation or result instead of name, so the frontend can fetch details about the tournament
     - use 
+
+
+03.08.:
+-maybe change models:
+
+
+-tournament list view:
+    - get list for all or for own
+
+- tournament details view:
+    - return the creator id instead - data for creator is already in players array
+    - send status for each invited player
+    - send tournament name in invite for info
+    - use player list directly as leaderboard
+    - 
+
+

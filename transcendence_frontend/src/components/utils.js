@@ -11,4 +11,7 @@ export const rCol = (classes, content) => html`
 /**
  * @param {string} [date]
  */
-export const humanizedDate = (date) => date == undefined ? '-' : new Date(date).toLocaleDateString()
+export const humanizedDate = (date) => {
+    // console.log('date: ', date);
+    return date == undefined ? '-' : new Date(date).toLocaleDateString();
+}

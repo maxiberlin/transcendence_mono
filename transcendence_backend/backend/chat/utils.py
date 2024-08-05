@@ -2,10 +2,13 @@ from .models import *
 from user.utils import *
 from django.db.models import Q, Count
 from typing import Literal
-from channels.layers import get_channel_layer
-from channels_redis.core import RedisChannelLayer
 from notification.models import get_user_notification_room
-from asgiref.sync import async_to_sync
+from notification.utils import sync_send_consumer_internal_command
+
+# from notification.constants import InternalCommandChatRoom
+# from asgiref.sync import async_to_sync
+# from channels.layers import get_channel_layer
+# from channels_redis.core import RedisChannelLayer
 
 # def recreate_private_chat_rooms(user_id):
 #     from user.models import UserAccount
@@ -58,7 +61,8 @@ def check_private_room_by_title(title):
         return room
     except ChatRoom.DoesNotExist:
         try:
-            room = ChatRoom.objects.get(title='-'.join(title.split('.')[::-1]))
+            # room = ChatRoom.objects.get(title='-'.join(title.split('.')[::-1]))
+            room = ChatRoom.objects.get(title='.'.join(title.split('.')[::-1]))
             return room
         except ChatRoom.DoesNotExist:
             return None
@@ -103,18 +107,19 @@ def handle_tournament_chatroom_message_consumer(action: Literal['add_player', 'r
 
 def message_chat_consumer(user: UserAccount, chatroom: ChatRoom, action: Literal['add', 'remove']):
     room = get_user_notification_room(user)
-    layer = get_channel_layer()
-    msg_type = "chat.room.add" if action == 'add' else "chat.room.remove"
-    
     try:
-        if isinstance(layer, RedisChannelLayer):
-            async_to_sync(layer.group_send)(
-                room,
-                {
-                    "type": msg_type,
-                    "group_name": chatroom.group_name,
-                    "data": chatroom.get_room_data()
-                }
-            )
+        sync_send_consumer_internal_command(room, {
+            'type': 'chat.room.add' if action == 'add' else 'chat.room.remove',
+            'group_name': chatroom.group_name,
+            'data': chatroom.get_room_data()
+        })
     except Exception as e:
         print(f"error {action} chat, send to consumer: {e}")
+        
+        # if isinstance(layer, RedisChannelLayer):
+        #     msg: InternalCommandChatRoom = {
+        #             "type": msg_type,
+        #             "group_name": chatroom.group_name,
+        #             "data": chatroom.get_room_data()
+        #         }
+        #     async_to_sync(layer.group_send)( room, msg )

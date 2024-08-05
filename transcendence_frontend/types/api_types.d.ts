@@ -29,6 +29,7 @@ declare namespace APITypes {
         [key: string]: JSONValue;
         room_id: number;
         type: 'tournament' | 'private';
+        title: string;
         users: APITypes.BasicUserData[];
     }
 
@@ -38,13 +39,13 @@ declare namespace APITypes {
         username: string;
         avatar: string;
         message: string;
-        timestamp: string;
+        timestamp: number;
     }
 
     export interface ChatMessageList {
         [key: string]: JSONValue;
+        messages: ChatMessageData[];
         room_id: number;
-        ChatMessageData: ChatMessageData[];
         next_page: number;
     }
 
@@ -73,6 +74,7 @@ declare namespace APITypes {
     export type gameId = 0 | 1;
     export type GameIdString = "Pong" | "Other";
     export type GameMode = "1vs1" | "tournament";
+    export type GameInvitationStatus = "accepted" | "rejected" | "cancelled" | 'pending';
 
     export interface GameInvitationItem extends BasicUserData {
         [key: string]: string | number | boolean | null | undefined;
@@ -80,22 +82,27 @@ declare namespace APITypes {
         invite_id: number;
         invitee?: number;
         inviter?: number;
+        status?: GameInvitationStatus;
         game_id: GameIdString;
         game_mode: GameMode;
-        tournament: number;
+        tournament?: number;
+        tournament_name?: string;
     }
 
     export interface PlayerData extends BasicUserData {
         [key: string]: JSONValue;
         alias: string;
+        status?: GameInvitationStatus;
+        xp?: number;
     }
 
     export interface GameScheduleItem {
-        [key: string]: number | string | null | PlayerData | GameMode;
+        [key: string]: JSONValue;
         schedule_id: number;
         game_id: GameIdString;
         game_mode: GameMode;
         tournament: number | null;
+        round?: number;
         duration: number;
         player_one: PlayerData;
         player_two: PlayerData;
@@ -119,6 +126,7 @@ declare namespace APITypes {
     export type TournamentMode = "single elimination" | "round robin";
 
     export interface TournamentItem {
+        [key: string]: JSONValue;
         id: number,
         name: string,
         game_id: GameIdString,
@@ -126,11 +134,11 @@ declare namespace APITypes {
     }
 
     export interface TournamentData {
-        [key: string]: number | string | null | PlayerData | GameMode | PlayerData[] | GameScheduleItem[];
+        [key: string]: number | string | null | PlayerData | PlayerData[] | GameScheduleItem[];
         id: number;
         name: string;
         game_id: GameIdString;
-        mode: GameMode,
+        mode: TournamentMode,
         creator: string,
         nb_player: number | null,
         rounds: number,
@@ -175,6 +183,7 @@ declare namespace APITypes {
         game_invitations_received?: GameInvitationItem[];
         game_invitations_sent?: GameInvitationItem[];
         game_schedule?: GameScheduleItem[];
+        tournaments?: TournamentItem[];
         game_results?: GameResultItem[];
         friend_requests_received?: FriendRequestItem[];
         friend_requests_sent?: FriendRequestItem[];

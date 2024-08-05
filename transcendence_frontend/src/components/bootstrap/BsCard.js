@@ -1,20 +1,26 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
+import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
 
-export const rendListItem = (content) => {
+// export const rendListItem = (content) => {
+//     return html`
+//         <li class="row px-0 list-group-item d-flex justify-content-center align-items-center bg-light-subtle">
+//             ${content}
+//         </li>
+//     `;
+// };
+export const renderListItem = (content) => {
     return html`
-        <li class="row px-0 list-group-item d-flex justify-content-center align-items-center">
+        <li class="row px-0 list-group-item  d-flex justify-content-center align-items-center bg-light-subtle">
             ${content}
         </li>
     `;
 };
 
-export const rendListItemAnchor = (href, content) => {
+export const renderListItemAnchor = (href, content) => {
     return html`
-        <li> 
-            <a href="${href ?? '#'}" class="row px-0 list-group-item d-flex justify-content-center align-items-center">
-                ${content}
-            </a>
-        </li>
+        <a href="${href ?? '#'}" class="row px-0 list-group-item list-group-item-action d-flex justify-content-center align-items-center">
+            ${content}
+        </a>
     `;
 };
 
@@ -24,7 +30,7 @@ export const rendListItemAnchor = (href, content) => {
 export const renderListCard = (title, icon, listItems) => {
     // console.log(listItems);
     return html`
-        <div class="card">
+        <div class="card bg-light-subtle text-center">
             ${title ?
                 html`
                 <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
@@ -39,9 +45,52 @@ export const renderListCard = (title, icon, listItems) => {
     `;
 };
 
-export const renderCard = (title, icon, content) => {
+/**
+ * @template {string} K
+ * @template T
+ * @param {string} title 
+ * @param {string} icon 
+ * @param {T[] | undefined} contentArray 
+ * @param {{heading: K, cb: ((heading: K, item: T) => TemplateAsLiteral)}[]} headingsArray 
+ * @param {boolean} [indexed] 
+ * @returns 
+ */
+export const renderTableCard = (title, icon, contentArray, headingsArray, indexed) => {
+    // console.log(listItems);
     return html`
         <div class="card text-center">
+            ${title ?
+                html`
+                <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
+            `
+            :   ''}
+            <div class="card-body">
+                <table class="table table-dark table-hover">
+                    <thead>
+                        ${indexed ? html`<th scope="col">#</th>` : ''}
+                        <tr>${headingsArray.map(i => html`<th scope="col">${i.heading}</th>`)}</tr>
+                    </thead>
+                    <tbody>
+                        ${contentArray?.map((t, i) => html`
+                            <tr>
+                                ${indexed ? html`<th scope="row">${i}</th>` : ''}
+                                ${headingsArray.map(k => html`
+                                    <td>
+                                        ${k.cb(k.heading, t)}
+                                    </td>
+                                `)}
+                            </tr>
+                        `)}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+                `;
+};
+
+export const renderCard = (title, icon, content) => {
+    return html`
+        <div class="card text-center bg-light-subtle">
             ${title ?
                 html`
                 <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
@@ -51,6 +100,18 @@ export const renderCard = (title, icon, content) => {
         </div>
     `;
 };
+
+/** @param {Array<{title: string, content: string}>} array */
+export const renderListItemInfos = (array) => {
+    return html`
+        <div class="d-flex align-items-center justify-content-between">
+            ${array.map(e => html`<span class="text-body-secondary p-0 m-0">${e.title}</span>`)}
+        </div>
+        <div class="d-flex align-items-center justify-content-between">
+            ${array.map(e => html`<span class="text-body"> ${e.content} </span>`)}
+        </div>
+    `
+}
 
 export const renderCardInfo = (title, content) => {
     return html`

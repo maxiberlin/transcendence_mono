@@ -30,7 +30,7 @@ import GameModal2 from './routes/home/PongGame_other_layout';
 import { ProfileView } from './routes/profile/ProfileView.js';
 import ProfileSearch from './routes/social/ProfileSearch.js';
 import FriendsView from './routes/social/FriendsView.js';
-import ChatView from './routes/social/ChatView.js';
+import ChatView, { SingleChatView } from './routes/social/ChatView.js';
 import TournamentCreateView from './routes/home/tournament/TournamentCreateView.js';
 import { TournamentDetailsView } from './routes/home/tournament/TournamentDetailsView.js';
 import { SettingsView } from './routes/profile/SettingsView.js';

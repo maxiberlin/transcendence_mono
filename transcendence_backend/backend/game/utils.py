@@ -1,6 +1,8 @@
 from .models import *
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
+from user.models import Player, UserAccount
+from django.db.models.query import QuerySet
 
 def send_invite(user, invitee, game_id, game_mode, tournament):
     if invitee != user:
@@ -109,18 +111,33 @@ def tournament_details(tournament):
     details = model_object_serializer(tournament)
     details['game_id'] = tournament.get_game_id_display()
     details['creator'] = Player.objects.get(user=tournament.creator).alias
-    tournament_players = tournament.players.all()
-    for player in tournament_players:
-        player_details = UserAccount.objects.get(username=player)
-        item = {
-            'id': player_details.pk,
-            'username': player_details.username,
-            'avatar': player_details.avatar.url,
-            'alias': player.alias
-        }
+    # details['creator'] = tournament.creator.pk
+    # tournament_players: QuerySet[Player] = tournament.players.all()
+    players_with_status: QuerySet[Player] = query_players_with_status(tournament)
+    
+    for player in players_with_status:
+        print(f"PLAYER: {player}")
+        item = player.get_player_data(getattr(player, 'game_request_status', 'UNKNOWN'))
+        # item = {
+        #     'id': player.user.pk,
+        #     'username': player.user.username,
+        #     'avatar': player.user.avatar.url,
+        #     'status': getattr(player, 'game_request_status', 'UNKNOWN'),
+        #     'alias': player.alias
+        # }
         players.append(item)
+    # for player in tournament_players:
+    #     player_details = UserAccount.objects.get(username=player)
+    #     item = {
+    #         'id': player_details.pk,
+    #         'username': player_details.username,
+    #         'avatar': player_details.avatar.url,
+    #         'alias': player.alias
+    #     }
+    #     players.append(item)
     details['players'] = players
-    schedules = GameSchedule.objects.filter(tournament=tournament, is_active=True)
+    # schedules = GameSchedule.objects.filter(tournament=tournament, is_active=True)
+    schedules = GameSchedule.objects.filter(tournament=tournament)
     for schedule in schedules:
         ply_1 = UserAccount.objects.get(username=schedule.player_one)
         ply_2 = UserAccount.objects.get(username=schedule.player_two)
@@ -128,6 +145,7 @@ def tournament_details(tournament):
             'id': schedule.pk,
             'game_id': schedule.get_game_id_display(), # type: ignore
             'tournament': schedule.tournament.pk if schedule.tournament else None,
+            'round': schedule.round,
             'player_one': {
                 'id': ply_1.pk,
                 'username': ply_1.username,

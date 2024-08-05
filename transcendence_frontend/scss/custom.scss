@@ -29,233 +29,137 @@
 // $enable-gradients: true;
 // $enable-shadows: true;
 
-$offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
-
 // Include functions first
-@import 'bootstrap/scss/functions';
+@import '../node_modules/bootstrap/scss/functions';
 
-// Customize some defaults
-$body-color: #333;
-$body-bg: #fff;
-$border-radius: 0.4rem;
-// $primary: #7952b3;
-
-$primary-light: #b797e8;
-$primary-dark: #7952b3;
-$primary: $primary-dark;
-
-[data-bs-theme='dark'] {
-    $primary: $primary-light;
-
-    // .btn-primary {
-    //     background-color: $primary;
-    //     border-color: $primary;
-    // }
-
-    // Weitere Komponenten überschreiben, falls erforderlich
-    .btn-outline-primary {
-        $btn-color: $primary;
-    }
-
-    .btn-dark {
-        @extend .btn-light !optional;
-    }
-    .btn-outline-dark {
-        @extend .btn-outline-light !optional;
-    }
-
-    // .btn-dark {
-    //   --bs-btn-bg: #{mix($gray-600, $blue-400, .5)};
-    //   --bs-btn-border-color: #{rgba($white, .25)};
-    //   --bs-btn-hover-bg: #{darken(mix($gray-600, $blue-400, .5), 5%)};
-    //   --bs-btn-hover-border-color: #{rgba($white, .25)};
-    //   --bs-btn-active-bg: #{darken(mix($gray-600, $blue-400, .5), 10%)};
-    //   --bs-btn-active-border-color: #{rgba($white, .5)};
-    //   --bs-btn-focus-border-color: #{rgba($white, .5)};
-    //   --bs-btn-focus-box-shadow: 0 0 0 .25rem rgba(255, 255, 255, .2);
-    // }
-}
+@import './variables.scss';
 
 // Required
-@import 'bootstrap/scss/variables';
-@import 'bootstrap/scss/variables-dark';
-@import 'bootstrap/scss/maps';
-@import 'bootstrap/scss/mixins';
-@import 'bootstrap/scss/utilities';
-@import 'bootstrap/scss/root';
-@import 'bootstrap/scss/reboot';
+@import '../node_modules/bootstrap/scss/variables';
+@import '../node_modules/bootstrap/scss/variables-dark';
+@import '../node_modules/bootstrap/scss/maps';
+@import '../node_modules/bootstrap/scss/mixins';
+@import '../node_modules/bootstrap/scss/utilities';
+@import '../node_modules/bootstrap/scss/root';
+@import '../node_modules/bootstrap/scss/reboot';
 
-@import 'bootstrap/scss/type';
+@import '../node_modules/bootstrap/scss/type';
 // @import "bootstrap/scss/images";
-@import 'bootstrap/scss/containers';
-@import 'bootstrap/scss/grid';
-// @import "bootstrap/scss/tables";
-@import 'bootstrap/scss/forms';
-@import 'bootstrap/scss/buttons';
-@import 'bootstrap/scss/transitions';
-@import 'bootstrap/scss/dropdown';
-@import 'bootstrap/scss/button-group';
-@import 'bootstrap/scss/nav';
-@import 'bootstrap/scss/navbar'; // Requires nav
-@import 'bootstrap/scss/card';
+@import '../node_modules/bootstrap/scss/containers';
+@import '../node_modules/bootstrap/scss/grid';
+@import 'bootstrap/scss/tables';
+@import '../node_modules/bootstrap/scss/forms';
+@import '../node_modules/bootstrap/scss/buttons';
+@import '../node_modules/bootstrap/scss/transitions';
+@import '../node_modules/bootstrap/scss/dropdown';
+@import '../node_modules/bootstrap/scss/button-group';
+@import '../node_modules/bootstrap/scss/nav';
+@import '../node_modules/bootstrap/scss/navbar'; // Requires nav
+@import '../node_modules/bootstrap/scss/card';
 // @import "bootstrap/scss/breadcrumb";
 // @import "bootstrap/scss/accordion";
 // @import "bootstrap/scss/pagination";
 // @import "bootstrap/scss/badge";
-@import 'bootstrap/scss/alert';
+@import '../node_modules/bootstrap/scss/alert';
 // @import "bootstrap/scss/progress";
-@import 'bootstrap/scss/list-group';
-@import 'bootstrap/scss/close';
-@import 'bootstrap/scss/toasts';
-@import 'bootstrap/scss/modal'; // Requires transitions
-@import 'bootstrap/scss/tooltip';
-@import 'bootstrap/scss/popover';
+@import '../node_modules/bootstrap/scss/list-group';
+@import '../node_modules/bootstrap/scss/close';
+@import '../node_modules/bootstrap/scss/toasts';
+@import '../node_modules/bootstrap/scss/modal'; // Requires transitions
+@import '../node_modules/bootstrap/scss/tooltip';
+@import '../node_modules/bootstrap/scss/popover';
 // @import "bootstrap/scss/carousel";
-@import 'bootstrap/scss/spinners';
-@import 'bootstrap/scss/offcanvas'; // Requires transitions
+@import '../node_modules/bootstrap/scss/spinners';
+@import '../node_modules/bootstrap/scss/offcanvas'; // Requires transitions
 // @import "bootstrap/scss/placeholders";
 
 // Helpers
-@import 'bootstrap/scss/helpers';
+@import '../node_modules/bootstrap/scss/helpers';
 
 // Utilities
-@import 'bootstrap/scss/utilities/api';
+@import '../node_modules/bootstrap/scss/utilities/api';
 
-.pong-navigation {
-    height: auto;
-    max-height: 15vh;
-    min-width: 100vw;
-    max-width: 100vw;
-    position: fixed;
-    z-index: 1030;
-    padding: 0.5em 0.5em calc(0.5em + env(safe-area-inset-bottom)) 0.5em;
-}
+// @import './styles.scss';
 
-.pong-content {
-    padding: 0; /* Default padding for small screens */
-    transition: padding 0.3s ease;
-    width: 100%;
-}
+// // @import '../node_modules/bootstrap/scss/bootstrap';
 
-/* Navigation on top for wider screens */
-@media (min-width: 577px) {
-    .pong-navigation {
-        top: 0;
-        left: 0;
-        right: 0;
-    }
-    .pong-content {
-        padding-top: 4em; /* Adjust padding to avoid overlap with the top navigation */
-        padding-bottom: 1em;
-    }
-}
+// // Override Bootstrap's Sass default variables
+// //
+// // Nearly all variables in Bootstrap are written with the `!default` flag.
+// // This allows you to override the default values of those variables before
+// // you import Bootstrap's source Sass files.
+// //
+// // Overriding the default variable values is the best way to customize your
+// // CSS without writing _new_ styles. For example, you can either change
+// // `$body-color` or write more CSS that override's Bootstrap's CSS like so:
+// // `body { color: red; }`.
 
-/* Navigation on bottom for narrower screens */
-@media (max-width: 576px) {
-    .pong-navigation {
-        bottom: 0;
-        left: 0;
-        right: 0;
-    }
-    .pong-content {
-        padding-bottom: calc(
-            5em + env(safe-area-inset-bottom)
-        ); /* Adjust padding to avoid overlap with the bottom navigation */
-    }
-}
+// //
+// // Bring in Bootstrap
+// //
 
-.pong-spacer {
-    height: 15vh;
-}
+// // Option 1
+// //
+// // Import all of Bootstrap's CSS
 
-.pong-navbar-desktop-left {
-    height: 100vh;
-    max-height: 100vh;
-    min-width: 80px;
-    max-width: 15vh;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    top: 0;
-    z-index: 1030;
-}
+// // @import "bootstrap/scss/bootstrap";
 
-// .pong-navbar-desktop-top {
-// }
+// // Option 2
+// //
+// // Place variable overrides first, then import just the styles you need. Note that some stylesheets are required no matter what.
 
-.pong-navbar-mobile {
-    height: auto;
-    max-height: 15vh;
-    min-width: 100vw;
-    max-width: 100vw;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1030;
-    padding: 0.5em 0.5em calc(0.5em + env(safe-area-inset-bottom)) 0.5em;
-}
+// // Toggle global options
+// // $enable-gradients: true;
+// // $enable-shadows: true;
 
-// .pong-fixed-left-1 {
-//     position: fixed;
-//     bottom: 0;
-//     left: 0;
-//     top: 0;
-//     z-index: 1030;
-// }
-// .pong-fixed-left-2 {
-//     position: fixed;
-//     bottom: 0;
-//     left: 15vh;
-//     top: 0;
-//     z-index: 1030;
-// }
-// .pong-fixed-bottom-1 {
-//     position: fixed;
-//     bottom: 0;
-//     left: 0;
-//     right: 0;
-//     z-index: 1030;
-// }
+// // Include functions first
+// @import 'bootstrap/scss/functions';
 
-// // .pong-navbar-padd {
-// //     padding: 1em 1em calc(1em + env(safe-area-inset-bottom));
-// // }
+// @import './variables.scss';
 
-// .pong-navbar-padd {
-//     flex: none;
-//     display: flex;
-//     gap: 1em;
-//     justify-content: space-evenly;
-//     background: black;
-//     padding: 0.5em 0.5em calc(0.5em + env(safe-area-inset-bottom)) 0.5em;
-//     /* adds the safe-area-inset-bottom value to the initial 1em of padding.
-//     a larger black area will display for a device that has a positive value for this variable. */
-//     position: sticky;
-//     bottom: 0;
-// }
+// // Required
+// @import 'bootstrap/scss/variables';
+// @import 'bootstrap/scss/variables-dark';
+// @import 'bootstrap/scss/maps';
+// @import 'bootstrap/scss/mixins';
+// @import 'bootstrap/scss/utilities';
+// @import 'bootstrap/scss/root';
+// @import 'bootstrap/scss/reboot';
 
-.pong-fixed-top-1 {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1030;
-}
+// @import 'bootstrap/scss/type';
+// // @import "bootstrap/scss/images";
+// @import 'bootstrap/scss/containers';
+// @import 'bootstrap/scss/grid';
+// // @import "bootstrap/scss/tables";
+// @import 'bootstrap/scss/forms';
+// @import 'bootstrap/scss/buttons';
+// @import 'bootstrap/scss/transitions';
+// @import 'bootstrap/scss/dropdown';
+// @import 'bootstrap/scss/button-group';
+// @import 'bootstrap/scss/nav';
+// @import 'bootstrap/scss/navbar'; // Requires nav
+// @import 'bootstrap/scss/card';
+// // @import "bootstrap/scss/breadcrumb";
+// // @import "bootstrap/scss/accordion";
+// // @import "bootstrap/scss/pagination";
+// // @import "bootstrap/scss/badge";
+// @import 'bootstrap/scss/alert';
+// // @import "bootstrap/scss/progress";
+// @import 'bootstrap/scss/list-group';
+// @import 'bootstrap/scss/close';
+// @import 'bootstrap/scss/toasts';
+// @import 'bootstrap/scss/modal'; // Requires transitions
+// @import 'bootstrap/scss/tooltip';
+// @import 'bootstrap/scss/popover';
+// // @import "bootstrap/scss/carousel";
+// @import 'bootstrap/scss/spinners';
+// @import 'bootstrap/scss/offcanvas'; // Requires transitions
+// // @import "bootstrap/scss/placeholders";
 
-// .pong-navbar-mobile {
-//     height: auto;
-//     max-height: 15vh;
-//     min-width: 100vw;
-//     max-width: 100vw;
-// }
-// .pong-spacer-mobile {
-//     height: 15vh;
-// }
+// // Helpers
+// @import 'bootstrap/scss/helpers';
 
-// .pong-navbar-desktop {
-//     height: 100vh;
-//     max-height: 100vh;
-//     min-width: 80px;
-//     max-width: 15vh;
-// }
+// // Utilities
+// @import 'bootstrap/scss/utilities/api';
+
+// // @import './styles.scss';

@@ -48,6 +48,7 @@ class UserAccount(AbstractBaseUser):
     last_name = models.CharField(max_length=30, verbose_name='last name')
     avatar = models.ImageField(max_length=255, upload_to=get_avatar_path, null=True, blank=True, default=set_default_avatar)
     status = models.CharField(max_length=10, default='offline')
+    online_count = models.PositiveIntegerField(default=0)
     is_2fa = models.BooleanField(default=False)
     oauth = models.CharField(max_length=10, choices=Oauth_Choices, null=True, default=None)
     full_profile = models.BooleanField(default=False)
@@ -83,6 +84,12 @@ class UserAccount(AbstractBaseUser):
         }
 
 
+
+class PlayerData(BasicUserData):
+    alias: str
+    xp: int
+    status: str
+
 class Player(models.Model):
     user = models.OneToOneField(UserAccount, related_name='player', on_delete=models.CASCADE)
     alias = models.CharField(max_length=30, unique=True)
@@ -100,6 +107,17 @@ class Player(models.Model):
         if not self.alias:
             self.alias = self.user.username
         super().save(*args, **kwargs)
+        
+    def get_player_data(self, status) -> PlayerData:
+        u = self.user.get_basic_user_data()
+        return {
+            'alias': str(self.alias),
+            'xp': int(self.xp),
+            'avatar': u['avatar'],
+            'id': u['id'],
+            'username': u['username'],
+            'status': status
+        }
 
 
 @receiver(post_save, sender=UserAccount)

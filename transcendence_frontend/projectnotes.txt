@@ -1,0 +1,3 @@
+- add alias to tournament display
+- new field alias in Tournament player -> unique per tournament.
+- tournament players: collapse returnes plyers and leaderboard - player xp of tournament extra from TournamentPlayer

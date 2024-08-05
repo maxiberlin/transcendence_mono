@@ -1,5 +1,5 @@
 {
-    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.typeCheckingMode": "standard",
     "editor.insertSpaces": false,
     "editor.tabSize": 4,
     "[python]": {
@@ -8,7 +8,4 @@
         "editor.wordBasedSuggestions": "off",
         "editor.formatOnSave": false,
     },
-    "mypy.runUsingActiveInterpreter": true,
-    "mypy.configFile": "backend/mypy.ini",
-    "mypy.enabled": true
 }

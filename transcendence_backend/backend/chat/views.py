@@ -70,13 +70,14 @@ class ChatRoomView(View):
 
 class ChatMessageView(View):
     def get(self, request: HttpRequest):
-        room_id = request.GET.get('room')
+        room_id = request.GET.get('room_id')
         pageno = request.GET.get('page')
         if not isinstance(room_id, str) or not room_id.isdigit() or not isinstance(pageno, str) or not pageno.isdigit():
-            return HttpNotFound404("unknown chatroom or page")
+            return HttpBadRequest400("invalid room_id or page")
         room_id = int(room_id)
         pageno = int(pageno)
         messages = ChatMessage.messages.by_room(room_id)
+        print(f"room_id: {room_id}, MESSAGES: {messages}")
         paginator = Paginator(messages, 20)
         messagepage = paginator.get_page(pageno)
         m = [msg.get_message_data() for msg in messagepage if isinstance(msg, ChatMessage)]
@@ -84,5 +85,6 @@ class ChatMessageView(View):
         return HttpSuccess200(data={
             'room_id': room_id,
             'messages': m,
-            'next_page': room_id + 1
+            'next_page': pageno + 1
         })
+        
