@@ -246,7 +246,7 @@ export class TournamentDetailsView extends BaseElement {
                                 ${this.renderMatches()}
                             </div>
                         </div>
-                            ${renderCard('Tournament Chat', '', html`<single-chat-view .user_or_tournament=${this.tournamentData} ></single-chat-view>`)}
+                            ${renderCard('Tournament Chat', '', html`<single-chat-view icon="paper-plane" text="tournament chat" .offcanvas=${true} .user_or_tournament=${this.tournamentData} ></single-chat-view>`)}
                     </div>
                 </div>
         `}

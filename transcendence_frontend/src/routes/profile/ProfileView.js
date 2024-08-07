@@ -8,7 +8,7 @@ import {
     renderListCard,
 } from '../../components/bootstrap/BsCard.js';
 import { avatarLink, getUserStatus } from '../../components/bootstrap/AvatarComponent.js';
-import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
+import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import { fetcher, gameAPI, sessionService, userAPI } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
@@ -272,7 +272,10 @@ export class ProfileView extends BaseElement {
                 </button>
                 ${sessionService.canSend1vs1GameInvitation(this.profileUserData.id) === false ? '' :
                         actions.sendGameInvitation(this.profileUserData.id, { host: this, showText: false })}
-                <single-chat-view color="success" icon="paper-plane" .user_or_tournament=${this.profileUserData} ></single-chat-view>
+                <a class="btn btn-primary" role="button"
+                    href="/chat/${encodeURI(sessionService.messageSocket?.getChatRoomForUser(this.profileUserData.username) ?? '')}" >
+                    <i class="fa-solid fa-paper-plane"></i>
+                </a>
                 ${actionButtonDropdowns.friendActions(this.profileUserData.id, () => { this.fetchProfileData(this.profileUserData?.id, true); })}
             `;
         if ((data = sessionService.getReceivedFriendRequest(this.profileUserData.id)) !== undefined)

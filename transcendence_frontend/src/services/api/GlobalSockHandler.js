@@ -89,6 +89,7 @@ export class MessageDataHandle {
     }
 }
 
+
 /**
  * @template {MessageSocketTypes.NotificationData | APITypes.ChatMessageData} T
  * @template {APITypes.ChatRoomData} K
@@ -162,12 +163,156 @@ class MessageData {
     insertMessages() {}
 }
 
+
 //  * @typedef {{room: APITypes.ChatRoomData, messages: MessageData<APITypes.ChatMessageData> , handle: MessageDataHandle<APITypes.ChatMessageData> }} Chat
 /**
  * @typedef {object} Chat
  * @property {APITypes.ChatRoomData} room
  * @property {MessageData<APITypes.ChatMessageData>} messages
  */
+
+
+class ChatMap {
+    /** @param {string} sessionUserName  */
+    constructor(sessionUserName) {
+        this.sessionUserName = sessionUserName;
+    }
+    sessionUserName;
+
+    /** @param {string} username */
+    getRoomForUser = (username) => this.privateChatLookup.get(username);
+
+    /** @param {any} roomIdOrTitle */
+    getRoomId = (roomIdOrTitle) => typeof roomIdOrTitle === 'number' ? roomIdOrTitle
+        : typeof roomIdOrTitle === 'string' ? this.chatsMapLookup.get(roomIdOrTitle)
+        : undefined
+
+    /** @param {APITypes.TournamentData | APITypes.BasicUserData | string | number} data  */
+    getChatroomHandle(data) {
+        let roomId = this.getRoomId(data);
+        if (typeof roomId === 'number') return this.chatsMap.get(roomId);
+        if (typeof data !== 'object') return undefined;
+        if (typeof data.username === 'string') {
+            roomId = this.getRoomId(`${this.sessionUserName}.${data.username}`);
+            if (roomId == undefined) roomId = this.getRoomId(`${data.username}.${this.sessionUserName}`);
+        } else if (typeof data.name === 'string') {
+            roomId = this.getRoomId(data.name);
+        }
+        if (roomId != undefined)
+            return this.chatsMap.get(roomId);
+    }
+
+    /**
+     * @param {number | string} roomIdOrTitle
+     * @param {APITypes.ChatMessageData} message
+     */
+    addNewMessageBottom(roomIdOrTitle, message) {
+        console.log('ADD NEW MESSAGE');
+        
+        const roomId = this.getRoomId(roomIdOrTitle);
+        console.log('ADD NEW MESSAGE: room_id: ', roomId);
+        if (typeof roomId === 'number') {
+            console.log('ADD NEW MESSAGE: room_id is number: ');
+            const chat = this.chatsMap.get(roomId);
+            if (chat) {
+                console.log('ADD NEW MESSAGE: has chat handle: ');
+                chat.messages.addEnd(message);
+                chat.pubsub.publish(chat.messages);
+                this.pubsubChat.publish(this.chatsMap);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param {number | string} roomIdOrTitle
+     * @param {APITypes.ChatMessageData[]} messageList
+     * @param {number} newPage 
+     */
+    pushMessagePageToTop(roomIdOrTitle, messageList, newPage) {
+        const roomId = this.getRoomId(roomIdOrTitle);
+        if (typeof roomId === 'number') {
+            const chat = this.chatsMap.get(roomId);
+            // console.log('ChatMap: pushMessagePageToTop: roomId: ', roomId, ', chat: ', chat);
+            
+            if (chat) {
+                chat.messages.addFront(messageList.reverse());
+                chat.messages.currentPage = newPage;
+                chat.messages.fetchingPage = false;
+                // console.log('ChatMap: pushMessagePageToTop DONE publish: roomId: ', roomId, ', chat: ', chat);
+                chat.pubsub.publish(chat.messages);
+                this.pubsubChat.publish(this.chatsMap);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param {number | string} roomIdOrTitle
+     */
+    setChatRoomPageExhausted(roomIdOrTitle) {
+        const roomId = this.getRoomId(roomIdOrTitle);
+        if (typeof roomId === 'number') {
+            const chat = this.chatsMap.get(roomId);
+            if (chat) chat.messages.currentPage = -1;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param {number | string} roomIdOrTitle
+     * @returns {null | MessageSocketTypes.CommandGetChatMessagesPage | false}
+     */
+    setFetchNewChatMessagePage(roomIdOrTitle) {
+        const roomId = this.getRoomId(roomIdOrTitle);
+        if (typeof roomId !== 'number') return false;
+            const chat = this.chatsMap.get(roomId);
+            if (chat == undefined) return false;
+            if (chat.messages.fetchingPage == true || chat.messages.currentPage === -1) return null;
+            chat.messages.fetchingPage = true;
+            return {module: 'chat', command: 'get_chatmessages_page', room_id: roomId, page_number: chat.messages.currentPage};
+    }
+
+    /** @param {APITypes.ChatRoomData} chatRoom  */
+    addOrUpdateChat(chatRoom) {
+        this.chatsMap.set(chatRoom.room_id, { messages: new MessageData(chatRoom), pubsub: new PubSub() });
+        this.chatsMapLookup.set(chatRoom.title, chatRoom.room_id);
+        if (chatRoom.type === 'private') {
+            const u = chatRoom.users.find(u => u.username !== this.sessionUserName);
+            if (u) this.privateChatLookup.set(u.username, chatRoom.title);
+        }
+        this.pubsubChat.publish(this.chatsMap);
+    }
+
+    /** @param {APITypes.ChatRoomData} chatRoom */
+    removeChat(chatRoom) {
+        this.chatsMap.delete(chatRoom.room_id);
+        this.chatsMapLookup.delete(chatRoom.title);
+        if (chatRoom.type === 'private') {
+            const u = chatRoom.users.find(u => u.username !== this.sessionUserName);
+            if (u) this.privateChatLookup.delete(u.username);
+        }
+        this.pubsubChat.publish(this.chatsMap);
+    }
+
+    /** @param {string} chatRoomName  */
+    isValidChatByRoomName(chatRoomName) {
+        return this.chatsMapLookup.has(chatRoomName);
+    }
+
+    /** @type {ChatsMap} */
+    chatsMap = new Map;
+    /** @type {Map<string, number>} */
+    chatsMapLookup = new Map();
+    /** @type {PubSub<ChatsMap>} */
+    pubsubChat = new PubSub();
+    /** @type {Map<string, string>} */
+    privateChatLookup = new Map();
+}
+
 
 /**
  * @typedef {Map< number, { pubsub: PubSub<MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData>>,  messages: MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData> } >} ChatsMap
@@ -177,6 +322,7 @@ export class GlobalSockHandler {
     /** @param {APITypes.UserData} userData  */
     constructor(userData) {
         this.userData = userData;
+        this.#chatsMap = new ChatMap(userData.username);
     }
 
     closeSocket() {
@@ -184,65 +330,37 @@ export class GlobalSockHandler {
         this.#socket?.close();
     }
 
-    initNotifications() {
-        this.#sendCommand({module: "notification", command: "get_notifications", page_number: this.#notifications.currentPage});
-        this.#sendCommand({module: "notification", command: "get_unread_notifications_count"})
-    }
-
-    async initChats() {
-        /** @type {APITypes.ApiResponse<APITypes.ChatRoomData[]>} */
-        const data =  await fetcher.$get('/chat/rooms');
-        if (data.success !== true) return;
-        /** @type {Promise<APITypes.ApiResponse<APITypes.ChatMessageList>>[]} */
-        const chatMessagePromises = [];
-        data.data.forEach((room) => {
-            console.log('room: ', room);
-            /** @type {MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData>} */
-            const messages = new MessageData(room);
-            const p = fetcher.$get('/chat/messages', {searchParams: new URLSearchParams({
-                room_id: room.room_id.toString(),
-                page: '1',
-            })});
-            chatMessagePromises.push(p);
-            // console.log('typeof roomid: ', typeof room.room_id);
-            this.#chatsMap.set(room.room_id, {messages, pubsub: new PubSub() });
-            this.#chatsMapLookup.set(room.title, room.room_id);
-        });
-        const res = await Promise.all(chatMessagePromises);
-        res.forEach((messageResponse) => {
-            // console.log('message response: ', messageResponse);
-            if (messageResponse.success) {
-                const d = messageResponse.data;
-                this.#chatsMap.get(d.room_id)?.messages.addEnd(d.messages.reverse(), d.next_page);
-            } else {
-                // console.log('invalid chatmessage response: ', messageResponse.message);
-            }
-        });
-    }
-
     async init() {
         this.#socket = new ReconnectingSocket(`wss://api.${window.location.host}/ws/`)
         this.#socket.addHandler("initial_connected", () => {
             console.log('INITIAL CONNECTED');
             this.#initialized = true;
-            this.initNotifications()
+            this.#sendCommand({module: "notification", command: "get_notifications", page_number: this.#notifications.currentPage});
+            this.#sendCommand({module: "notification", command: "get_unread_notifications_count"})
+            this.#chatsMap.chatsMap.forEach((v, room_id) => {
+                const cmd = this.#chatsMap.setFetchNewChatMessagePage(room_id);
+                if (cmd !== null && cmd !== false) {
+                    this.#sendCommand(cmd);
+                }
+            })
         });
         this.#socket.addHandler('error_json', (e) => {
             console.log('json error: ', e);
             
         })
         this.#socket.addHandler("message", this.handleSocketMessage);
-        await this.initChats()
-        // this.#notificationsHandle = new MessageDataHandle(this.#notifications);
-        // this.#notificationsHandle
-
-        
+         /** @type {APITypes.ApiResponse<APITypes.ChatRoomData[]>} */
+         const data =  await fetcher.$get('/chat/rooms');
+         if (data.success !== true) return;
+         /** @type {Promise<APITypes.ApiResponse<APITypes.ChatMessageList>>[]} */
+         const chatMessagePromises = [];
+         data.data.forEach((room) => {
+             console.log('room: ', room);
+             this.#chatsMap.addOrUpdateChat(room);
+         });
     }
-    /** @type {ChatsMap} */
-    #chatsMap = new Map();
-
-    /** @type {Map<string, number>} */
-    #chatsMapLookup = new Map();
+    #chatsMap;
+    
 
     #initialized = false;
     /** @type {ReconnectingSocket | undefined} */
@@ -257,36 +375,18 @@ export class GlobalSockHandler {
     /** @param {MessageSocketTypes.ChatEvents} data */
     handleSocketChatEvent(data) {
         if (data.msg_type ===  MSG_TYPE_CHAT_ROOM_ADD) {
-            this.#chatsMap.set(data.payload.chat_room.room_id, {messages: new MessageData(data.payload.chat_room), pubsub: new PubSub() });
+            this.#chatsMap.addOrUpdateChat(data.payload.chat_room);
             this.#sendCommand({module: 'chat', command: 'get_chatmessages_page', room_id: data.payload.chat_room.room_id, page_number: 1});
-            this.#pubsubChat.publish(this.#chatsMap);
         } else if (data.msg_type === MSG_TYPE_CHAT_ROOM_REMOVE) {
-            this.#chatsMap.delete(data.payload.chat_room.room_id);
-            this.#pubsubChat.publish(this.#chatsMap);
+            this.#chatsMap.removeChat(data.payload.chat_room);
         } else if (data.msg_type === MSG_TYPE_CHAT_ROOM_UPDATE) {
-            const c = this.#chatsMap.get(data.payload.chat_room.room_id);
-            if (c) c.messages.room = data.payload.chat_room;
-            c?.pubsub.publish(c.messages);
-            this.#pubsubChat.publish(this.#chatsMap);
+            this.#chatsMap.addOrUpdateChat(data.payload.chat_room);
         } else if (data.msg_type === MSG_TYPE_CHAT_MESSAGE_NEW) {
-            console.log('OKOK');
-            const chat = this.#chatsMap.get(data.payload.room_id);
-            console.log('chat: ', chat);
-            chat?.messages.addEnd(data.payload.chat_message, chat.messages.unreadCount+1);
-            chat?.pubsub.publish(chat.messages);
-            this.#pubsubChat.publish(this.#chatsMap);
-            return;
+            this.#chatsMap.addNewMessageBottom(data.payload.room_id, data.payload.chat_message);
         } else if (data.msg_type === MSG_TYPE_CHAT_MESSAGE_PAGE) {
-            const c = this.#chatsMap.get(data.payload.room_id);
-            if (c) {
-                console.log('new page: ', data.payload.new_page_number);
-                
-                c.messages.addFront(data.payload.chat_messages.reverse(), data.payload.new_page_number);
-                console.log('new messages: ', c.messages.messages);
-                c.messages.fetchingPage = false;
-                c.pubsub.publish(c.messages);
-                this.#pubsubChat.publish(this.#chatsMap);
-            }
+            this.#chatsMap.pushMessagePageToTop(data.payload.room_id, data.payload.chat_messages, data.payload.new_page_number);
+        } else if (data.msg_type === MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED) {
+            this.#chatsMap.setChatRoomPageExhausted(data.payload.room_id);
         }
     }
 
@@ -347,12 +447,9 @@ export class GlobalSockHandler {
     getNextMessagePage(room_id) {
         if (!this.#initialized) return;
         if (typeof room_id === 'number') {
-            const c = this.#chatsMap.get(room_id);
-            if (c && c.messages.currentPage !== -1 && c.messages.fetchingPage === false) {
-                c.messages.fetchingPage = true;
-                this.#sendCommand({module: 'chat', command: 'get_chatmessages_page', page_number: c.messages.currentPage, room_id});
-            }
-
+            const cmd = this.#chatsMap.setFetchNewChatMessagePage(room_id);
+            if (cmd !== null && cmd !== false)
+                this.#sendCommand(cmd)
         } else if (this.#notifications.currentPage !== -1 && this.#notifications.fetchingPage === false) {
             this.#notifications.fetchingPage = true;
             this.#sendCommand({module: 'notification', command: "get_notifications", page_number: this.#notifications.currentPage});
@@ -378,12 +475,22 @@ export class GlobalSockHandler {
         }
     }
 
+    getRoomId = (value) => this.#chatsMap.getRoomId(value);
+    
+    
+    /** @param {string} chatroom_name  */
+    isValidChat = (chatroom_name) => this.#chatsMap.isValidChatByRoomName(chatroom_name); 
+
+    /** @param {string} username */
+    getChatRoomForUser = (username) => this.#chatsMap.getRoomForUser(username);
+
     /**
      * @param {number} room_id 
      * @param {string} message 
      */
     sendChatMessage(room_id, message) {
-        this.#sendCommand({module: 'chat', command: 'send_chat_message', room_id, message})
+        if (this.getRoomId !== undefined)
+            this.#sendCommand({module: 'chat', command: 'send_chat_message', room_id, message})
     }
 
     /** @type {PubSub<MessageDataHandle<MessageSocketTypes.NotificationData> >} */
@@ -394,12 +501,13 @@ export class GlobalSockHandler {
         return this.#pubsubNotification.subscribe(this.#notifications.getHandle(), host, force);
     }
 
-    /** @type {PubSub<ChatsMap>} */
-    #pubsubChat = new PubSub();
+    // /** @type {PubSub<ChatsMap>} */
+    // #pubsubChat = new PubSub();
 
     /** @param {BaseBase} [host] @param {boolean} [force] */
     subscribeChats(host, force) {
-        return this.#pubsubChat.subscribe(this.#chatsMap, host, force);
+        return this.#chatsMap.pubsubChat.subscribe(this.#chatsMap.chatsMap, host, force);
+        // return this.#pubsubChat.subscribe(this.#chatsMap, host, force);
     }
 
     #pubsubStatus = new PubSub();
@@ -409,36 +517,16 @@ export class GlobalSockHandler {
     }
 
 
-    // /** @type {Map<number, PubSub<MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData>> >} */
-    // #pubsubChatsMap = new Map();
-
     /**
-     * @param {APITypes.BasicUserData | APITypes.TournamentData} userOrTournament
+     * @param {APITypes.BasicUserData | APITypes.TournamentData | number} userOrTournament
      * @param {BaseBase} host
      * @param {(msg_type: keyof MessageSocketTypes.ChatEventTypes) => void} callback
      */
     subscribeSingleChat(userOrTournament, host, callback) {
-        let v;
-        console.log('subscribe chats');
+        const handle = this.#chatsMap.getChatroomHandle(userOrTournament);
+        console.log('HANDLE OF ROOM: ', userOrTournament, ': ', handle);
         
-        if (typeof userOrTournament.username === 'string') {
-            
-            console.log('1. check for chat my name: ', `${this.userData.username}.${userOrTournament.username}`);
-            v = this.#chatsMapLookup.get(`${this.userData.username}.${userOrTournament.username}`);
-            console.log('res 1: ', v);
-            
-            console.log('2. check for chat my name: ', `${userOrTournament.username}.${this.userData.username}`);
-            if (v === undefined) v = this.#chatsMapLookup.get(`${userOrTournament.username}.${this.userData.username}`);
-            console.log('res 2: ', v);
-            if (v === undefined) return
-        } else if (typeof userOrTournament.name === 'string') {
-            v = this.#chatsMapLookup.get(userOrTournament.name);
-        }
-        if (v) {
-            const d = this.#chatsMap.get(v);
-            console.log('GlobakSockHandler: subscribeSingleChat: data: ', d);
-            return d?.pubsub.subscribe(d.messages, host, true);
-        }
+        if (handle) return handle.pubsub.subscribe(handle.messages, host, true);
     }
 
     /** @param {MessageSocketTypes.ChatCommands | MessageSocketTypes.NotificationCommands} command */
