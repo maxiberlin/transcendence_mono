@@ -5,7 +5,7 @@ import * as bootstrap from 'bootstrap'
 // import 'bootstrap'
 
 import { sessionService } from './services/api/API_new.js';
-import { messageSocketService } from './services/api/GlobalSockHandler.js';
+// import { messageSocketService } from './services/api/GlobalSockHandler.js';
 import router from './services/router.js';
 
 // Components
@@ -41,7 +41,7 @@ import { getPreferredTheme, setTheme } from './services/themeSwitcher';
 const onDomLoaded = async () => {
     setTheme(getPreferredTheme());
     await sessionService.login();
-    await messageSocketService.init();
+    // await messageSocketService.init();
     console.log('DOM LOADED');
     router.init('pong-app');
     // document.body.appendChild(document.createElement('pong-app'));

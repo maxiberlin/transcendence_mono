@@ -32,7 +32,7 @@ export default class PubSub extends EventTarget {
 
     /** @param {T} data data to publish */
     publish(data) {
-        console.log('PubSub: iam: ', this, ' publish data: ', data);
+        // console.log('PubSub: iam: ', this, ' publish data: ', data);
         // console.log('eventType: ', this.eventType);
         this.dispatchEvent(new CustomEvent(this.eventType, { detail: data }));
     }

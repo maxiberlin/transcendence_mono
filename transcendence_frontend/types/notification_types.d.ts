@@ -1,5 +1,7 @@
 
 declare namespace MessageSocketTypes {
+    export type NotificationContentTypes = 'friendrequest' | 'friendlist' | 'gamerequest';
+
     export type ModuleType = 'notification' | 'chat';
 
     export interface ModuleNotification {
@@ -28,7 +30,7 @@ declare namespace MessageSocketTypes {
 
 
     export interface NotificationData {
-        notification_type: string;
+        notification_type: NotificationContentTypes;
         notification_id: number;
         description: string;
         action_id: number;
@@ -81,13 +83,13 @@ declare namespace MessageSocketTypes {
             count: number;
         };
     }
-    export type NotificationMessages = NotificationsList
+    export type NotificationEvents = NotificationsList
         | NewNotification
         | NotificationUpdate
         | NotificationCount
         | PaginationExhausted;
 
-    export type NotificationEventMsgType = NotificationMessages['msg_type'];
+    export type NotificationEventMsgType = NotificationEvents['msg_type'];
 
     export interface CommandSendChatMessage extends ModuleChat {
         command: 'send_chat_message';
@@ -124,8 +126,8 @@ declare namespace MessageSocketTypes {
     export enum ChatEventTypes {
         MSG_TYPE_CHAT_ROOM_ADD = 100,
         MSG_TYPE_CHAT_ROOM_REMOVE = 101,
-        MSG_TYPE_CHAT_USER_ADD = 102,
-        MSG_TYPE_CHAT_USER_REMOVE = 103,
+        MSG_TYPE_CHAT_ROOM_UPDATE = 102,
+
         MSG_TYPE_CHAT_MESSAGE_NEW = 104,
         MSG_TYPE_CHAT_MESSAGE_UPDATED = 105,
         MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT = 106,
@@ -144,29 +146,22 @@ declare namespace MessageSocketTypes {
     export interface EventChatRoomAdd extends ModuleChat {
         msg_type: ChatEventTypes.MSG_TYPE_CHAT_ROOM_ADD;
         payload: {
-            room: APITypes.ChatRoomData;
+            chat_room: APITypes.ChatRoomData;
         };
     }
     export interface EventChatRoomRemove extends ModuleChat {
         msg_type: ChatEventTypes.MSG_TYPE_CHAT_ROOM_REMOVE;
         payload: {
-            room: APITypes.ChatRoomData;
+            chat_room: APITypes.ChatRoomData;
         };
     }
-    export interface EventChatUserAdd extends ModuleChat {
-        msg_type: ChatEventTypes.MSG_TYPE_CHAT_USER_ADD;
+    export interface EventChatRoomUpdate extends ModuleChat {
+        msg_type: ChatEventTypes.MSG_TYPE_CHAT_ROOM_UPDATE;
         payload: {
-            room: APITypes.ChatRoomData;
-            user: APITypes.BasicUserData;
+            chat_room: APITypes.ChatRoomData;
         };
     }
-    export interface EventChatUserRemove extends ModuleChat {
-        msg_type: ChatEventTypes.MSG_TYPE_CHAT_USER_REMOVE;
-        payload: {
-            room: APITypes.ChatRoomData;
-            user: APITypes.BasicUserData;
-        };
-    }
+
     export interface EventChatMessageList extends ModuleChat {
         msg_type: ChatEventTypes.MSG_TYPE_CHAT_MESSAGE_PAGE;
         payload: {
@@ -199,14 +194,30 @@ declare namespace MessageSocketTypes {
         | EventChatMessageNew
         | EventChatRoomAdd
         | EventChatRoomRemove
-        | EventChatUserAdd
-        | EventChatUserRemove
+        | EventChatRoomUpdate
         | EventChatMessageList
         | EventChatMessageUpdate
         | EventChatMessagePaginationExhausted
         | EventChatMessageUnreadCount;
 
     export type ChatEventMsgType = ChatEvents['msg_type'];
+
+    export enum ActionTypes {
+        MSG_TYPE_FRIEND_STATUS_CHANGED = 201
+    }
+
+    export interface FriendStatusChanged {
+        msg_type: ActionTypes.MSG_TYPE_FRIEND_STATUS_CHANGED;
+        payload: {
+            user_id: number;
+            status: 'online' | 'offline';
+        };
+    }
+
+    export type ActionEvents =
+        | FriendStatusChanged;
+
+    export type MessageSocketEvents = ChatEvents | NotificationEvents | ActionEvents;
 }
 // export enum NotificationMessageTypes {
 //     MSG_TYPE_NOTIFICATIONS_DATA = 'MSG_TYPE_NOTIFICATIONS_DATA', // New 'general' notifications data payload incoming

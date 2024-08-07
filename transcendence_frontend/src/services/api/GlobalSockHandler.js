@@ -22,15 +22,24 @@ const MSG_TYPE_NOTIFICATION_UPDATED = 5
 
 const MSG_TYPE_CHAT_ROOM_ADD = 100
 const MSG_TYPE_CHAT_ROOM_REMOVE = 101
-const MSG_TYPE_CHAT_USER_ADD = 102
-const MSG_TYPE_CHAT_USER_REMOVE = 103
+const MSG_TYPE_CHAT_ROOM_UPDATE = 102
 const MSG_TYPE_CHAT_MESSAGE_NEW = 104
 const MSG_TYPE_CHAT_MESSAGE_UPDATED = 105
 const MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT = 106
 const MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED = 107
 const MSG_TYPE_CHAT_MESSAGE_PAGE = 108
 
+const MSG_TYPE_FRIEND_STATUS_CHANGED = 201
 
+// export class UserStatusChangeEvent extends Event {
+//     static type = 'user-status-changed-event';
+//     constructor(user_status) {
+//         super(UserStatusChangeEvent.type, {bubbles: true});
+//         console.log('UserStatusChangeEvent constructor');
+        
+//         this.user_status = user_status;
+//     }
+// }
 
 function detailedTimeAgo(now, timestamp) {
     const secondsPast = Math.floor(now - timestamp);
@@ -51,8 +60,8 @@ function detailedTimeAgo(now, timestamp) {
 
 
 /**
- * @template T
- * @template K
+ * @template {MessageSocketTypes.NotificationData | APITypes.ChatMessageData} T
+ * @template {APITypes.ChatRoomData} K
  */
 export class MessageDataHandle {
     /** 
@@ -61,10 +70,8 @@ export class MessageDataHandle {
      */
     constructor(msgData, roomInfo) {
         this.#msgData = msgData;
-        this.#roomInfo = roomInfo;
     }
     #msgData;
-    #roomInfo;
     get messages() {
         return this.#msgData.messages;
     }
@@ -75,7 +82,7 @@ export class MessageDataHandle {
         return this.#msgData.unreadCount;
     }
     get room() {
-        return this.#roomInfo;
+        return this.#msgData.room;
     }
     get fetchingPage() {
         return this.#msgData.fetchingPage;
@@ -83,8 +90,8 @@ export class MessageDataHandle {
 }
 
 /**
- * @template T
- * @template K
+ * @template {MessageSocketTypes.NotificationData | APITypes.ChatMessageData} T
+ * @template {APITypes.ChatRoomData} K
  */
 class MessageData {
     /** @param {K | undefined} [roomInfo] */
@@ -108,11 +115,11 @@ class MessageData {
 
     /**
      *  data array needs to be in descending order of timestamps
-     * @param {*} data 
-     * @param {*} newPage 
+     * @param {T | T[]} data 
+     * @param {number} [newPage] 
      */
     addEnd(data, newPage) {
-        console.log('ADD FRONT: ', data);
+        // console.log('ADD END: ', data, ', current Page: ', this.currentPage, ', new Page: ', newPage);
         // if (newPage !== this.currentPage + 1) return;
         if (newPage !== -1 && data) {
             if (data instanceof Array) {
@@ -128,25 +135,28 @@ class MessageData {
     }
     /**
      *  data array needs to be in descending order of timestamps
-     * @param {*} data 
-     * @param {number} newPage 
+     * @param {T | T[]} data 
+     * @param {number} [newPage] 
      */
     addFront(data, newPage) {
-        console.log('ADD FRONT: ', data);
-        if (newPage === this.currentPage) return;
-        if (data instanceof Array) {
-            for (let i = data.length - 1; i >= 0; i--) {
-                this.messages.unshift( data[i]);
+        // console.log('ADD FRONT: ', data, ', current Page: ', this.currentPage, ', new Page: ', newPage);
+        // if (newPage === this.currentPage) return;
+        if (data && newPage !== -1) {
+            if (data instanceof Array) {
+                for (let i = data.length - 1; i >= 0; i--) {
+                    this.messages.unshift( data[i]);
+                }
+            } else {
+                this.messages.unshift(data);
             }
-        } else {
-            this.messages.unshift(data);
         }
         if (typeof newPage === "number")
             this.currentPage = newPage;
     }
-    updateMessage(data, loopkup) {
-        const i = this.messages.findIndex(i => i[loopkup] === data[loopkup]);
-        console.log('update message: ', data, ', lookup: ', loopkup, ' , index: ', i);
+    /** @param {T} data @param {keyof T} lookup  */
+    updateMessage(data, lookup) {
+        const i = this.messages.findIndex(i => i[lookup] === data[lookup]);
+        console.log('update message: ', data, ', lookup: ', lookup, ' , index: ', i);
         if (i !== -1) this.messages[i] = data;
     }
     insertMessages() {}
@@ -163,9 +173,15 @@ class MessageData {
  * @typedef {Map< number, { pubsub: PubSub<MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData>>,  messages: MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData> } >} ChatsMap
  */
 
-class GlobalSockHandler {
-    constructor() {
-        this.session = sessionService.subscribe(undefined, true);
+export class GlobalSockHandler {
+    /** @param {APITypes.UserData} userData  */
+    constructor(userData) {
+        this.userData = userData;
+    }
+
+    closeSocket() {
+        this.#initialized = false;
+        this.#socket?.close();
     }
 
     initNotifications() {
@@ -181,25 +197,25 @@ class GlobalSockHandler {
         const chatMessagePromises = [];
         data.data.forEach((room) => {
             console.log('room: ', room);
+            /** @type {MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData>} */
             const messages = new MessageData(room);
             const p = fetcher.$get('/chat/messages', {searchParams: new URLSearchParams({
                 room_id: room.room_id.toString(),
                 page: '1',
             })});
             chatMessagePromises.push(p);
-            console.log('typeof roomid: ', typeof room.room_id);
+            // console.log('typeof roomid: ', typeof room.room_id);
             this.#chatsMap.set(room.room_id, {messages, pubsub: new PubSub() });
             this.#chatsMapLookup.set(room.title, room.room_id);
         });
         const res = await Promise.all(chatMessagePromises);
         res.forEach((messageResponse) => {
-            console.log('message response: ', messageResponse);
+            // console.log('message response: ', messageResponse);
             if (messageResponse.success) {
                 const d = messageResponse.data;
-                console.log('');
                 this.#chatsMap.get(d.room_id)?.messages.addEnd(d.messages.reverse(), d.next_page);
             } else {
-                console.log('invalid chatmessage response: ', messageResponse.message);
+                // console.log('invalid chatmessage response: ', messageResponse.message);
             }
         });
     }
@@ -232,12 +248,27 @@ class GlobalSockHandler {
     /** @type {ReconnectingSocket | undefined} */
     #socket;
 
+
+    
+
     /** @type {MessageData<MessageSocketTypes.NotificationData>} */
     #notifications = new MessageData();
 
     /** @param {MessageSocketTypes.ChatEvents} data */
     handleSocketChatEvent(data) {
-        if (data.msg_type === MSG_TYPE_CHAT_MESSAGE_NEW) {
+        if (data.msg_type ===  MSG_TYPE_CHAT_ROOM_ADD) {
+            this.#chatsMap.set(data.payload.chat_room.room_id, {messages: new MessageData(data.payload.chat_room), pubsub: new PubSub() });
+            this.#sendCommand({module: 'chat', command: 'get_chatmessages_page', room_id: data.payload.chat_room.room_id, page_number: 1});
+            this.#pubsubChat.publish(this.#chatsMap);
+        } else if (data.msg_type === MSG_TYPE_CHAT_ROOM_REMOVE) {
+            this.#chatsMap.delete(data.payload.chat_room.room_id);
+            this.#pubsubChat.publish(this.#chatsMap);
+        } else if (data.msg_type === MSG_TYPE_CHAT_ROOM_UPDATE) {
+            const c = this.#chatsMap.get(data.payload.chat_room.room_id);
+            if (c) c.messages.room = data.payload.chat_room;
+            c?.pubsub.publish(c.messages);
+            this.#pubsubChat.publish(this.#chatsMap);
+        } else if (data.msg_type === MSG_TYPE_CHAT_MESSAGE_NEW) {
             console.log('OKOK');
             const chat = this.#chatsMap.get(data.payload.room_id);
             console.log('chat: ', chat);
@@ -258,28 +289,58 @@ class GlobalSockHandler {
             }
         }
     }
-    /** @param {MessageSocketTypes.NotificationMessages} data */
+
+    /** @param {MessageSocketTypes.NotificationContentTypes} type  */
+    updateSessionUserDataByNotificationContentType(type) {
+        switch (type) {
+            case 'friendlist':
+                sessionService.updateData(['user']);
+                break;
+            case 'friendrequest':
+                sessionService.updateData(['friend_requests_received', 'friend_requests_sent'])
+                break;
+            case 'gamerequest':
+                sessionService.updateData(['game_invitations_received', 'game_invitations_sent', 'tournaments'])
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** @param {MessageSocketTypes.NotificationEvents} data */
     handleSocketNotificationEvent(data) {
+        if (!this.#initialized) return;
         if(data.msg_type === MSG_TYPE_NOTIFICATION_PAGE) {
             this.#notifications.addEnd(data.payload.notifications, data.payload.new_page_number);
         } else if(data.msg_type === MSG_TYPE_NOTIFICATION_NEW) {
-            this.#notifications.addFront(data.payload.notification, data.payload.count);
+            this.#notifications.addFront(data.payload.notification);
+            this.#notifications.unreadCount += 1;
+            this.updateSessionUserDataByNotificationContentType(data.payload.notification.notification_type)
         } else if(data.msg_type === MSG_TYPE_NOTIFICATION_PAGINATION_EXHAUSTED) {
             this.#notifications.currentPage = -1;
         } else if(data.msg_type === MSG_TYPE_NOTIFICATION_UNREAD_COUNT) {
             this.#notifications.unreadCount = data.payload.count;
         } else if(data.msg_type === MSG_TYPE_NOTIFICATION_UPDATED) {
-            this.#notifications.updateMessage(data, 'notification_id');
+            this.#notifications.updateMessage(data.payload.notification, 'notification_id');
+            this.updateSessionUserDataByNotificationContentType(data.payload.notification.notification_type)
         }
         this.#pubsubNotification.publish(this.#notifications.getHandle())
     }
 
-    /** @param {MessageSocketTypes.NotificationMessages | MessageSocketTypes.ChatEvents} data */
+    /** @param {MessageSocketTypes.MessageSocketEvents} data */
     handleSocketMessage = (data) => {
         if (!this.#initialized) return;
         console.log('new message: ', data);
-        if (data.module === 'chat') this.handleSocketChatEvent(data);
-        else if (data.module === 'notification') this.handleSocketNotificationEvent(data);
+        if (data.msg_type === MSG_TYPE_FRIEND_STATUS_CHANGED) {
+            userStatusMap.set(data.payload.user_id, data.payload.status);
+            console.log('dispatch event: UserStatusChangeEvent');
+            
+            this.#pubsubStatus.publish(data.payload.status);
+        } else if (data.module === 'chat') {
+            this.handleSocketChatEvent(data)
+        } else if (data.module === 'notification') {
+            this.handleSocketNotificationEvent(data);
+        }
     }
 
     /** @param {number} [room_id]  */
@@ -341,6 +402,13 @@ class GlobalSockHandler {
         return this.#pubsubChat.subscribe(this.#chatsMap, host, force);
     }
 
+    #pubsubStatus = new PubSub();
+    /** @param {BaseBase} [host] @param {boolean} [force] */
+    subscribeUserStatusChange(host, force) {
+        return this.#pubsubStatus.subscribe(undefined, host, force);
+    }
+
+
     // /** @type {Map<number, PubSub<MessageData<APITypes.ChatMessageData, APITypes.ChatRoomData>> >} */
     // #pubsubChatsMap = new Map();
 
@@ -354,9 +422,15 @@ class GlobalSockHandler {
         console.log('subscribe chats');
         
         if (typeof userOrTournament.username === 'string') {
-            v = this.#chatsMapLookup.get(`${this.session.value.user?.username}.${userOrTournament.username}`);
-            if (v === undefined) v = this.#chatsMapLookup.get(`${userOrTournament.username}.${this.session.value.user?.username}`);
-            return
+            
+            console.log('1. check for chat my name: ', `${this.userData.username}.${userOrTournament.username}`);
+            v = this.#chatsMapLookup.get(`${this.userData.username}.${userOrTournament.username}`);
+            console.log('res 1: ', v);
+            
+            console.log('2. check for chat my name: ', `${userOrTournament.username}.${this.userData.username}`);
+            if (v === undefined) v = this.#chatsMapLookup.get(`${userOrTournament.username}.${this.userData.username}`);
+            console.log('res 2: ', v);
+            if (v === undefined) return
         } else if (typeof userOrTournament.name === 'string') {
             v = this.#chatsMapLookup.get(userOrTournament.name);
         }
@@ -366,8 +440,6 @@ class GlobalSockHandler {
             return d?.pubsub.subscribe(d.messages, host, true);
         }
     }
-
-
 
     /** @param {MessageSocketTypes.ChatCommands | MessageSocketTypes.NotificationCommands} command */
     #sendCommand = (command) => {
@@ -379,4 +451,5 @@ class GlobalSockHandler {
     }
 }
 
-export const messageSocketService = new GlobalSockHandler();
+/** @type {Map<number, 'online' | 'offline' | 'none'>} */
+export const userStatusMap = new Map();

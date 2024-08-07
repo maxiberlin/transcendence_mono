@@ -2,8 +2,8 @@ import { avatarInfo } from '../../components/bootstrap/AvatarComponent.js';
 import { renderCard, renderListCard } from '../../components/bootstrap/BsCard.js';
 import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
+import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
 import { sessionService } from '../../services/api/API_new.js';
-import { messageSocketService } from '../../services/api/GlobalSockHandler.js';
 
 // function formatDateString(dateString) {
 //     const date = new Date(dateString);
@@ -324,10 +324,17 @@ function formatDateString(dateString) {
 
 /**
  * @prop user_or_tournament
+ * @attr color
+ * @attr text
+ * @attr outline
+ * @attr icon
  * @extends BaseElement<SINGLECHATPROPS>
  */
 export class SingleChatView extends BaseElement {
-    static observedAttributes = [];
+    static observedAttributes = ['text', 'icon', 'color', 'outline'];
+    static id = 0;
+    static getIdName = () => `chat-offcanvas-toggler-${SingleChatView.id++}`
+
     constructor() {
         super(false, false);
         // @ts-ignore
@@ -335,6 +342,11 @@ export class SingleChatView extends BaseElement {
         /** @type {import('../../lib_templ/templ/nodes/FuncNode.js').Ref<HTMLInputElement>} */
         this.inputRef = createRef();
         this.chatContainerRef = createRef();
+        this.useId = SingleChatView.getIdName();
+        this.text = '';
+        this.icon = '';
+        this.outline = false;
+        this.color = 'primary';
     }
 
     /**
@@ -349,12 +361,21 @@ export class SingleChatView extends BaseElement {
             if (this.chats instanceof PubSubConsumer) {
                 this.chats.cleanupEventlistener();
             }
-            // @ts-ignore
-            this.chats = messageSocketService.subscribeSingleChat(value, this, (msg_type) => {});
+            
+            // // @ts-ignore
+            this.chats = sessionService.messageSocket?.subscribeSingleChat(value, this, (msg_type) => {});
             console.log('SingleChatView: onPropChange: created Chats: ', this.chats);
         }
         return true;
     }
+
+    // onBeforeMount(route, params, url) {
+ 
+    // }
+
+    // onRouteChange(route, params, url) {
+
+    // }
 
     /** @param {APITypes.ChatMessageData} [message] */
     renderMessage = (message) => {
@@ -376,7 +397,7 @@ export class SingleChatView extends BaseElement {
                     <small class="ms-2 me-1 fw-semibold">${self ? 'you' : message?.username}</small>
                     <small class="fw-light">· ${formatDateString(message?.timestamp)}</small>
                 </div>
-                <p class="border-1 bg-dark-subtle rounded-2 py-2 px-3">${message?.message}</p>
+                <p class="border-1 bg-primary-subtle rounded-2 py-2 px-3">${message?.message}</p>
             </div>
         </div>
     `}
@@ -384,7 +405,7 @@ export class SingleChatView extends BaseElement {
     sendMsg = () => {
         if (this.chats?.value.room?.room_id && this.inputRef.value?.value) {
             if (this.inputRef.value?.value.trim().length > 0)
-                messageSocketService.sendChatMessage(this.chats?.value.room?.room_id, this.inputRef.value?.value)
+                sessionService.messageSocket?.sendChatMessage(this.chats?.value.room?.room_id, this.inputRef.value?.value)
             this.inputRef.value.value = '';
         }
     }
@@ -439,7 +460,7 @@ export class SingleChatView extends BaseElement {
                 else this.#clientScrolled = true;
             }
             if (menu && menu instanceof HTMLElement && menu.scrollTop === 0 && typeof this.chats?.value.room?.room_id === 'number')
-                messageSocketService.getNextMessagePage(this.chats?.value.room?.room_id)
+                sessionService.messageSocket?.getNextMessagePage(this.chats?.value.room?.room_id)
                 // sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: this.#pageNo})
             this.scrolltimeout = undefined;
         }, 300);
@@ -466,17 +487,49 @@ export class SingleChatView extends BaseElement {
             }
             this.renderCount += 1;
         }
+        const color = `btn-${this.outline ? 'outline-' : ''}${this.color}`
         return html`
-            <div class="col d-flex flex-column" style="${"min-height: 75vh; max-height: 100vh"}">
-                <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
-                    class="flex-grow-1 overflow-scroll" >
-                    ${this.chats?.value.messages.map(m => this.renderMessage(m))}
+            <button class=" btn ${color}" type="button" data-bs-toggle="offcanvas" data-bs-target="#${this.useId}" aria-controls="${this.useId}">
+                ${this.text}
+                ${this.icon ? html`<i class="fa-solid fa-fw fa-${this.icon}"></i>` : ''}
+            </button>
+
+            <div class="offcanvas offcanvas-end" data-bs-backdrop="true" tabindex="-1" id="${this.useId}" aria-labelledby="${this.useId}Label">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title" id="${this.useId}Label">
+                        ${this.props.user_or_tournament?.name ? `tournament chat ${this.props.user_or_tournament?.name}`
+                            : this.props.user_or_tournament?.username ? `private chat with ${this.props.user_or_tournament?.username}`
+                            : 'unknown chat'
+                        }
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
-                <div class="px-2" >
-                    ${this.renderMessageInput()}
+                <div class="offcanvas-body">
+                    <div class="col d-flex flex-column h-100" >
+                    <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
+                        class="flex-grow-1 overflow-scroll" >
+                        ${this.chats?.value.messages.map(m => this.renderMessage(m))}
+                    </div>
+                    <div class="px-2" >
+                        ${this.renderMessageInput()}
+                    </div>
+                </div>
                 </div>
             </div>
+
+            
         `
+        // return html`
+        //     <div class="col d-flex flex-column" style="${"min-height: 75vh; max-height: 100vh"}">
+        //         <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
+        //             class="flex-grow-1 overflow-scroll" >
+        //             ${this.chats?.value.messages.map(m => this.renderMessage(m))}
+        //         </div>
+        //         <div class="px-2" >
+        //             ${this.renderMessageInput()}
+        //         </div>
+        //     </div>
+        // `
     }
     // render() {
     //     console.log('SingleChatView: render: current Chats: ', this.chats?.value);
@@ -500,7 +553,7 @@ export default class ChatView extends BaseElement {
     static observedAttributes = [];
     constructor() {
         super(false, false);
-        this.chatsMap = messageSocketService.subscribeChats(this);
+        this.chatsMap = sessionService.messageSocket?.subscribeChats(this);
         this.session = sessionService.subscribe(this);
         /** @type {import('../../lib_templ/templ/nodes/FuncNode.js').Ref<HTMLInputElement>} */
         this.inputRef = createRef();
@@ -547,7 +600,7 @@ export default class ChatView extends BaseElement {
         </li>
     `
 // this.chatsMap.value.forEach((v, k) => {})
-    renderChatsList = () => html`
+    renderChatsList = () => !this.chatsMap ? '' : html`
         <ul class="list-group list-group-flush w-100 h-100 overflow-scroll">
             ${
                 Array.from(this.chatsMap.value, ([room_id, data]) => this.renderChatsListEntry(data.messages.room))

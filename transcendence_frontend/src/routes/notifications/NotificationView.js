@@ -3,7 +3,7 @@ import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { sessionService } from '../../services/api/API_new';
 import { Popover } from 'bootstrap';
-import { messageSocketService } from '../../services/api/GlobalSockHandler';
+// import { messageSocketService } from '../../services/api/GlobalSockHandler';
 
 const GENERAL_NOTIFICATION_INTERVAL = 4000
 const GENERAL_NOTIFICATION_TIMEOUT = 5000
@@ -22,26 +22,26 @@ export class NotificationView extends BaseElement {
     static observedAttributes = [];
     constructor() {
         super();
-        this.notifications = messageSocketService.subscribeNotifications(this);
+        this.notifications = sessionService.messageSocket?.subscribeNotifications(this);
     }
 
     scrolltimeout
     /** @param {Event} e */
     onMenuScroll = (e) => {
-        if (this.scrolltimeout !== undefined || (this.notifications.value && this.notifications.value.fetchingPage === true))
+        if (this.scrolltimeout !== undefined || (this.notifications?.value && this.notifications.value.fetchingPage === true))
             return;
         const menu = e.currentTarget;
         this.scrolltimeout = setTimeout(() => {
             if (menu && menu instanceof HTMLElement && menu.scrollTop + 10 >= menu.scrollHeight - menu.offsetHeight)
-                messageSocketService.getNextMessagePage()
+                sessionService.messageSocket?.getNextMessagePage()
                 // sessionService.pushToNotificationSocket({command: "get_general_notifications", page_number: this.#pageNo})
             this.scrolltimeout = undefined;
           }, 300);
     }
 
     /** @param {MessageSocketTypes.NotificationData} n */
-    getAction = (n) => n.notification_type === "friendrequest" ? actionButtonGroups.receivedFriendInvitation(n.action_id, true)
-        : n.notification_type === "gamerequest" ? actionButtonGroups.receivedGameInvitation(n.action_id, true)
+    getAction = (n) => n.notification_type === "friendrequest" ? actionButtonGroups.receivedFriendInvitation(n.action_id, true, this)
+        : n.notification_type === "gamerequest" ? actionButtonGroups.receivedGameInvitation(n.action_id, true, this)
         : ''
 
     /**
@@ -87,6 +87,8 @@ export class NotificationView extends BaseElement {
         // console.log('render: notification list data?!: ', this.notifications?.value.unreadCount);
         // class=" ${isMobile ? 'btn-group dropup' : 'dropdown'} "
         const isMobile = window.innerWidth <= 576;
+        console.log('render notification, update: ', this.notifications);
+        
         return html`
         <div class="py-2 w-100" >
             <button
@@ -94,8 +96,8 @@ export class NotificationView extends BaseElement {
                     this.DrowdownIsOpen = true;
                     // console.log('DROPDOWN OPEN');
                     
-                    messageSocketService.setNotificationsAsReadUntil(Math.round(Date.now() / 1000))
-                    messageSocketService.updateNotificationNaturalTime()
+                    sessionService.messageSocket?.setNotificationsAsReadUntil(Math.round(Date.now() / 1000))
+                    sessionService.messageSocket?.updateNotificationNaturalTime()
                     // sessionService.pushToNotificationSocket({command: "mark_notifications_read", oldest_timestamp: this.#newestTmeStamp});
                     document.body.classList.add("overflow-hidden");
                 } }
@@ -110,7 +112,7 @@ export class NotificationView extends BaseElement {
                 aria-expanded="false"
             >
                 <i class="fa-solid fa-bell pe-2"></i>
-                ${this.notifications?.value.unreadCount === 1 ? '' : html`
+                ${this.notifications?.value.unreadCount === 0 ? '' : html`
                     <span class="badge text-bg-danger rounded-2 px-2  fs-5">
                         ${this.notifications?.value.unreadCount}
                         <span class="visually-hidden">unread notifications</span>
@@ -120,7 +122,7 @@ export class NotificationView extends BaseElement {
             </button>
             <div
                 @scroll=${ (e) => { this.onMenuScroll(e) } }
-                style="${"max-width: 100vw; max-height: 30em;"}"
+                style="${"min-width: 350px; max-width: 100vw; max-height: 30em;"}"
                 class="overflow-scroll dropdown-menu scrollable-menu"
                 aria-labelledby="id_notification_dropdown_toggle"
             >
