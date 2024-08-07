@@ -114,13 +114,15 @@ def sent_invites(request, *args, **kwargs):
 @login_required
 def game_invite_accept(request, *args, **kwargs):
     user = request.user
+    data = json.loads(request.body)
+    alias = data.get('alias', None)
     invite_id = kwargs.get('invite_id')
     if not invite_id:
         return HttpBadRequest400(message='Invite is invalid.')
     game_invite = GameRequest.objects.get(pk=invite_id)
     if game_invite and game_invite.is_active==True:
         if game_invite.invitee == user:
-            game_invite.accept()
+            game_invite.accept(alias)
             return JsonResponse({'success': True, 'message': 'Invite accepted.'}, status=200)
         else:
             return JsonResponse({'success': False, 'message': 'You cannot access this feature'}, status=400)
@@ -348,6 +350,7 @@ def create_tournament(request, *args, **kwargs):
                         tournament.delete()
                         return JsonResponse({'success': False, 'message': 'Blocklist: cannot invite user'}, status=400)
             tournament_player_creator(user, tournament)
+            tournament.save()
             return JsonResponse({'success': True, 'message': 'Tournament created'}, status=200)
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)

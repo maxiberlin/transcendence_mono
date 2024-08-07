@@ -26,14 +26,14 @@ def model_object_serializer(object: models.Model):
 
 def calculate_user_xp(margin, winner):
     xp_map = {
-        range(1, 4): 1,
-        range(4, 7): 2,
-        range(7, 10): 3
+        range(1, 4): 4,
+        range(4, 7): 7,
+        range(7, 10): 10
     }
     xp = 0
     for margin_range, xp_value in xp_map.items():
         if margin in margin_range:
-            xp = xp_value if winner else -xp_value
+            xp = xp_value if winner else 0
     return xp
 
 
@@ -130,7 +130,6 @@ class HttpBadRequest400(Response):
     def __init__(self, message: str):
         super().__init__(message=message, success=False, status=400)
 
-
 class HttpUnauthorized401(Response):
     def __init__(self, message: str):
         super().__init__(message=message, success=False, status=401)
@@ -151,6 +150,7 @@ class HttpConflict409(Response):
 class HttpInternalError500(Response):
     def __init__(self, message: str):
         super().__init__(message=message, success=False, status=500)
+
 
 class ConflictExcept(Exception):
     pass

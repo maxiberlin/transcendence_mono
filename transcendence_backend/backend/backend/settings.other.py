@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'friends',
     'game',
     'pong_server',
-    # 'public_chat',
     # 'chat',
 ]
 
