@@ -22,6 +22,7 @@ export class SelectedSearchResult extends Event {
 
 /**
  * @prop todiscard
+ * @attr followlink
  */
 export default class ProfileSearch extends BaseElement {
     static observedAttributes = ["followlink", "discardprev"];
@@ -221,7 +222,7 @@ export default class ProfileSearch extends BaseElement {
         } else if (this.#searchData instanceof Array) {
             this.#currSearchRes = this.#searchData.map((data, i) => html`
                 <div data-search-result="${i}" class="list-group-item list-group-item-action m-0 p-0" >
-                    ${avatarLink(data, "list-group-item list-group-item-action")}
+                    ${avatarLink(data, true, "list-group-item list-group-item-action")}
                 </div>
             `)
         } else {

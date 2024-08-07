@@ -1,14 +1,11 @@
 from typing import TypedDict
-from user.models import UserAccount
+from user.models import UserAccount, BasicUserData
 from datetime import datetime
 from .models import BlockList, FriendList
 from django.db.models.query import QuerySet
 
-class UserFriendRequestData(TypedDict):
+class UserFriendRequestData(BasicUserData):
 	request_id: int
-	id: int
-	username: str
-	avatar: str
 
 
 def get_friend_request_item(id: int, user: UserAccount) -> UserFriendRequestData:
@@ -16,17 +13,15 @@ def get_friend_request_item(id: int, user: UserAccount) -> UserFriendRequestData
 		'request_id': id,
 		'id': user.pk,
 		'username': user.username,
-		'avatar': user.avatar.url
+		'avatar': user.avatar.url,
+		'online_status': user.status # type: ignore
 	}
 
 
-class UserInfoData(TypedDict):
-	id: int
-	username: str
+class UserInfoData(BasicUserData):
 	email: str
 	first_name: str
 	last_name: str
-	avatar: str
 	last_login: datetime
 	date_joined: datetime
 	is_mutual_friend: bool
@@ -42,7 +37,8 @@ def get_other_user_data(user_in_list: UserAccount, is_friend_of_logged_in_user: 
         'avatar': user_in_list.avatar.url,
         'last_login': user_in_list.last_login,
         'date_joined': user_in_list.date_joined,
-        'is_mutual_friend': is_friend_of_logged_in_user
+        'is_mutual_friend': is_friend_of_logged_in_user,
+        'online_status': user_in_list.status # type: ignore
     }
 
 

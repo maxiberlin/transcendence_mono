@@ -1,5 +1,6 @@
 /* eslint-disable jsdoc/require-returns */
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
+import { userStatusMap } from '../../services/api/GlobalSockHandler.js';
 
 /**
  * @prop text_after
@@ -74,8 +75,8 @@ export default class AvatarComponent extends BaseElement {
         if (this.statusborder) return '';
         return html`
             <span
-                class="text position-absolute p-2 border border-light rounded-circle bg-${statusColor}"
-                style="transform: translate(${Number(this.size) * 0.6}px, ${Number(this.size) * -0.1}px);"
+                class="text position-absolute rounded-circle bg-${statusColor}"
+                style="padding: 0.4em; transform: translate(${Number(this.size) * 0.66}px, ${Number(this.size) * 0.66}px);"
             ></span>
         `;
     };
@@ -111,17 +112,37 @@ export default class AvatarComponent extends BaseElement {
 customElements.define('avatar-component', AvatarComponent);
 
 /**
+ * @param {APITypes.BasicUserData} [userData]
+ * @param {boolean} [showStatus]
+ */
+export function getUserStatus(userData, showStatus) {
+    // console.log('getUserStatus: user: ', userData);
+    // console.log(`getUserStatus: render avatar: ${userData?.username}, showstatus: ${showStatus}`);
+    // if (userData)
+        // console.log(`getUserStatus: render avatar: statusFromMap: ${userStatusMap.get(userData.id)}, userStatus: ${userData.online_status}`);
+        
+    
+    if (!userData || !showStatus || !userData.online_status) return 'none';
+    const statusFromMap = userStatusMap.get(userData.id);
+    return (statusFromMap == undefined ? userData.online_status : statusFromMap);
+    // const status = !showStatus ? 'none' : userData.online_status ?? 'none'
+}
+
+/**
  *
  * @param {APITypes.BasicUserData} [userData]
+ * @param {boolean} [showStatus]
  * @param {string} [linkClasses]
  */
-export const avatarLink = (userData, linkClasses) => {
+export const avatarLink = (userData, showStatus, linkClasses) => {
     // let status = '';
     // if userData.online
     if (userData && 'inviter' in userData && typeof userData.inviter === "string")
         userData.username = userData.inviter
     else if (userData && 'invitee' in userData && typeof userData.invitee === "string")
         userData.username = userData.invitee
+    // status="${showStatus ? userData.online_status ?? 'none' : 'none'}"
+    
     return userData == undefined ? '' : html`
     <a
         href="/profile/${userData.id ?? 0}"
@@ -130,9 +151,8 @@ export const avatarLink = (userData, linkClasses) => {
         <avatar-component
             size="35"
             src="${userData.avatar ?? ''}"
-            statusborder
-            status="${userData.online == null ? '' : userData.online === true ? 'online' : 'offline'}"
             radius="circle"
+            status=${getUserStatus(userData, showStatus)}
             .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
         >
         </avatar-component>
@@ -141,20 +161,22 @@ export const avatarLink = (userData, linkClasses) => {
 
 /**
  * @param {APITypes.BasicUserData | undefined} userData
+ * @param {boolean} [showStatus]
  */
-export const avatarInfo = (userData) => {
+export const avatarInfo = (userData, showStatus) => {
     // let status = '';
     // if userData.online
     if (userData && 'inviter' in userData && typeof userData.inviter === "string")
         userData.username = userData.inviter
     else if (userData && 'invitee' in userData && typeof userData.invitee === "string")
         userData.username = userData.invitee
+    
     return userData ? html`
         <avatar-component
             size="35"
             src="${userData.avatar ?? ''}"
-            statusborder
             radius="circle"
+            status=${getUserStatus(userData, showStatus)}
             .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
         >
         </avatar-component>

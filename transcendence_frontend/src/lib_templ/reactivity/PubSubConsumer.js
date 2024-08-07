@@ -20,13 +20,13 @@ export default class PubSubConsumer extends BaseReactive {
     constructor(pubSubInst, initialValue, force = false, host = undefined) {
         super(initialValue, host);
         this.host = host;
-        console.log('PubSubConsumer: constructor: host: ', this.host,', pubsub: ', pubSubInst, ', initial value: ', initialValue, ', force: ', force);
+        // console.log('PubSubConsumer: constructor: host: ', this.host,', pubsub: ', pubSubInst, ', initial value: ', initialValue, ', force: ', force);
         this.#pubSubInst = pubSubInst;
         if (host == undefined) force = true;
         this.#force = force;
 
         this.#handler = (event) => {
-            console.log('PubSubConsumer: eventHandler: host: ', this.host, ': event.detail: ',event.detail);
+            // console.log('PubSubConsumer: eventHandler: host: ', this.host, ': event.detail: ',event.detail);
             this.onNewValue(event.detail, this.#force);
         };
 
@@ -38,10 +38,10 @@ export default class PubSubConsumer extends BaseReactive {
     #connected = false;
 
     onConnected() {
-        console.log('PubSubConsumer: onConnected: host: ', this.host, ', is Connected?: ', this.#connected);
+        // console.log('PubSubConsumer: onConnected: host: ', this.host, ', is Connected?: ', this.#connected);
         
         if (this.#connected) return;
-        console.log('PubSubConsumer: onConnected: host: ', this.host, ', add eventListener to pubsub: ', this.#pubSubInst);
+        // console.log('PubSubConsumer: onConnected: host: ', this.host, ', add eventListener to pubsub: ', this.#pubSubInst);
         this.#pubSubInst.addEventListener(
             this.#pubSubInst.eventType,
             this.#handler,

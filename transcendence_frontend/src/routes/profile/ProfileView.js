@@ -7,8 +7,8 @@ import {
     renderCardInfo,
     renderListCard,
 } from '../../components/bootstrap/BsCard.js';
-import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
-import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
+import { avatarLink, getUserStatus } from '../../components/bootstrap/AvatarComponent.js';
+import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import { fetcher, gameAPI, sessionService, userAPI } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
@@ -50,35 +50,103 @@ export class ProfileView extends BaseElement {
     }
 
 
-    /**
-     * @param {number} userId 
-     * @param {boolean} shouldRerender 
-     */
-    async fetchProfileData(userId, shouldRerender) {
-        try {
-            console.log('fetch deb1');
-            this.profileResponse = await userAPI.getProfile(userId);
-            if (!this.profileResponse.success && this.profileResponse.statuscode !== 403) {
-                document.dispatchEvent( new ToastNotificationErrorEvent(this.profileResponse.message) );
-                return false;
-            }
-            console.log('fetch deb2');
-            this.profileUserData = this.profileResponse.data;
-            const gameHistoryResponse = await gameAPI.getHistory(this.profileUserData.username)
-            if (!gameHistoryResponse.success) {
-                document.dispatchEvent( new ToastNotificationErrorEvent(gameHistoryResponse.message) );
-                return false;
-            }
-            this.profileUserGameResults = gameHistoryResponse.data;
-            console.log('fetch deb3');
-            this.profileUserData = this.profileResponse.data;
-            this.profileUserId = userId;
-            const statsRes = await gameAPI.getStats();
+    // /**
+    //  * @param {number} [userId] 
+    //  * @param {boolean} [shouldRerender] 
+    //  */
+    // async fetchProfileData(userId, shouldRerender) {
+    //     try {
+    //         if (userId == undefined) return;
+    //         console.log('fetch deb1');
+    //         this.profileResponse = await userAPI.getProfile(userId);
+    //         if (!this.profileResponse.success && this.profileResponse.statuscode !== 403) {
+    //             document.dispatchEvent( new ToastNotificationErrorEvent(this.profileResponse.message) );
+    //             return false;
+    //         }
+    //         console.log('fetch deb2');
+    //         this.profileUserData = this.profileResponse.data;
+    //         const gameHistoryResponse = await gameAPI.getHistory(this.profileUserData.username)
+    //         if (!gameHistoryResponse.success) {
+    //             document.dispatchEvent( new ToastNotificationErrorEvent(gameHistoryResponse.message) );
+    //             return false;
+    //         }
+    //         this.profileUserGameResults = gameHistoryResponse.data;
+    //         console.log('fetch deb3');
+    //         this.profileUserData = this.profileResponse.data;
+    //         this.profileUserId = userId;
+    //         const statsRes = await gameAPI.getStats();
+    //         if (!statsRes.success || typeof statsRes.data !== "string") {
+    //             document.dispatchEvent( new ToastNotificationErrorEvent(statsRes.message) );
+    //             return false;
+    //         }
+    //         this.imageData = statsRes.data;
+    //         // console.log('fetch deb4');
+    //         // this.gameStatImage = new Image();
+    //         // this.gameStatImage.src = 'data:image/png;base64, ' + statsRes.data;
+    //         // console.log(this.gameStatImage);
+
+
+    //         // super.requestUpdate();
+    //         // this.statsImageWrapperRef.value?.append(this.gameStatImage);
+            
+            
+    //         if (shouldRerender) super.requestUpdate();
+    //         return true;
+    //     } catch (error) {
+    //         sessionService.handleFetchError(error);
+    //         return false;
+    //     }
+    // }
+
+    fetchProfileStats() {
+        this.getProfileStatsPromise = gameAPI.getStats().then((statsRes) => {
             if (!statsRes.success || typeof statsRes.data !== "string") {
                 document.dispatchEvent( new ToastNotificationErrorEvent(statsRes.message) );
-                return false;
+                Promise.reject()
+            } else {
+                this.imageData = statsRes.data;
+                this.allLoaded = true;
+                
+                super.requestUpdate();
             }
-            this.imageData = statsRes.data;
+        })
+    }
+
+    /**
+     * @param {number} [userId] 
+     * @param {boolean} [shouldRerender] 
+     */
+    fetchProfileData(userId, shouldRerender) {
+        try {
+            if (userId == undefined) return;
+            console.log('fetch deb1');
+            this.getProfilePromise = userAPI.getProfile(userId).then((value) => {
+                this.profileResponse = value;
+                if (!this.profileResponse.success && this.profileResponse.statuscode !== 403) {
+                    document.dispatchEvent( new ToastNotificationErrorEvent(this.profileResponse.message) );
+                    Promise.reject()
+                    router.redirect("/")
+                    // history.back();
+                } else {
+                    this.profileUserData = this.profileResponse.data;
+                    this.profileUserId = userId;
+                    
+                    super.requestUpdate();
+                    console.log('fetch deb2');
+                    this.getProfileHistoryPromise = gameAPI.getHistory(this.profileUserData.username).then((historyRes) => {
+                        if (!historyRes.success) {
+                            document.dispatchEvent( new ToastNotificationErrorEvent(historyRes.message) );
+                            Promise.reject()
+                        } else {
+                            this.profileUserGameResults = historyRes.data;
+                            super.requestUpdate();
+                            console.log('fetch deb3');
+                            this.fetchProfileStats();
+                        }
+                        
+                    })
+                }
+            })
             // console.log('fetch deb4');
             // this.gameStatImage = new Image();
             // this.gameStatImage.src = 'data:image/png;base64, ' + statsRes.data;
@@ -97,11 +165,33 @@ export class ProfileView extends BaseElement {
         }
     }
 
+    // /**
+    //  * @param {{pk: string | undefined}} a
+    //  * @param {boolean} shouldRerender
+    //  */
+    // async handleUrlParams({pk}, shouldRerender) {
+    //     // this.routerParams = params;
+    //     const sessionUserId = this.sessionUser.value?.user?.id;
+
+    //     const user_id = Number(pk)
+    //     if ((pk == undefined && sessionUserId != undefined) || sessionUserId === pk) {
+    //         this.profileUserData = this.sessionUser.value?.user;
+    //         this.profileUserGameResults = this.sessionUser.value?.game_results;
+    //         if (shouldRerender) super.requestUpdate();
+    //         return true;
+    //     } else if (pk == undefined || isNaN(user_id)) {
+    //         document.dispatchEvent( new ToastNotificationErrorEvent("Profile not found") );
+    //         return false;
+    //     } else {
+    //         await this.fetchProfileData(user_id, shouldRerender);
+    //         return true;
+    //     }
+    // }
     /**
      * @param {{pk: string | undefined}} a
      * @param {boolean} shouldRerender
      */
-    async handleUrlParams({pk}, shouldRerender) {
+    handleUrlParams({pk}, shouldRerender) {
         // this.routerParams = params;
         const sessionUserId = this.sessionUser.value?.user?.id;
 
@@ -109,13 +199,14 @@ export class ProfileView extends BaseElement {
         if ((pk == undefined && sessionUserId != undefined) || sessionUserId === pk) {
             this.profileUserData = this.sessionUser.value?.user;
             this.profileUserGameResults = this.sessionUser.value?.game_results;
+            this.fetchProfileStats();
             if (shouldRerender) super.requestUpdate();
             return true;
         } else if (pk == undefined || isNaN(user_id)) {
             document.dispatchEvent( new ToastNotificationErrorEvent("Profile not found") );
             return false;
         } else {
-            await this.fetchProfileData(user_id, shouldRerender);
+            this.fetchProfileData(user_id, shouldRerender);
             return true;
         }
     }
@@ -123,32 +214,39 @@ export class ProfileView extends BaseElement {
      * @param {string} route
      * @param {object} params
      * @param {URL} url
-     * @returns {Promise<symbol | void>}
+     * @returns {symbol | void}
      */
-    async onBeforeMount(route, params, url) {
+    onBeforeMount(route, params, url) {
         // console.log("onBeforeMount");
         if (!sessionService.isLoggedIn) {
             return router.redirect('/');
         }
-        const success = await this.handleUrlParams(params, true);
+        // const success = await this.handleUrlParams(params, true);
+        const success = this.handleUrlParams(params, true);
         if (!success) return router.redirect("/");
     }
 
-    async onRouteChange(route, params, url) {
+    onRouteChange(route, params, url) {
         // console.log("onRouteChange, params: ", params);
-        await this.handleUrlParams(params, false);
+        this.handleUrlParams(params, false);
         
         super.requestUpdate();
     }
 
+    onBeforeUnMount() {
+        console.log('onBeforeUnMount: profilePromise: ', this.getProfilePromise);
+        console.log('onBeforeUnMount: profileHistoryPromise: ', this.getProfileHistoryPromise);
+        console.log('onBeforeUnMount: profileStatsPromise: ', this.getProfileStatsPromise);
+        
+    }
+
     /**
-     * @param {APITypes.UserData | undefined} userData
      * @returns {import('../../lib_templ/templ/TemplateAsLiteral.js').TemplateAsLiteral | string}
      */
-    getActionButtons = (userData) => {
+    getActionButtons = () => {
         // console.log(userData);
-        if (!userData) return "";
-        if (userData.is_self)
+        if (this.profileUserData == undefined) return "";
+        if (this.profileUserData.is_self)
             return html`
                 <a
                     href="/profile/settings"
@@ -164,32 +262,41 @@ export class ProfileView extends BaseElement {
             `;
         let data;
         // console.log('profile view: userdata: ', userData);
-        if ((data = sessionService.getFriend(userData.id)) !== undefined)
+        console.log('rerender Profile, friendrequests all: ', this.sessionUser.value.friend_requests_received);
+        console.log('rerender Profile, friendrequests of user: ', sessionService.getReceivedFriendRequest(this.profileUserData.id));
+        
+        if ((data = sessionService.getFriend(this.profileUserData.id)) !== undefined)
             return html`
                 <button disabled class="btn btn-dark me-1">
                     <i class="fa-solid fa-user-check"></i>
                 </button>
-                ${actionButtonDropdowns.friendActions(userData.id, () => { this.fetchProfileData(userData.id, true); })}
+                ${sessionService.canSend1vs1GameInvitation(this.profileUserData.id) === false ? '' :
+                        actions.sendGameInvitation(this.profileUserData.id, { host: this, showText: false })}
+                <a class="btn btn-primary" role="button"
+                    href="/chat/${encodeURI(sessionService.messageSocket?.getChatRoomForUser(this.profileUserData.username) ?? '')}" >
+                    <i class="fa-solid fa-paper-plane"></i>
+                </a>
+                ${actionButtonDropdowns.friendActions(this.profileUserData.id, () => { this.fetchProfileData(this.profileUserData?.id, true); })}
             `;
-        if ((data = sessionService.getReceivedFriendRequest(userData.id)) !== undefined)
+        if ((data = sessionService.getReceivedFriendRequest(this.profileUserData.id)) !== undefined)
             return html`
                 <button disabled class="btn btn-dark me-1">
                     <i class="fa-solid fa-user-clock"></i>
                 </button>
                 ${actionButtonGroups.receivedFriendInvitation(data.request_id, true)}
-                ${actionButtonDropdowns.userActions(data.id, () => { this.fetchProfileData(userData.id, true); })}
+                ${actionButtonDropdowns.userActions(data.id, () => { this.fetchProfileData(this.profileUserData?.id, true); })}
             `;
-        if ((data = sessionService.getSentFriendRequest(userData.id)) !== undefined)
+        if ((data = sessionService.getSentFriendRequest(this.profileUserData.id)) !== undefined)
             return html`
                 <button disabled class="btn btn-dark me-1">
                     <i class="fa-solid fa-user-clock"></i>
                 </button>
                 ${actions.cancelFriendRequest(data.request_id)}
-                ${actionButtonDropdowns.userActions(userData.id, () => { this.fetchProfileData(userData.id, true); })}
+                ${actionButtonDropdowns.userActions(this.profileUserData.id, () => { this.fetchProfileData(this.profileUserData?.id, true); })}
             `;
         return html`
-            ${actions.sendFriendRequest(userData.id)}
-            ${actionButtonDropdowns.userActions(userData.id, () => { this.fetchProfileData(userData.id, true); })}
+            ${actions.sendFriendRequest(this.profileUserData.id)}
+            ${actionButtonDropdowns.userActions(this.profileUserData.id, () => { this.fetchProfileData(this.profileUserData?.id, true); })}
         `;
     };
 
@@ -199,7 +306,7 @@ export class ProfileView extends BaseElement {
                 <div class="profile-header-body" >
                     <div class="d-flex flex-column align-items-center justify-content-between">
                         <avatar-component
-                            status="online"
+                            status=${getUserStatus(this.profileUserData, this.profileUserData?.is_self ? false : true)}
                             statusborder
                             radius="5"
                             src="${this.profileUserData?.avatar ?? ""}"
@@ -223,7 +330,7 @@ export class ProfileView extends BaseElement {
                             stands out from regular paragraphs.
                         </p>
                         <div class="h-100 d-flex flex-row align-items-end justify-content-center" >
-                            ${this.getActionButtons(this.profileUserData)}
+                            ${this.getActionButtons()}
                         </div>
                     </div>
                 </div>
@@ -243,7 +350,7 @@ export class ProfileView extends BaseElement {
         <div class="d-flex w-100 px-2 align-items-center justify-content-between border-start border-4
                 ${ profileUserIsWinner ? 'border-success-subtle' : 'border-danger-subtle'}"
             >
-                ${ avatarLink(data.player_one.id === this.profileUserData?.id ? data.player_two : data.player_one) }
+                ${ avatarLink(data.player_one.id === this.profileUserData?.id ? data.player_two : data.player_one, true) }
                 ${ renderCardInfo('Score', `${data.player_one_score} : ${data.player_two_score}` ) }
                 ${ renderCardInfo( 'Date',  new Date(data.date).toLocaleDateString( 'de-DE', { dateStyle: 'short' } ) ) }
             </div>
@@ -268,7 +375,7 @@ export class ProfileView extends BaseElement {
     statsImageWrapperRef = createRef();
     render() {
         return html`
-            <div class="w-100 h-100">
+            <div class="w-100 h-100 opacity-transition ${this.allLoaded ? 'content-loaded' : ''}">
                 ${this.profileResponse?.statuscode === 403 ? this.renderBlockedPage() : html`
                 <div class="mt-3 profile-grid px-3">
                     ${this.renderProfileHeader()}

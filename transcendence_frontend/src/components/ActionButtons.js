@@ -155,26 +155,28 @@ export const actions = {
         getBtn(sessionService.handleRequest.bind(sessionService, "game-cancel", invitationId), configs.cancelReq, conf),
     acceptGameInvitation: (invitationId, conf) =>
         getBtn(sessionService.handleRequest.bind(sessionService, "game-accept", invitationId), configs.acceptReq, conf),
-    rejectGameInvitation: (invitationId, conf) => getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
-    pushRandomGameResult: (scheduleId, conf) =>   getBtn(sessionService.finishGameUpdateData.bind(sessionService, scheduleId),           configs.pushRes,   conf),
+    rejectGameInvitation: (invitationId, conf) =>
+        getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
+    pushRandomGameResult: (scheduleId, conf) =>
+        getBtn(sessionService.finishGameUpdateData.bind(sessionService, scheduleId), configs.pushRes, conf),
 };
 
 
 /**
  * @typedef {Object} ActionButtonGroups
- * @property {(id: number, showText: boolean) => TplLit} receivedGameInvitation
- * @property {(id: number, showText: boolean) => TplLit} receivedFriendInvitation
+ * @property {(id: number, showText: boolean, host?: BaseElement) => TplLit} receivedGameInvitation
+ * @property {(id: number, showText: boolean, host?: BaseElement) => TplLit} receivedFriendInvitation
  */
 
 /** @type {ActionButtonGroups} */
 export const actionButtonGroups = {
-    receivedGameInvitation: (invitationId, showText) => html`
+    receivedGameInvitation: (invitationId, showText, host) => html`
         <div>
-            ${actions.acceptGameInvitation(invitationId, { showText })}
-            ${actions.rejectGameInvitation(invitationId, { showText })}
+            ${actions.acceptGameInvitation(invitationId, { showText, host })}
+            ${actions.rejectGameInvitation(invitationId, { showText, host })}
         </div>
     `,
-    receivedFriendInvitation: (requestId, showText) => html`
+    receivedFriendInvitation: (requestId, showText, host) => html`
         <div>
             ${actions.acceptFriendRequest(requestId, { showText })}
             ${actions.rejectFriendRequest(requestId, { showText })}

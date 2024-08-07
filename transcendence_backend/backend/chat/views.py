@@ -15,56 +15,56 @@ from django.core.paginator import Paginator
 
 Debug = True
 
-def chat_view(request):
-	context = {}
-	context['debug_mode'] = settings.DEBUG
-	context['room_type'] = 'public'
-	context['room_id'] = 1
-	context['debug'] = Debug
-	user = request.user
-	room_id = context['room_id']
-	chat_room = ChatRoom.objects.get(id=room_id)
-	chat_messages = ChatMessage.objects.filter(room=chat_room)[:30]
-	messages = []
-	for chat in chat_messages:
-		item = model_object_serializer(chat)
-		messages.append(item)
-	context['messages'] = messages
-	# return JsonResponse({'success': True, 'message': messages}, status=200)
-	return render(request, "chats/public-chat.html", context)
+# def chat_view(request):
+# 	context = {}
+# 	context['debug_mode'] = settings.DEBUG
+# 	context['room_type'] = 'public'
+# 	context['room_id'] = 1
+# 	context['debug'] = Debug
+# 	user = request.user
+# 	room_id = context['room_id']
+# 	chat_room = ChatRoom.objects.get(id=room_id)
+# 	chat_messages = ChatMessage.objects.filter(room=chat_room)[:30]
+# 	messages = []
+# 	for chat in chat_messages:
+# 		item = model_object_serializer(chat)
+# 		messages.append(item)
+# 	context['messages'] = messages
+# 	# return JsonResponse({'success': True, 'message': messages}, status=200)
+# 	return render(request, "chats/public-chat.html", context)
 
 
-@csrf_exempt
-@login_required
-@require_GET
-def chat_room_get(request, *args, **kwargs):
-	user = request.user
-	# friend_id = json.loads(request.body).get('user_id')
-	friend_id = kwargs.get('user_id')
-	print(f'---->> friend_id')
-	try:
-		friend = UserAccount.objects.get(pk=friend_id)
-		friend_list = FriendList.objects.get(user=user)
-	except Exception as e:
-		return HttpInternalError500(message=str(e))
-	print(f'---->> progress')
-	if not friend_list.is_mutual_friend(friend):
-		return HttpForbidden403(message=f'Access denied: you must be friends to chat {friend}')
-	try:
-		room: ChatRoom = get_private_room_or_create(user, friend)
-		print(f'---->> got room')
-	except Exception as e:
-		return HttpInternalError500(message=str(e))
-	data = {}
-	if room.pk:
-		data['room_id'] = room.pk
-	return HttpSuccess200(message='', data=data)
+# @csrf_exempt
+# @login_required
+# @require_GET
+# def chat_room_get(request, *args, **kwargs):
+# 	user = request.user
+# 	# friend_id = json.loads(request.body).get('user_id')
+# 	friend_id = kwargs.get('user_id')
+# 	print(f'---->> friend_id')
+# 	try:
+# 		friend = UserAccount.objects.get(pk=friend_id)
+# 		friend_list = FriendList.objects.get(user=user)
+# 	except Exception as e:
+# 		return HttpInternalError500(message=str(e))
+# 	print(f'---->> progress')
+# 	if not friend_list.is_mutual_friend(friend):
+# 		return HttpForbidden403(message=f'Access denied: you must be friends to chat {friend}')
+# 	try:
+# 		room: ChatRoom = get_private_room_or_create(user, friend)
+# 		print(f'---->> got room')
+# 	except Exception as e:
+# 		return HttpInternalError500(message=str(e))
+# 	data = {}
+# 	if room.pk:
+# 		data['room_id'] = room.pk
+# 	return HttpSuccess200(message='', data=data)
 
 
 class ChatRoomView(View):
     def get(self, request: HttpRequest):
         user = request.user
-        rooms = ChatRoom.objects.filter(users__id=user.pk, is_active=True)
+        rooms = ChatRoom.rooms.filter(users__id=user.pk, is_active=True)
         return HttpSuccess200(data=[room.get_room_data() for room in rooms])
 
 
