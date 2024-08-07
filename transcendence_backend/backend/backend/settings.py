@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'friends',
     'game',
     'pong_server',
-    'notification'
+    'notification',
+    'websocket_server'
     
     
 ]

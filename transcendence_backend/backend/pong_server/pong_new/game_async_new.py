@@ -283,6 +283,9 @@ class PongGame:
         #     pass
         # else:
         #     raise msg_server.CommandError("invalid action", msg_server.WebsocketErrorCode.INVALID_COMMAND)
+        print(f"DEB: tickno: {tickno}, tick_diff: {tick_diff}, self.game_timer.get_tick_duration('ms'): {self.game_timer.get_tick_duration('ms')}")
+        print(f"DEB: self.game_timer.get_current_tick(): {self.game_timer.get_current_tick()}")
+        print(f"DEB: self.game_timer.get_current_tick() - 3: {self.game_timer.get_current_tick() - 3}")
         if (tickno is None
             or tick_diff is None
             or tick_diff > self.game_timer.get_tick_duration("ms")
@@ -293,20 +296,20 @@ class PongGame:
             return
             raise msg_server.CommandError("invalid action", msg_server.WebsocketErrorCode.INVALID_COMMAND)
         
-        # item = ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle)
+        item = ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle)
         try:
             # self.move_items.append(item)
 
-            # task = asyncio.get_running_loop().create_task(self.__start_reconcile(item))
-            # self.background_msg_send_tasks.add(task)
-            # def on_msg_done(task: asyncio.Task):
-            #     e = task.exception()
-            #     if e is not None:
-            #         logger.error(f"Error: PongGame: unable to push to consumer: {e}")
-            #     self.background_msg_send_tasks.discard(task)
-            # task.add_done_callback(on_msg_done)
+            task = asyncio.get_running_loop().create_task(self.__start_reconcile(item))
+            self.background_msg_send_tasks.add(task)
+            def on_msg_done(task: asyncio.Task):
+                e = task.exception()
+                if e is not None:
+                    logger.error(f"Error: PongGame: unable to push to consumer: {e}")
+                self.background_msg_send_tasks.discard(task)
+            task.add_done_callback(on_msg_done)
 
-            self.game_state.reconcile(ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle))
+            # self.game_state.reconcile(ClientMoveItem(action=action, new_y=new_y, tick=tickno, timediff_ms=tick_diff, paddle=paddle))
         except Exception as e:
             print(f"error reconcile: {e}")
             

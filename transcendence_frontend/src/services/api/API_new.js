@@ -3,6 +3,7 @@ import PubSub from '../../lib_templ/reactivity/PubSub.js';
 import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent } from '../../components/bootstrap/BsToasts.js';
 import BaseBase from '../../lib_templ/BaseBase.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
+import { GlobalSockHandler } from './GlobalSockHandler.js';
 
 // export const fetcher = new Fetcher("http://127.0.0.1", {
 
@@ -268,6 +269,9 @@ export class SessionStore {
         // this.#initNotificationSocket();
     }
 
+    /** @type {GlobalSockHandler | null} */
+    messageSocket = null;
+
     #isLoggedIn = false;
 
     /** @type {APITypes.UserSession | undefined} */
@@ -322,7 +326,13 @@ export class SessionStore {
             }
             if (loginData.success) {
                 this.#isLoggedIn = true;
-                await this.updateData(["all"], loginData.data.user_id)
+                await this.updateData(["all"], loginData.data.user_id);
+                if (this.#sessionData?.user) {
+                    this.messageSocket = new GlobalSockHandler(this.#sessionData?.user);
+                    await this.messageSocket.init();
+                }
+
+                else throw new Error("NO USER DATA?!?!")
             }
             return loginData;
         } catch (error) {
@@ -336,6 +346,8 @@ export class SessionStore {
             await userAPI.logout();
             this.#isLoggedIn = false;
             this.#sessionData = undefined;
+            this.messageSocket?.closeSocket();
+            this.messageSocket = null;
             this.#pubsub.publish(this.#sessionData);
         } catch (error) {
             this.handleFetchError(error);
@@ -467,6 +479,8 @@ export class SessionStore {
      */
     async updateData(lists, user_id) {
         if (this.#sessionData?.user) user_id = this.#sessionData.user.id;
+        console.log('SESSIONSERVICE: updateData: ', lists);
+        
         if (!user_id) throw new Error("unable to fetch data without the user id");
         /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<APITypes.GameResultItem[]> | APITypes.ApiResponse<APITypes.TournamentItem[]> > []} */
         let promises = [];

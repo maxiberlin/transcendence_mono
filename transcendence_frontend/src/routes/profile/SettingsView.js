@@ -172,8 +172,6 @@ export class SettingsView extends BaseElement {
             <h1>Update your profile</h1>
             <div class="col-12 col-md-4 mb-3">
                 <avatar-component
-                    status="online"
-                    statusborder
                     radius="5"
                     src="${ifDefined(this.sessionUser.value?.user?.avatar)}"
                     size="150"

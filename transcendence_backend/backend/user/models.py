@@ -3,7 +3,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .utils import get_avatar_path, set_default_avatar
-from typing import TypedDict
+from .types import BasicUserData, Literal
+
+
 
 class UserAccountManager(BaseUserManager["UserAccount"]):
 
@@ -31,11 +33,6 @@ class UserAccountManager(BaseUserManager["UserAccount"]):
         user.is_superuser = True
         user.save(using=self._db)
         return user
-
-class BasicUserData(TypedDict):
-    id: int
-    username: str
-    avatar: str
 
 class UserAccount(AbstractBaseUser):
     Oauth_Choices = [
@@ -81,8 +78,29 @@ class UserAccount(AbstractBaseUser):
         return {
             'id': int(self.pk),
             'username': str(self.username),
-            'avatar': str(self.avatar.url)
+            'avatar': str(self.avatar.url),
+            'online_status': str(self.status) # type: ignore
         }
+        
+    def get_private_user_room(self):
+        return f"user-room-private-{hash(self.username)}"
+
+    def get_friends_user_room(self):
+        return f"user-room-friends-{hash(self.username)}"
+    
+    def update_status_count(self, online: bool) -> Literal['offline', 'online'] | None:
+        status = None
+        self.online_count = self.online_count + 1 if online else self.online_count - 1
+        if self.online_count < 0:
+            self.online_count = 0
+        if online and self.online_count == 1:
+            status = 'online'
+        elif not online and self.online_count == 0:
+            status = 'offline'
+        if status:
+            self.status = status
+        self.save()
+        return status
 
 
 
@@ -117,7 +135,8 @@ class Player(models.Model):
             'avatar': u['avatar'],
             'id': u['id'],
             'username': u['username'],
-            'status': status
+            'status': status,
+            'online_status': u['online_status']
         }
     
 class Leaderboard(models.Model):
