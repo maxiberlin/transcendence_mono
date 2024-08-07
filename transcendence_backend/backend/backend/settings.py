@@ -52,7 +52,6 @@ INSTALLED_APPS = [
 
     'user',
     'chat',
-    'public_chat',
     'friends',
     'game',
     'pong_server',

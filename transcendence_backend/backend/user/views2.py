@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 # from friends.models import *
 from friends.models import BlockList, FriendList
 from .utils import *
-from .models import UserAccount, Player
+from .models import UserAccount, Player, Leaderboard
 from friends.utils import get_my_block_list, get_user_friend_list
 # from friends.views import friend_list, block_list_view
 from django.contrib.auth import authenticate, login, logout
@@ -101,6 +101,7 @@ def profile_view(request, *args, **kwargs):
     data['blocked'] = block_list
     data['is_self'] = False if user.is_authenticated and user != account else True
     data['is_friend'] = is_friend
+    data['rank'] = Leaderboard.objects.get(player=player).rank
     return HttpSuccess200(data=data)
 
 
@@ -133,6 +134,24 @@ def profile_edit_view(request, *args, **kwargs):
     player.save()
     account.save()
     return HttpSuccess200("Profile edited sucessfull")
+
+
+@csrf_exempt
+@login_required
+@require_POST
+def profile_delete(request, *args, **kwargs):
+    user = request.user
+    user_id = kwargs.get('user_id')
+    try:
+        account: UserAccount = UserAccount.objects.get(pk=user_id)
+    except (UserAccount.DoesNotExist, Player.DoesNotExist):
+        HttpNotFound404("This profile does not exist")
+    if user == account:
+        account.delete()
+        return HttpSuccess200(message='Your account and data has been deleted')
+    else:
+        return HttpForbidden403()
+
 
 
 @csrf_exempt

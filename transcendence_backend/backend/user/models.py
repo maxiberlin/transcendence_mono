@@ -49,6 +49,7 @@ class UserAccount(AbstractBaseUser):
     avatar = models.ImageField(max_length=255, upload_to=get_avatar_path, null=True, blank=True, default=set_default_avatar)
     status = models.CharField(max_length=10, default='offline')
     online_count = models.PositiveIntegerField(default=0)
+    bio = models.CharField(max_length=255, null=True)
     is_2fa = models.BooleanField(default=False)
     oauth = models.CharField(max_length=10, choices=Oauth_Choices, null=True, default=None)
     full_profile = models.BooleanField(default=False)
@@ -118,6 +119,13 @@ class Player(models.Model):
             'username': u['username'],
             'status': status
         }
+    
+class Leaderboard(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    rank = models.IntegerField()
+
+    def __str__(self):
+        return f'{self.rank} - {self.player.user}'
 
 
 @receiver(post_save, sender=UserAccount)
