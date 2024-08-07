@@ -248,17 +248,45 @@ def update_tournament(tournament):
         tournament.matchmaking()
         tournament.update()
 
-def tournament_leaderboard(tournament):
+def tournament_leaderboard(tournament: Tournament):
     leaderboard = []
-    ordered_player = (TournamentPlayer.objects.filter(tournament=tournament)
-                   .select_related('player')
-                   .order_by('-xp')
-                   )
+    
+    # players = tournament.players.prefetch_related('user').all().order_by('-xp')  # Holt alle Spieler des Turniers
+
+    # players = players
+    # return players
+    
+    ordered_player = (
+        TournamentPlayer.objects.filter(tournament=tournament)
+        .select_related('player')
+        .order_by('-xp')
+        .annotate(game_request_status=models.Subquery(
+            GameRequest.objects.filter(
+                invitee_id=models.OuterRef('player__user_id'),
+                tournament=tournament,
+                is_active=True
+            ).values('status')[:1]
+        ))
+    )
+    print(f"SUBQUERY SQP: ", str(ordered_player.query))
+    print(f"SUBQUERY: ", ordered_player)
     if ordered_player:
-        for player in ordered_player:
-            print(f'--> {player}')
+        for tournament_player in ordered_player:
+            item = tournament_player.player.get_player_data(getattr(tournament_player, 'game_request_status', 'UNKNOWN'))
+            item['xp'] = tournament_player.xp
+            leaderboard.append(item)
+            print(f'--> {tournament_player}')
     else:
         print(f'Value: error')    
+    # ordered_player = (TournamentPlayer.objects.filter(tournament=tournament)
+    #                .select_related('player')
+    #                .order_by('-xp')
+    #                )
+    # if ordered_player:
+    #     for player in ordered_player:
+    #         print(f'--> {player}')
+    # else:
+    #     print(f'Value: error')    
     return leaderboard
 
 

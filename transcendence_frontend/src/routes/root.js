@@ -75,7 +75,7 @@ export default class PongApp extends BaseElement {
             <bs-toasts></bs-toasts>
             ${!sessionService.isLoggedIn ? this.renderLoginRegister()
                 : html`
-                <div  class="p-0 m-0 pong-navigation" >
+                <div  class="pong-navigation" >
                     
                     <vertical-nav
                         notification

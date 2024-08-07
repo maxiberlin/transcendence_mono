@@ -451,11 +451,11 @@ export class PongRemote extends Pong {
         }
         const elapsedSec = elapsedMs / 1000;
         if (q.length >= 2) {
-            console.log('\nqueuelen: ', q.length);
+            // console.log('\nqueuelen: ', q.length);
             const cU = q[0];
             const nU = q[1];
             const elapsed = (renderTime - cU.timestamp_ms) / (nU.timestamp_ms - cU.timestamp_ms);
-            this.manager.ball.interpolate(cU.ball, nU.ball, elapsed);
+            
             if (this.manager.side === "left") {
                 this.manager.paddleLeft.update(elapsedSec);
                 // this.manager.paddleLeft.interpolate(cU.paddle_left, nU.paddle_left, elapsed)
@@ -465,12 +465,13 @@ export class PongRemote extends Pong {
                 // this.manager.paddleRight.interpolate(cU.paddle_right, nU.paddle_right, elapsed);
                 this.manager.paddleLeft.interpolate(cU.paddle_left, nU.paddle_left, elapsed)
             }
+            this.manager.ball.interpolate(cU.ball, nU.ball, elapsed);
         } else {
             // console.log('extrapolate remote');
             
-            // this.manager.paddleRight.update(elapsedSec);
-            // this.manager.paddleLeft.update(elapsedSec);
-            // this.manager.ball.updateBall(elapsedSec);
+            this.manager.paddleRight.update(elapsedSec);
+            this.manager.paddleLeft.update(elapsedSec);
+            this.manager.ball.updateBall(elapsedSec);
         }
         this.manager.draw();
     }
@@ -565,10 +566,11 @@ export class PongRemote extends Pong {
             const c = performance.now();
             const e = c - this.#lastMoveTime;
             this.pushMove(undefined, new_y);
-            if (e > 50) {
-                console.log('push new y to server: ', new_y);
-                this.#lastMoveTime = c;
-            }
+            console.log('push new y to server: ', new_y);
+            // if (e > 50) {
+            //     console.log('push new y to server: ', new_y);
+            //     this.#lastMoveTime = c;
+            // }
         }
     }
 

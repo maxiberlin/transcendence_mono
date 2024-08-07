@@ -21,7 +21,7 @@ declare namespace APITypes {
         id: number;
         avatar: string;
         username: string;
-        online: boolean | null;
+        online_status: 'online' | 'offline' | null;
     }
 
     // [key: string]: string | number | APITypes.BasicUserData[];

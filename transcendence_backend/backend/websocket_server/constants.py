@@ -1,13 +1,13 @@
 from typing import TypedDict, Literal, Union, NotRequired
-from enum import Enum, IntEnum
+from enum import IntEnum
 
 from django.contrib.auth.models import AnonymousUser
 
-from asgiref.typing import Scope, WebSocketScope
+from asgiref.typing import WebSocketScope
 
 from user.models import UserAccount
-from notification.models import NotificationData
-from chat.models import ChatMessageData, ChatRoomData
+from notification.types import NotificationData
+from chat.types import ChatMessageData, ChatRoomData
 
 DEFAULT_NOTIFICATION_PAGE_SIZE = 5
 DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 10
@@ -24,30 +24,47 @@ MSG_TYPE_NOTIFICATION_UPDATED = 5
 
 MSG_TYPE_CHAT_ROOM_ADD = 100
 MSG_TYPE_CHAT_ROOM_REMOVE = 101
-MSG_TYPE_CHAT_USER_ADD = 102
-MSG_TYPE_CHAT_USER_REMOVE = 103
+MSG_TYPE_CHAT_ROOM_UPDATE = 102
+
 MSG_TYPE_CHAT_MESSAGE_NEW = 104
 MSG_TYPE_CHAT_MESSAGE_UPDATED = 105
 MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT = 106
 MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED = 107
 MSG_TYPE_CHAT_MESSAGE_PAGE = 108
 
+MSG_TYPE_FRIEND_STATUS_CHANGED = 201
+
+
+
+class InternalCommandFriendStatusChanged(TypedDict):
+    type: Literal['friend.status.changed']
+    status: Literal['online', 'offline']
+    user_id: int
+
 class InternalCommandChatRoom(TypedDict):
-    type: Literal['chat.room.add', 'chat.room.remove']
-    group_name: str
+    type: Literal['chat.room.add', 'chat.room.remove', 'chat.room.update']
+    chat_room_channel_name: NotRequired[str]
     data: ChatRoomData
 
 class InternalCommandChatMessageNew(TypedDict):
     type: Literal['chat.message.new']
     room_id: int
     data: ChatMessageData
+
+class InternalCommandNotificationNewUpdate(TypedDict):
+    type: Literal['notification.new', 'notification.update']
+    data: NotificationData
     
 InternalCommand = Union[
+    InternalCommandFriendStatusChanged,
     InternalCommandChatRoom,
     InternalCommandChatMessageNew,
+    InternalCommandNotificationNewUpdate,
 ]
 
-
+class PayloadUserStatus(TypedDict):
+    status: Literal['online', 'offline']
+    user_id: int
 
 class PayloadRoomId(TypedDict):
     room_id: int
@@ -83,6 +100,7 @@ class PayloadNotificationsUnreadCount(TypedDict):
 
 
 MessagePayload = Union[
+    PayloadUserStatus,
     PayloadRoomId,
     PayloadChatMessage,
     PayloadChatMessageList,

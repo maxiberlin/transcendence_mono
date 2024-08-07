@@ -38,9 +38,9 @@ export default class FriendsView extends BaseElement {
 
     /**
      * @param {string} route
-     * @returns {Promise<symbol | void>}
+     * @returns {symbol | void}
      */
-    async onBeforeMount(route) {
+    onBeforeMount(route) {
         if (!sessionService.isLoggedIn) {
             return router.redirect('/');
         }
@@ -138,7 +138,7 @@ export default class FriendsView extends BaseElement {
             <li class="list-group-item text-body-secondary fs-6">
                 <div class="w-100 row text-center align-items-center justify-content-between">
                     <div class=" col-5 d-block p-0 m-2">
-                        ${avatarLink(userData)}
+                        ${avatarLink(userData, true)}
                     </div>
                     <div class=" col-auto p-0">
                         ${this.getUserBtn(userData)}

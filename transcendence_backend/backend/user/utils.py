@@ -54,7 +54,8 @@ def serializer_minimal_account_details(account):
         'email': account.email,
         'first_name': account.first_name,
         'last_name': account.last_name,
-        'avatar': account.avatar.url
+        'avatar': account.avatar.url,
+        'online_status': account.status
     }
     return data
 
@@ -71,7 +72,8 @@ def serializer_full_profile_details(account, player):
         'alias': player.alias,
         'games_played': player.games_played,
         'wins': player.wins,
-        'losses': player.losses
+        'losses': player.losses,
+        'online_status': account.status
     }
     return data
 
@@ -86,6 +88,7 @@ def serializer_inviter_invitee_details(invite, account, player, inviter: bool):
         'id': account.pk,
         'alias': player.alias,
         'avatar': account.avatar.url,
+        'online_status': account.status
 	}
     if inviter:
         data['inviter'] = account.username
