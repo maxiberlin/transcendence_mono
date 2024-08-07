@@ -21,33 +21,28 @@ def send_invite(user, invitee, game_id, game_mode, tournament):
     
 def parse_results(schedule_id, score_one, score_two): #TODO send user xp gained ot lost + winner to consumer
     try:
-        game = GameSchedule.objects.get(id=schedule_id, is_active=True)
+        schedule = GameSchedule.objects.get(id=schedule_id, is_active=True)
     except Exception as e:
-        return {'success': False, 'message': 'Game Schedule: '+str(e)}, 400
-    if game.player_one.user == game.player_two.user:
-        return {'success': False, 'message': 'Player fields cannot be the same.'}, 400
-    
+        return {'success': False, 'message': str(e)}, 400
+    # if game.game_schedule.player_one.user == game.game_schedule.player_two.user:
+    #     return {'success': False, 'message': 'Player fields cannot be the same.'}, 400
     try:
         result = GameResults.objects.create(
-		game_id=game.game_id,
-		game_mode=game.game_mode,
-		tournament=game.tournament,
-		player_one=game.player_one.user,
-		player_two=game.player_two.user,
-		player_one_score=score_one,
-		player_two_score=score_two
+            game_schedule=schedule,
+            tournament=schedule.tournament,# if hasattr(schedule, 'tournament') and schedule.tournament else None,
+            player_one_score=score_one,
+            player_two_score=score_two,
 		)
         result.save()
     except Exception as e:
-        return {'success': False, 'message': 'Game Results: '+str(e)}, 400
-    
-    game.is_active = False
-    game.save()
+        return {'success': False, 'message': str(e)}, 400
+    schedule.is_active = False
+    schedule.save()
     if result.winner and result.loser:
         xp_calculation(result, score_one, score_two)
     else:
         return {'success': False, 'message': 'Internal server error'}, 500
-    if game.game_mode == 'tournament' and result.tournament:
+    if schedule.game_mode == 'tournament' and result.tournament:
         if check_final_game(result):
             set_winner(result)
             result.tournament.update(False, True)
@@ -55,6 +50,7 @@ def parse_results(schedule_id, score_one, score_two): #TODO send user xp gained 
             tournament_player_update(result)
             if tournament_round_finished(result.tournament):
                 result.tournament.update(False, False)
+    update_leaderboard()
     return {'success': True, 'message': 'record created'}, 200
 
 
@@ -164,8 +160,8 @@ def tournament_details(tournament):
     results = []
     games_played = GameResults.objects.filter(tournament=tournament)
     for game in games_played:
-        ply_one_user_acc = UserAccount.objects.get(username=game.player_one)
-        ply_two_user_acc = UserAccount.objects.get(username=game.player_two)
+        ply_one_user_acc = UserAccount.objects.get(username=game.game_schedule.player_one)
+        ply_two_user_acc = UserAccount.objects.get(username=game.game_schedule.player_two)
         item = {
 			'match_id': game.pk,
 			'game_id': game.game_id,
@@ -202,6 +198,7 @@ def tournament_player_creator(user, tournament):
             tournament=tournament,
             round=1
             )
+        tournament_player.save()
     except Exception as e:
         tournament.delete()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -288,5 +285,12 @@ def tournament_leaderboard(tournament: Tournament):
     # else:
     #     print(f'Value: error')    
     return leaderboard
+
+
+def update_leaderboard():
+    Leaderboard.objects.all().delete()
+    players = Player.objects.all().order_by('-xp')
+    for rank, player in enumerate(players, start=1):
+        Leaderboard.objects.create(player=player, rank=rank)
 
 

@@ -163,17 +163,18 @@ class Tournament(models.Model):
                     return JsonResponse({'success': False, 'message': 'GameScheduleError'}, status=500)
 
 
-    def group_and_knockout(self, players):
-        if self.rounds == 1:
-            pass
-        else:
-            pass
+    # def group_and_knockout(self, players):
+    #     if self.rounds == 1:
+    #         pass
+    #     else:
+    #         pass
 
 
 
 class TournamentPlayer(models.Model):
     tournament = models.ForeignKey(Tournament, related_name='tournament_players', on_delete=models.CASCADE)
     player = models.ForeignKey(Player, related_name='player_tournaments', on_delete=models.CASCADE)
+    alias = models.CharField(max_length=30, default='')
     xp = models.IntegerField(default=0)
     round = models.PositiveIntegerField(default=0)
     stage = models.CharField(max_length=20, null=True, blank=True)
@@ -182,41 +183,19 @@ class TournamentPlayer(models.Model):
     # def __str__(self):
     # 	return self.player.user
 
+    def save(self, *args, **kwargs):
+        aliases = self.objects.filter(tournament=self.tournament, alias=self.alias)
+        if len(aliases) == 0:
+            aliases = Player.objects.filter(alias=self.alias)
+        if len(aliases) > 0:
+            raise ValueError('Duplicate alias not allowed for this tournament')
+        super().save(*args, **kwargs)
 
 
 class TournamentLobby(models.Model):
     tournament = models.ForeignKey(Tournament, related_name='tournament_tl', on_delete=models.CASCADE)
     winners = models.ManyToManyField(Player, related_name='winners')
     losers = models.ManyToManyField(Player, related_name='losers')
-
-
-class GameResults(models.Model):
-    game_id = models.CharField(max_length=10, null=False)
-    game_mode = models.CharField(max_length=20, null=False)
-    tournament = models.ForeignKey(Tournament, related_name='tournament_name', on_delete=models.SET_NULL, null=True, blank=True)
-    player_one = models.ForeignKey(UserAccount, related_name='player_one', on_delete=models.SET_NULL, null=True)
-    player_two = models.ForeignKey(UserAccount, related_name='player_two', on_delete=models.SET_NULL, null=True)
-    player_one_score = models.IntegerField()
-    player_two_score = models.IntegerField()
-    winner = models.ForeignKey(UserAccount, related_name='winner', on_delete=models.SET_NULL, null=True)
-    loser = models.ForeignKey(UserAccount, related_name='loser', on_delete=models.SET_NULL, null=True)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    # game_schedule = models.ForeignKey("GameSchedule", related_name='tournament_name', on_delete=models.SET_NULL, null=True, blank=True)
-    # player_one_score = models.IntegerField()
-    # player_two_score = models.IntegerField()
-    # winner = models.ForeignKey(UserAccount, related_name='winner', on_delete=models.SET_NULL, null=True)
-    # loser = models.ForeignKey(UserAccount, related_name='loser', on_delete=models.SET_NULL, null=True)
-    # timestamp = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        if not self.winner or not self.loser:
-            if self.player_one_score > self.player_two_score:
-                self.winner = self.player_one
-                self.loser = self.player_two
-            elif self.player_two_score > self.player_one_score:
-                self.winner = self.player_two
-                self.loser = self.player_one
-        super().save(*args, **kwargs)
 
 
 class GameSchedule(models.Model):
@@ -233,6 +212,30 @@ class GameSchedule(models.Model):
     scheduled = models.DateTimeField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f'{self.id} - {self.player_one} vs {self.player_two}'
+
+
+class GameResults(models.Model):
+    game_schedule = models.ForeignKey(GameSchedule, related_name='schedule_id', on_delete=models.CASCADE)
+    tournament = models.ForeignKey(Tournament, related_name='tournament_name', on_delete=models.SET_NULL, null=True, blank=True)
+    player_one_score = models.IntegerField()
+    player_two_score = models.IntegerField()
+    winner = models.ForeignKey(UserAccount, related_name='winner', on_delete=models.SET_NULL, null=True)
+    loser = models.ForeignKey(UserAccount, related_name='loser', on_delete=models.SET_NULL, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.winner or not self.loser:
+            if self.player_one_score > self.player_two_score:
+                self.winner = self.game_schedule.player_one.user
+                self.loser = self.game_schedule.player_two.user
+            elif self.player_two_score > self.player_one_score:
+                self.winner = self.game_schedule.player_two.user
+                self.loser = self.game_schedule.player_one.user
+        super().save(*args, **kwargs)
+
+
 class GameRequest(models.Model):
 
     class GameID(models.IntegerChoices):
@@ -248,9 +251,13 @@ class GameRequest(models.Model):
     notifications = GenericRelation(Notification)
     timestamp = models.DateTimeField(auto_now_add=True)
  
-    def _handle_tournament(self, accepted: bool):
+    def _handle_tournament(self, accepted: bool, alias):
         if self.game_mode != 'tournament' or self.tournament is None:
             return
+        player = get_object_or_404(Player, user=self.invitee)
+        print(f'@@@@@@---> {player}')
+        if alias is None:
+            alias = player.alias
         if accepted == False:
             self.tournament.players.remove(Player.objects.get(user=self.invitee))
             ChatRoom.rooms.remove_user_from_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
@@ -260,9 +267,14 @@ class GameRequest(models.Model):
             # handle_tournament_chatroom_message_consumer('add_player', self.tournament.name, self.invitee)
             # add_user_to_chat_room(self.invitee, self.tournament.name)
             try:
-                TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=Player.objects.get(user=self.invitee), round=1)
+                t_player = TournamentPlayer.objects.create(tournament=self.tournament, player=player, alias=alias, round=1)
             except Exception as e:
-                raise ValueError(e)
+                try:
+                    t_player = TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=player, alias=player.alias, round=1)
+                except Exception as e:
+                    raise ValueError(e)
+            print(f'~~~~~~>>')
+            t_player.save()
         if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
             self.tournament.update(True, False)
 
@@ -272,10 +284,11 @@ class GameRequest(models.Model):
         self.is_active = False
         self.save()
 
-    def accept(self):
+    def accept(self, alias):
         if not self.is_active: return
-        if self.tournament:
-            self._handle_tournament(True)
+        if self.game_mode == 'tournament' and self.tournament != None:
+            print(f'<<<------>>>>')
+            self._handle_tournament(True, alias)
         else:
             GameSchedule.objects.create(
                 player_one=get_object_or_404(Player, user=self.user),
@@ -347,7 +360,7 @@ def add_user_to_chat_room(user: UserAccount, tournament_name: str):
         pass
 
 
-    
+
 
 
 # class GameRequest(models.Model):

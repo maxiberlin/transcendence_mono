@@ -33,6 +33,7 @@ urlpatterns = [
 
     path('profile/<int:user_id>', views2.profile_view, name='profile'),
     path('profile/<int:user_id>/edit', views2.profile_edit_view, name='profile-edit'),
+    path('profile/<int:user_id>/delete', views2.profile_delete, name='profile-delete'),
     path('search', views2.search, name='search'),
 
     path('password-reset', auth_view.PasswordResetView.as_view(), name='password-reset'),
