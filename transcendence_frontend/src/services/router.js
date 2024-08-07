@@ -31,6 +31,11 @@ const routes = [
         component: 'chat-view',
         title: 'Chat',
     },
+    {
+        path: '/chat/:chatroom_name',
+        component: 'chat-view',
+        title: 'Chat',
+    },
 
     {
         path: '/social',

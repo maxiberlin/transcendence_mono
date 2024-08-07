@@ -1,3 +1,4 @@
+import { sessionService } from '../services/api/API_new.js';
 import BaseBase from './BaseBase.js';
 import Template from './templ/Template.js';
 
@@ -144,6 +145,12 @@ export class BaseElement extends BaseBase {
         } else {
             this.root = this;
         }
+
+        this._requestUpdate = () => {
+            console.log('request update after statusChange');
+            this.requestUpdate();
+        }
+        this.userStatusChange = sessionService.messageSocket?.subscribeUserStatusChange(this, true);
     }
 
     onSlotChange() {

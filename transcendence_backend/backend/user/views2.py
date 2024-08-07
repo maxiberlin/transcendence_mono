@@ -16,7 +16,7 @@ from django.core.files.storage import default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 from django.views.decorators.csrf import csrf_exempt
-# import requests
+import requests
 
 @csrf_exempt
 @require_POST
@@ -171,7 +171,8 @@ def search(request, *args, **kwargs):
                 'email': account.email,
                 'first_name': account.first_name,
                 'last_name': account.last_name,
-                'avatar': account.avatar.url
+                'avatar': account.avatar.url,
+                'online_status': account.status
             }
             user_friend_list = FriendList.objects.get(user=user)
             item['is_mutual_friend'] = user_friend_list.is_mutual_friend(account)
@@ -196,7 +197,7 @@ def callback(request):
     # redirect_uri = 'http://localhost:8000/callback/'
     redirect_uri = 'https://api.pong42.com/callback/'
     token_url = 'https://api.intra.42.fr/oauth/token'
-    response = post(token_url, data={
+    response = requests.post(token_url, data={
         'grant_type': 'authorization_code',
         'code': code,
         'redirect_uri': redirect_uri,
@@ -206,7 +207,7 @@ def callback(request):
     token_data = response.json()
     access_token = token_data['access_token']
     # Use the access token to get user info
-    user_info_response = get('https://api.intra.42.fr/v2/me', headers={
+    user_info_response = requests.get('https://api.intra.42.fr/v2/me', headers={
         'Authorization': f'Bearer {access_token}'
     })
     user_info = user_info_response.json()

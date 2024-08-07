@@ -5,7 +5,7 @@ import * as bootstrap from 'bootstrap'
 // import 'bootstrap'
 
 import { sessionService } from './services/api/API_new.js';
-import { messageSocketService } from './services/api/GlobalSockHandler.js';
+// import { messageSocketService } from './services/api/GlobalSockHandler.js';
 import router from './services/router.js';
 
 // Components
@@ -30,7 +30,8 @@ import GameModal2 from './routes/home/PongGame_other_layout';
 import { ProfileView } from './routes/profile/ProfileView.js';
 import ProfileSearch from './routes/social/ProfileSearch.js';
 import FriendsView from './routes/social/FriendsView.js';
-import ChatView, { SingleChatView } from './routes/social/ChatView.js';
+import ChatView from './routes/social/ChatView.js';
+import { SingleChatView } from './routes/social/SingleChatView';
 import TournamentCreateView from './routes/home/tournament/TournamentCreateView.js';
 import { TournamentDetailsView } from './routes/home/tournament/TournamentDetailsView.js';
 import { SettingsView } from './routes/profile/SettingsView.js';
@@ -41,7 +42,7 @@ import { getPreferredTheme, setTheme } from './services/themeSwitcher';
 const onDomLoaded = async () => {
     setTheme(getPreferredTheme());
     await sessionService.login();
-    await messageSocketService.init();
+    // await messageSocketService.init();
     console.log('DOM LOADED');
     router.init('pong-app');
     // document.body.appendChild(document.createElement('pong-app'));

@@ -1,6 +1,10 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
+        "lib": [
+            "dom",
+            "ES2022.Object"
+        ],
         "noEmit": true,
         "allowJs": true,
         "checkJs": true,

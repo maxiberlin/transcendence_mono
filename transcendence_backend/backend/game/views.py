@@ -469,10 +469,10 @@ def player_stats(request, *args, **kwargs):
         
         player_data = model_object_serializer(player)
 
-        win_rate = round((player_data['wins'] / player_data['games_played']) * 100, 1)
-        loss_rate = round((player_data['losses']/ player_data['games_played']) * 100, 1)
+        win_rate = 0 if player_data['games_played'] == 0 else round((player_data['wins'] / player_data['games_played']) * 100, 1)
+        loss_rate = 0 if player_data['games_played'] == 0 else round((player_data['losses']/ player_data['games_played']) * 100, 1)
 
-        win_loss_ratio = round((player_data['wins'] / player_data['losses']) * 100, 1)
+        win_loss_ratio = 0 if player_data['losses'] == 0 else round((player_data['wins'] / player_data['losses']) * 100, 1)
 
         df = pd.DataFrame(player_data)
         margins = df[['win_loss_margin']]
@@ -484,6 +484,7 @@ def player_stats(request, *args, **kwargs):
             elif item < 0:
                 loss_margin.append(item)
 
+        avg_win_margin = avg_loss_margin = 0
         if win_margin != 0 and len(win_margin) != 0:
             avg_win_margin = sum(win_margin) / len(win_margin)
         if loss_margin != 0 and len(loss_margin) != 0:

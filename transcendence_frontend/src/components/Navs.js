@@ -240,7 +240,7 @@ export class VerticalNav extends BaseElement {
 
     render() {
         return html`
-        <div class="d-flex border-end bg-light-subtle h-100 w-100 align-items-center">
+        <div class="pong-navigation-nav bg-light-subtle border-top">
             ${this.notification ? html` <div class="flex-shrink-1"><notification-view></notification-view></div> ` : ''}
             <div  class="flex-grow-1 nav navbar py-2">
                 ${this.burger ? this.renderOffscreenNavbar() : this.renderNavbar()}

@@ -1,60 +1,11 @@
 from django.contrib.contenttypes.fields import GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from user.models import UserAccount
-from chat.utils import get_private_room_or_create, handle_private_chatroom_message_consumers
-from django.conf import settings
-from django.utils import timezone
+from chat.models import ChatRoom
 from notification.models import Notification
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.exceptions import PermissionDenied
-from django.http import Http404
 from user.utils import ConflictExcept
 from django.shortcuts import get_object_or_404       
-from django.contrib.contenttypes.fields import ReverseGenericManyToOneDescriptor
-from typing import TypedDict, Literal
-from datetime import datetime
-
-class FriendRequestUserdata(TypedDict):
-    id: int
-    username: str
-    avatar: str
-
-class FriendRequestData(TypedDict):
-    request_id: int
-    updated_at: datetime
-    sender: FriendRequestUserdata
-    receiver: FriendRequestUserdata
-
-class FriendRequestActionData(TypedDict):
-    request_id: int
-    id: int
-    username: str
-    avatar: str
-
-def update_notification(instance: "FriendList | FriendRequest", description: str):
-    notification: Notification | None = instance.notifications.first()
-    if notification is None:
-        print(f"NOTIFICATION IS NONE?!")
-        return None
-    notification.read = True
-    notification.description = description
-    notification.timestamp = timezone.now()
-    notification.save(send_notification=True)
-    return notification
-  
-def create_notification(instance: "FriendList | FriendRequest", from_u: UserAccount, to_u: UserAccount, descr: str):
-    content_type = ContentType.objects.get_for_model(instance)
-    n: Notification = instance.notifications.create(
-        target=to_u,
-        from_user=from_u,
-        description=descr,
-        content_type=content_type,
-        object_id=instance.pk,
-        timestamp=timezone.now()
-    )
-    return n
+from notification.utils import create_notification, update_notification
 
 class FriendRequest(models.Model):
     
@@ -75,6 +26,7 @@ class FriendRequest(models.Model):
         receiver_list.add_friend(self.sender)
         sender_list.add_friend(self.receiver)
         self._update_state()
+        ChatRoom.rooms.create_private_chat(self.sender, self.receiver)
         return create_notification(self, self.receiver, self.sender, f"{self.receiver.username} accepted your friend request.")
 
     def reject(self):
@@ -88,12 +40,9 @@ class FriendRequest(models.Model):
         return create_notification(self, self.receiver, self.sender, f"You cancelled the friend request to {self.receiver.username}.")
 
 
-@receiver(post_save, sender=FriendRequest)
-def create_notification_friendrequest(sender: type[FriendRequest], instance: FriendRequest, created: bool, **kwargs):
-    if created:
-        create_notification(instance, instance.sender, instance.receiver, f"{instance.sender.username} sent you a friend request.")
-        
-
+# class FriendRequestManager(models.Manager['FriendList']):
+#     def get_friendlist_by_user(self, user: UserAccount | int):
+#         return self.get(user=user)
 
 class FriendList(models.Model):
     user = models.OneToOneField(UserAccount, on_delete=models.CASCADE)
@@ -115,7 +64,7 @@ class FriendList(models.Model):
             raise ConflictExcept("You can not add yourself to your friendlist")
         self.friends.add(account)
         self.save()
-        handle_private_chatroom_message_consumers('create', account, self.user)
+        # handle_private_chatroom_message_consumers('create', account, self.user)
         # self._handle_chat_room(account, False)
         create_notification(self, account, self.user, f"You are now friends with {account.username}.")
 
@@ -126,7 +75,8 @@ class FriendList(models.Model):
             raise ConflictExcept("You can not remove yourself from your friendlist")
         self.friends.remove(account)
         self.save()
-        handle_private_chatroom_message_consumers('inactivate', account, self.user)
+        ChatRoom.rooms.toggle_private_chat('inactivate', account, self.user)
+        # handle_private_chatroom_message_consumers('inactivate', account, self.user)
         # self._handle_chat_room(account, False)
         
     
@@ -142,6 +92,10 @@ class FriendList(models.Model):
         if friend in self.friends.all():
             return True
         return False
+    
+    def get_friends_public_groups(self):
+        friends = self.friends.all()
+        return [u.get_friends_user_room() for u in friends if isinstance(u, UserAccount)]
     
     @property
     def get_cname(self):
@@ -163,10 +117,11 @@ class BlockList(models.Model):
         self.blocked.add(account)
         self.save()
         print('@@@@@@@@---> BLocked')
-        room = get_private_room_or_create(self.user, account)
-        if room.is_active:
-            room.is_active = False
-            room.save()
+        ChatRoom.rooms.toggle_private_chat('inactivate', self.user, account)
+        # room = get_private_room_or_create(self.user, account)
+        # if room.is_active:
+        #     room.is_active = False
+        #     room.save()
         print('Room deactivated @@@@@@@@---')
 
     def unblock_user(self, account: UserAccount):
@@ -178,10 +133,11 @@ class BlockList(models.Model):
         other_list = BlockList.objects.get(user=account)
         if self.user not in other_list.blocked.all():
             print(f'<<<---------->>>')
-            room = get_private_room_or_create(self.user, account)
-            if not room.is_active:
-                room.is_active = True
-                room.save()
+            ChatRoom.rooms.toggle_private_chat('activate', self.user, account)
+            # room = get_private_room_or_create(self.user, account)
+            # if not room.is_active:
+            #     room.is_active = True
+            #     room.save()
 
     def is_blocked(self, account: UserAccount):
         if account in self.blocked.all():

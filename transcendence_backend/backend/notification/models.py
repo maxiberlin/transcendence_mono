@@ -1,29 +1,9 @@
 from django.db import models
-from user.models import UserAccount, BasicUserData
+from user.models import UserAccount
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType, ContentTypeManager
-from typing import TypeVar, Protocol, Generic, TypedDict
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.humanize.templatetags.humanize import naturaltime
-from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save
-from channels.layers import get_channel_layer
-from channels_redis.core import RedisChannelLayer
-from asgiref.sync import async_to_sync
-from django.utils import timezone
-
-
-
-class NotificationData(TypedDict):
-    notification_type: str
-    notification_id: int
-    description: str
-    action_id: int
-    is_active: bool
-    is_read: bool
-    natural_timestamp: str
-    timestamp: int
-    redirect_url: str | None
-    user: BasicUserData | None
+from .types import NotificationData
 
 
 class Notification(models.Model):
@@ -45,7 +25,7 @@ class Notification(models.Model):
         super().save(**kwargs)
         print(f"CUSTOM SAVE - AFTER")
     
-    def get_notification_data(self) -> "NotificationData":
+    def get_notification_data(self) -> NotificationData:
         model = self.content_object
         notification_type = "unkown"
         active = False
@@ -71,30 +51,6 @@ class Notification(models.Model):
             "redirect_url": str(self.redirect_url.rstrip('/')) if self.redirect_url else None,
             "user": self.from_user.get_basic_user_data() if self.from_user else None
         }
-
-
-def get_user_notification_room(user: UserAccount):
-    return f"user-room-{hash(user)}"
-
-
-@receiver(post_save, sender=Notification)
-def create_notification(sender, instance: Notification, created, **kwargs):
-    room = get_user_notification_room(instance.target)
-    layer = get_channel_layer()
-    if not created and not instance.send_notification:
-        return
-    msg_type = "notification.new" if created else "notification.update"
-    try:
-        if isinstance(layer, RedisChannelLayer):
-            async_to_sync(layer.group_send)(
-                room,
-                {
-                    "type": msg_type,
-                    "data": instance.get_notification_data()
-                }
-            )
-    except Exception as e:
-        print(f"error: {e}")
 
 
 
