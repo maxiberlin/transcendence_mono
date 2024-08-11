@@ -25,8 +25,7 @@ import LoginRegisterRoute from './routes/auth/LoginRegisterRoute.js';
 import PongBg from './routes/auth/PongBg.js';
 import GameWindow from './routes/home/GameWindow.js';
 // import GameModalRemote from './routes/home/PongGame_remote.js';
-import GameModal from './routes/home/PongGame.js';
-import GameModal2 from './routes/home/PongGame_other_layout';
+import GameScreen from './routes/home/PongGame.js';
 import { ProfileView } from './routes/profile/ProfileView.js';
 import ProfileSearch from './routes/social/ProfileSearch.js';
 import FriendsView from './routes/social/FriendsView.js';
@@ -37,6 +36,7 @@ import { TournamentDetailsView } from './routes/home/tournament/TournamentDetail
 import { SettingsView } from './routes/profile/SettingsView.js';
 import { NotificationView } from './routes/notifications/NotificationView';
 import { getPreferredTheme, setTheme } from './services/themeSwitcher';
+import { VirtTest } from './routes/social/virtualize/virtcomp';
 
 
 const onDomLoaded = async () => {
@@ -44,7 +44,7 @@ const onDomLoaded = async () => {
     await sessionService.login();
     // await messageSocketService.init();
     console.log('DOM LOADED');
-    router.init('pong-app');
+    await router.init('pong-app');
     // document.body.appendChild(document.createElement('pong-app'));
     // router.init("pong-app");
 };

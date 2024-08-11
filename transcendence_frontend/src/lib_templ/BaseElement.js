@@ -78,14 +78,97 @@ export class BaseElement extends BaseBase {
 
     onAfterUpdate() {}
 
-    requestUpdate() {
-        // console.log("request Update");
-        // console.log('request Update');
-        if (this.#isConnected) {
-            // console.log("is connected! update")
-            this.update();
+
+
+    // lifecycle functions to be implemented by subclass
+    shouldUpdate() {return true;}
+    firstUpdated() {}
+    updated() {}
+    willUpdate() {}
+
+    
+    performUpdate() {
+        // console.log('performUpdate');
+        if (!this.isUpdatePending) {
+            // console.log('performUpdate: !this.isUpdatePending -> return');
+            return;
+        }
+        try {
+            if (this.shouldUpdate()) {
+                // console.log('performUpdate -> schouldUpdate!');
+                this.willUpdate();
+                // console.log('performUpdate -> call update');
+                this.update();
+                // console.log('performUpdate -> update called');
+                if (!this.hasUpdated) {
+                    // console.log('performUpdate -> not hasUpdated -> first Update');
+                    this.hasUpdated = true;
+                    this.firstUpdated();
+                }
+                this.updated();
+            } else {
+                // console.log('performUpdate -> schould not update');
+                this.isUpdatePending = false;
+            }
+        } catch (e) {
+            // console.log('performUpdate -> catched error: ', e);
+            this.isUpdatePending = false;
         }
     }
+
+    /** @returns {void | Promise<unknown>} */
+    scheduleUpdate() {
+        // console.log('scheduleUpdate');
+        const result = this.performUpdate();
+        // console.log('scheduleUpdate - result: ', result);
+        return result;
+    }
+
+    /** @returns {Promise<boolean>} */
+    async __enqueueUpdate() {
+        // console.log('enqueueUpdate');
+        this.isUpdatePending = true;
+        try {
+            // console.log('enqueueUpdate - await');
+            await this.__updatePromise;
+            // console.log('enqueueUpdate - awaited!');
+        } catch (e) {
+            // console.log('enqueueUpdate - catched');
+            Promise.reject(e);
+        }
+        // console.log('enqueueUpdate - call scheduleupdate: ');
+        const result = this.scheduleUpdate();
+        // console.log('enqueueUpdate - result of scheduleupdate: ', result);
+        if (result != null) {
+            // console.log('enqueueUpdate - result not None - await');
+            await result;
+            // console.log('enqueueUpdate - result not None - awaited!');
+        }
+        return !this.isUpdatePending;
+    }
+
+    hasUpdated = false;
+    isUpdatePending = false;
+    /** @type {Promise<boolean>} */
+    __updatePromise;
+
+    requestUpdate() {
+        // console.log('requestUpdate, i am: ', this, ', myPromise: ', this.__updatePromise);
+        if (this.isUpdatePending === false) {
+            // console.log('requestUpdate: isUpdatePending is false -> call enqueueUpdate');
+            this.__updatePromise = this.__enqueueUpdate();
+            // console.log('requestUpdate: after: this.__enqueueUpdate: updatePromise: ', this.__updatePromise);
+        }
+    }
+
+    // requestUpdate() {
+    //     // console.log("request Update");
+    //     // console.log('request Update');
+    //     if (this.#isConnected) {
+    //         // console.log("is connected! update")
+    //         this.update();
+    //     }
+    // }
 
     /**
      * @param {string} route
@@ -116,6 +199,10 @@ export class BaseElement extends BaseBase {
 
     onAfterUnMount() {}
 
+    get updateComplete() {
+        return this.__updatePromise;
+    }
+
     /**
      * @param {boolean} useBootstrap
      * @param {boolean} useShadow
@@ -128,6 +215,8 @@ export class BaseElement extends BaseBase {
         shadowOption = undefined,
     ) {
         super();
+        // console.log('constructor of this: ', this);
+        
 
         // @ts-ignore
         // eslint-disable-next-line no-underscore-dangle
@@ -146,10 +235,12 @@ export class BaseElement extends BaseBase {
             this.root = this;
         }
 
-        this._requestUpdate = () => {
-            console.log('request update after statusChange');
-            this.requestUpdate();
-        }
+        this.__updatePromise = new Promise( (res) => (this.enableUpdating = res) );
+
+        // this._requestUpdate = () => {
+        //     console.log('request update after statusChange');
+        //     this.requestUpdate();
+        // }
         this.userStatusChange = sessionService.messageSocket?.subscribeUserStatusChange(this, true);
     }
 
@@ -159,13 +250,18 @@ export class BaseElement extends BaseBase {
 
     #isConnected = false;
 
+    /** @param {boolean} _requestedUpdate  */
+    enableUpdating(_requestedUpdate) {}
+
     connectedCallback() {
         super.connectedCallback();
         if (this.#attrPropMapRef === undefined) this.#initAttrPropMap();
         this.#isConnected = true;
         
         this.shadowRoot?.addEventListener('slotchange', this.onSlotChange.bind(this));
-        this.update();
+        this.enableUpdating(true);
+        this.requestUpdate();
+        // this.update();
     }
 
     disconnectedCallback() {
@@ -201,6 +297,7 @@ export class BaseElement extends BaseBase {
             this.#templ.update(res.values);
         }
 
+        this.isUpdatePending = false;
         this.onAfterUpdate();
     }
 

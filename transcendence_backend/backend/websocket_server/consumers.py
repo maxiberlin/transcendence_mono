@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 
 from user.models import UserAccount, Player
-from chat.models import ChatRoom, ChatMessage, ChatRoomData, ChatMessageData, UnreadMessages
+from chat.models import *
 from friends.models import FriendList
 
 from .constants import *
@@ -38,13 +38,13 @@ def use_timeout(timeout_ms: int):
     def check_timeout():
         nonlocal last
         now = get_time()
-        print(f"CHECK CONNECTION: STAMP: {now - start}, DIFF: {now - last}")
+        # print(f"CHECK CONNECTION: STAMP: {now - start}, DIFF: {now - last}")
         return now - last > timeout_ms
     
     def reset_timeout():
         nonlocal last
         now = get_time()
-        print(f"NEW PING: STAMP: {now - start}, DIFF: {now - last}")
+        # print(f"NEW PING: STAMP: {now - start}, DIFF: {now - last}")
         last = now
 
     return check_timeout, reset_timeout
@@ -109,9 +109,9 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         while True:
             await asyncio.sleep(timeout)
             currtime = time.perf_counter()*1000
-            # print(f"CHECK CONNECTION: {currtime - self.lastpong}")
+            # # print(f"CHECK CONNECTION: {currtime - self.lastpong}")
             if currtime - self.lastpong > HEARTBEAT_TIMEOUT_MS:
-                print(f"CHECK CONNECTION took too long: {currtime - self.lastpong}")
+                # print(f"CHECK CONNECTION took too long: {currtime - self.lastpong}")
                 await self.close()
                 break
             
@@ -192,8 +192,8 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         await self.send_message('chat', msg_type, payload)
 
     async def send_message_notification(self, msg_type: int, payload: MessagePayload | None = None):
-        print(f"send_message_notification, msg_type: {msg_type}, payload: {payload}")
-        print(f"send_message_notification, typeof msg_type: {type(msg_type)}, typeof payload: {type(payload)}")
+        # print(f"send_message_notification, msg_type: {msg_type}, payload: {payload}")
+        # print(f"send_message_notification, typeof msg_type: {type(msg_type)}, typeof payload: {type(payload)}")
         await self.send_message('notification', msg_type, payload)
         
 
@@ -247,7 +247,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             print(f"chatroom to update does not exist")
     
     async def chat_message_new(self, event):
-        print(f"HIER: new chat message: {event}")
+        # print(f"HIER: new chat message: {event}")
         await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_NEW, {"room_id": event['room_id'], "chat_message": event['data']})
     
 
@@ -257,17 +257,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def create_room_chat_message(self, room_id: int, message: str):
         m = ChatMessage.objects.create(user=self.user, room_id=room_id, content=message)
-        return m.get_message_data()
+        return serializer_chat_message_data(m)
 
     @database_sync_to_async
     def get_chatmessages_page(self, room_id: int, page_number: int) -> list[ChatMessageData] | None:
-        print(f"func -> get_chatmessages_page: page: {page_number}, typeof page: {type(page_number)}")
+        # print(f"func -> get_chatmessages_page: page: {page_number}, typeof page: {type(page_number)}")
         chatmessages = ChatMessage.messages.by_room(room_id)
-        print(f"new chats: {chatmessages}")
+        # print(f"new chats: {chatmessages}")
         pages = Paginator(chatmessages, DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE)
         try:
             page = pages.page(page_number)
-            return [ e.get_message_data() for e in page.object_list if isinstance(e, ChatMessage)]
+            return [ serializer_chat_message_data(e) for e in page.object_list if isinstance(e, ChatMessage)]
         except InvalidPage:
             print(f"page {page_number} out of bounds")
             
@@ -281,20 +281,22 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     """
     async def handle_chat_command(self, content: ClientCommand):
         try:
-            print(f"handle_chat_command")
+            # print(f"handle_chat_command")
             match content['command']:
                 case 'send_chat_message':
                     room_id = content['room_id']
                     message = content['message']
+                    print(f"user: {self.user} wants to send a message to room: {room_id}")
                     item = next(item for item in self.chatrooms if item.room_id == room_id)
                     message_data: ChatMessageData = await self.create_room_chat_message(room_id, message)
+                    print(f"user: {self.user} send a message to room: {room_id} - successsfull")
                     await async_send_consumer_internal_command(item.groupname, {
                         'type': 'chat.message.new',
                         'data': message_data,
                         'room_id': room_id,
                     })
                 case 'get_chatmessages_page' :
-                    print(f"handle get_chatmessages_page")
+                    # print(f"handle get_chatmessages_page")
                     data: list[ChatMessageData] | None = await self.get_chatmessages_page(content['room_id'], content['page_number'])
                     if data is None:
                         await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED, {'room_id': content['room_id']})
@@ -317,8 +319,8 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     GENERAL GET MODULE AND CALL SPECIFIC HANDLER: PARSE AND HANDLE COMMAND
     """
     async def receive_json(self, content: ClientCommand, **kwargs):
-        if content.get('command') != "ping":
-            print(f"NotificationConsumer: receive_json. Command: {content}")
+        # if content.get('command') != "ping":
+            # print(f"NotificationConsumer: receive_json. Command: {content}")
         try:
             if content.get('command') == 'ping':
                 self.lastpong = time.perf_counter()*1000
@@ -370,18 +372,18 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     """
     @database_sync_to_async
     def mark_notifications_read(self, newest_timestamp: int) -> int:
-        print(f"1. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+        # print(f"1. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
         ts = datetime.fromtimestamp(newest_timestamp)
-        print(f"2. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+        # print(f"2. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
         notifications = Notification.objects.filter(target=self.user, read=False).order_by('-timestamp').filter(timestamp__lte=(ts))
-        print(f"3. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+        # print(f"3. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
         for notification in notifications:
-            print(f"loop - MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+            # print(f"loop - MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
             notification.read = True
             notification.save(send_notification=False)
-        print(f"4. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+        # print(f"4. MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
         count = Notification.objects.filter(target=self.user, read=False).count()
-        print(f"COUNT: {count}")
+        # print(f"COUNT: {count}")
         return int(count)
     
     @database_sync_to_async
@@ -396,7 +398,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             page = pages.page(page_number)
             return [ e.get_notification_data() for e in page.object_list if isinstance(e, Notification)]
         except InvalidPage:
-            print(f"page {page_number} out of bounds")
+            # print(f"page {page_number} out of bounds")
             return None
 
 
@@ -419,9 +421,9 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 #         while True:
 #             await asyncio.sleep(timeout)
 #             currtime = time.perf_counter()*1000
-#             # print(f"CHECK CONNECTION: {currtime - self.lastpong}")
+# #             # print(f"CHECK CONNECTION: {currtime - self.lastpong}")
 #             if currtime - self.lastpong > HEARTBEAT_TIMEOUT_MS:
-#                 print(f"CHECK CONNECTION took too long: {currtime - self.lastpong}")
+# #                 print(f"CHECK CONNECTION took too long: {currtime - self.lastpong}")
 #                 await self.close()
 #                 break
 
@@ -476,7 +478,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 #         })
     
 #     async def chat_message_new(self, event):
-#         print(f"HIER: new chat message: {event}")
+# #         print(f"HIER: new chat message: {event}")
 #         await self.send_json({
 #             "general_msg_type": MSG_TYPE_NEW_CHAT_MESSAGE,
 #             "room_id": event['room_id'],
@@ -494,7 +496,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 #         return Notification.objects.filter(target=self.user, read=False).count()
     
 #     async def notification_new(self, event):
-#         print(f"HIER: new notification: {event}")
+# #         print(f"HIER: new notification: {event}")
 #         count = await self.get_unread_count()
 #         await self.send_json({
 #             "general_msg_type": MSG_TYPE_GET_NEW_GENERAL_NOTIFICATIONS,
@@ -503,7 +505,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 #         })
     
 #     async def notification_update(self, event):
-#         print(f"HIER: updated notification: {event}")
+# #         print(f"HIER: updated notification: {event}")
 #         await self.send_json({
 #                 "general_msg_type": MSG_TYPE_UPDATED_NOTIFICATION,
 #                 "notification": event['data']
@@ -515,7 +517,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         
 #         command = content.get("command", None)
 #         if command != "ping":
-#             print(f"NotificationConsumer: receive_json. Command: {command}")
+# #             print(f"NotificationConsumer: receive_json. Command: {command}")
 #         # if content.get("module", None) == 'chat':
 #         #     await self.handle_chat_command(content)
 #         #     return
@@ -523,23 +525,23 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 #             match content['command']:
 #                 case 'ping':
 #                     self.lastpong = time.perf_counter()*1000
-#                     # print(f"PONG")
+# #                     # print(f"PONG")
 #                     data = { "msg_type": "pong" }
 #                     await self.send_json(data)
 #                 case 'send_chat_message':
 #                     room_id = content.get('room_id')
 #                     message = content.get('message')
-#                     print(f"room: {room_id}")
-#                     print(f"type room: {type(room_id)}")
-#                     print(f"message: {message}")
-#                     print(f"rooooms: {self.chatrooms}")
+# #                     print(f"room: {room_id}")
+# #                     print(f"type room: {type(room_id)}")
+# #                     print(f"message: {message}")
+# #                     print(f"rooooms: {self.chatrooms}")
 #                     for r in self.chatrooms:
-#                         print(f"is: {r[0]} type: {type(r[0])}")
+# #                         print(f"is: {r[0]} type: {type(r[0])}")
 #                     checkedroom = [i for i in self.chatrooms if i[0] == room_id]
-#                     print(f"checkedroom: {checkedroom[0]}")
+# #                     print(f"checkedroom: {checkedroom[0]}")
 #                     if len(checkedroom) == 1 and checkedroom[0][0] == room_id and len(message.lstrip()) != 0:
 #                         checkedroom = checkedroom[0]
-#                         print(f"OKOK: ", checkedroom)
+# #                         print(f"OKOK: ", checkedroom)
 #                         message_data = await self.create_room_chat_message(room_id, message)
 #                         await self.channel_layer.group_send(checkedroom[1], {
 #                             'type': 'chat.message.new',
@@ -568,7 +570,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
 
 #     def mark_notifications_read(self, newest_timestamp: int):
-#         print(f"MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
+# #         print(f"MARK AS READ: {datetime.fromtimestamp(newest_timestamp)}")
 #         ts = datetime.fromtimestamp(newest_timestamp)
 #         notifications = Notification.objects.filter(target=self.user, read=False).order_by('-timestamp').filter(timestamp__lte=(ts))
         
@@ -590,7 +592,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             
 #     def get_general_notifications(self, page_number: int) -> GeneralNotificationsData | PageinationExhausted:
 #         notifications = Notification.objects.filter(target=self.user).order_by('-timestamp')
-#         # print(f"page: {page_number}, all notifications: {notifications}")
+# #         # print(f"page: {page_number}, all notifications: {notifications}")
 #         pages = Paginator(notifications, DEFAULT_NOTIFICATION_PAGE_SIZE)
 #         try:
 #             page = pages.page(page_number)
@@ -601,7 +603,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 #                 "new_page_number": page_number + 1
 #             }
 #         except InvalidPage:
-#             print(f"page {page_number} out of bounds")
+# #             print(f"page {page_number} out of bounds")
 #             return {
 #                 "general_msg_type": MSG_TYPE_PAGINATION_EXHAUSTED,
 #             }

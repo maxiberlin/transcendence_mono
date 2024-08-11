@@ -97,6 +97,12 @@ export class PongObjManager {
         this.paddleLeft = new PongPaddle(paddleLeftData);
         this.paddleRight = new PongPaddle(paddleRightData);
         this.#setObjectSizes(this.width, this.height);
+        if (this.objectColor) {
+            this.court.setColor(this.backgroundColor, this.objectColor);
+            this.paddleLeft.setColor(this.objectColor);
+            this.paddleRight.setColor(this.objectColor);
+            this.ball.setColor(this.objectColor);
+        }
     }
 
     /**
@@ -124,6 +130,8 @@ export class PongObjManager {
      * @param {string} objectColor 
      */
     changeColor(backgroundColor, objectColor) {
+        this.backgroundColor = backgroundColor;
+        this.objectColor = objectColor;
         this.court.setColor(backgroundColor, objectColor);
         this.paddleLeft.setColor(objectColor);
         this.paddleRight.setColor(objectColor);
@@ -152,20 +160,26 @@ export class PongObjManager {
         player_one_score: this.court.scoreL, player_two_score: this.court.scoreR,
         who_scored_id: side === "left" ? this.playerOneId : this.playerTwoId, side
     })
-    /** @param {PongGameplayTypes.GameEndReason} reason @param {PongGameplayTypes.PongGameSides} side @returns {FromWorkerGameMessageTypes.GameEnd} */
-    #getGameDoneMessage = (side, reason) => ({
+    /**
+     * @param {PongGameplayTypes.GameEndReason} reason
+     * @param {PongGameplayTypes.PongGameSides} side
+     * @param {APITypes.GameScheduleItem} [game_result]
+     * @returns {FromWorkerGameMessageTypes.GameEnd} */
+    #getGameDoneMessage = (side, reason, game_result) => ({
         message: "from-worker-game-done", winner_side: side, loser_side: side === "left" ? "right" : "left",
         winner_id: side === "left" ? this.playerOneId : this.playerTwoId, loser_id: side === "left" ? this.playerTwoId : this.playerOneId,
         player_one_id: this.playerOneId, player_two_id: this.playerTwoId,
-        player_one_score: this.court.scoreL, player_two_score: this.court.scoreR, reason
+        player_one_score: this.court.scoreL, player_two_score: this.court.scoreR, reason,
+        game_result: game_result ?? null
     })
     /**
      * @param {PongGameplayTypes.PongGameSides | number} actionSide
      * @param {"local-set-score-check-win-message-main" | "remote-set-score-message-main" | "remote-game-end-message-main-winner-side"} mode
      * @param {PongGameplayTypes.GameEndReason} [data]
+     * @param {APITypes.GameScheduleItem} [game_result]
      * @returns 
      */
-    makeAction(actionSide, mode, data) {
+    makeAction(actionSide, mode, data, game_result) {
         let end = false;
         /** @type {PongGameplayTypes.PongGameSides | "none"} */
         let side;
@@ -189,6 +203,7 @@ export class PongObjManager {
                 setTimeout(() => {
                     // console.log('timeout done old ball: ', this.ball);
                     this.ball = new PongBall(this.ballData, !this.remote);
+                    if (this.objectColor) this.ball.setColor(this.objectColor);
                     // console.log('new ball created: ', this.ball);
                     this.ball.setCanvasSizes(this.width, this.height);
                     // console.log(`this.width: ${this.width} this.height: ${this.height}`);
@@ -200,7 +215,7 @@ export class PongObjManager {
         if (side === "none")
             throw new Error("PongObjsManager: makeAction: invalid side");
         if (typeof data === "string" && mode === "remote-game-end-message-main-winner-side")
-            pushMessageToMainThread(this.#getGameDoneMessage(side, data))
+            pushMessageToMainThread(this.#getGameDoneMessage(side, data, game_result))
         else if (end && mode === "local-set-score-check-win-message-main") 
             pushMessageToMainThread(this.#getGameDoneMessage(side, "reguar"))
 

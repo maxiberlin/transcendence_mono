@@ -153,11 +153,20 @@ export const avatarLink = (userData, showStatus, linkClasses) => {
             src="${userData.avatar ?? ''}"
             radius="circle"
             status=${getUserStatus(userData, showStatus)}
-            .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
+            .text_after=${Object.hasOwn(userData, 'alias') ? html`
+                <span class="d-inline-flex flex-column m-2 text-truncate">
+                    <small class="text-truncate text-body-secondary">@${userData.username ?? ''}</small>
+                    <span class="text-truncate">${(Object.hasOwn(userData, 'alias')) ? userData.alias : ''}</span>
+                </span>
+            ` : html`
+                <span class="m-2 text-truncate">${userData.username ?? ''}</span>
+            `}
         >
         </avatar-component>
     </a>
 `};
+
+// .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
 
 /**
  * @param {APITypes.BasicUserData | undefined} userData

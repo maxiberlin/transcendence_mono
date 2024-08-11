@@ -11,6 +11,7 @@ from user.models import *
 from friends.models import *
 from .models import *
 from .utils import *
+from .serializers import *
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
@@ -21,6 +22,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http.request import HttpRequest
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.humanize.templatetags.humanize import naturaltime
+from user.serializers import *
 
 # Create your views here.
 
@@ -114,19 +116,28 @@ def sent_invites(request, *args, **kwargs):
 @login_required
 def game_invite_accept(request, *args, **kwargs):
     user = request.user
-    data = json.loads(request.body)
-    alias = data.get('alias', None)
+    # try:
+    #     data = json.loads(request.body)
+    # except Exception:
+    #     data = None
+    # alias = data.get('alias', None) if data else None
     invite_id = kwargs.get('invite_id')
     if not invite_id:
+        print(f"deb1")
         return HttpBadRequest400(message='Invite is invalid.')
+    print(f"deb0")
     game_invite = GameRequest.objects.get(pk=invite_id)
     if game_invite and game_invite.is_active==True:
         if game_invite.invitee == user:
-            game_invite.accept(alias)
+            # game_invite.accept(alias)
+            game_invite.accept()
+            print(f"deb2")
             return JsonResponse({'success': True, 'message': 'Invite accepted.'}, status=200)
         else:
+            print(f"deb3")
             return JsonResponse({'success': False, 'message': 'You cannot access this feature'}, status=400)
     else:
+        print(f"deb4")
         return JsonResponse({'success': False, 'message': 'This invite does not exist'}, status=400)
 
 
@@ -193,26 +204,27 @@ def game_schedule(request, *args, **kwargs):
         return JsonResponse({'success': False, 'message': 'Player does not exist'}, status=400)
 
     for game in game_list:
-        ply_one_user_acc = UserAccount.objects.get(username=game.player_one)
-        ply_two_user_acc = UserAccount.objects.get(username=game.player_two)
-        item = {
-            'schedule_id': game.pk,
-            'game_id': game.game_id,
-            'game_mode': game.game_mode,
-            'tournament': game.tournament.pk if game.tournament else None,
-            'player_one': {
-                'id': ply_one_user_acc.pk,
-                'username': ply_one_user_acc.username,
-                'avatar': ply_one_user_acc.avatar.url,
-                'alias': Player.objects.get(user=ply_one_user_acc).alias,
-            },
-            'player_two': {
-                'id': ply_two_user_acc.pk,
-                'username': ply_two_user_acc.username,
-                'avatar': ply_two_user_acc.avatar.url,
-                'alias': Player.objects.get(user=ply_two_user_acc).alias,
-            }
-        }
+        # ply_one_user_acc = UserAccount.objects.get(username=game.player_one)
+        # ply_two_user_acc = UserAccount.objects.get(username=game.player_two)
+        # item = {
+        #     'schedule_id': game.pk,
+        #     'game_id': game.game_id,
+        #     'game_mode': game.game_mode,
+        #     'tournament': game.tournament.pk if game.tournament else None,
+        #     'player_one': {
+        #         'id': ply_one_user_acc.pk,
+        #         'username': ply_one_user_acc.username,
+        #         'avatar': ply_one_user_acc.avatar.url,
+        #         'alias': Player.objects.get(user=ply_one_user_acc).alias,
+        #     },
+        #     'player_two': {
+        #         'id': ply_two_user_acc.pk,
+        #         'username': ply_two_user_acc.username,
+        #         'avatar': ply_two_user_acc.avatar.url,
+        #         'alias': Player.objects.get(user=ply_two_user_acc).alias,
+        #     }
+        # }
+        item = serializer_game_schedule(game, None)
         schedules.append(item)
     return HttpSuccess200("game schedules", schedules)
 
@@ -255,30 +267,32 @@ def game_schedule(request, *args, **kwargs):
 @login_required
 def match_history(request: HttpRequest, *args, **kwargs):
     history = []
-    player: AbstractBaseUser | AnonymousUser = request.user
+    user: AbstractBaseUser | AnonymousUser = request.user
     query = request.GET.get('user')
     print(f"get game history for: {query}")
     if query is not None:
-        player = get_object_or_404(UserAccount, username=query)
-    games_played = GameResults.objects.filter(Q(player_one=player) | Q(player_two=player)).order_by('-timestamp')
+        user = get_object_or_404(UserAccount, username=query)
+    games_played = GameResults.objects.filter(Q(game_schedule__player_one__user=user) | Q(game_schedule__player_two__user=user)).order_by('-timestamp')
     for game in games_played:
-        if game.player_one is None or game.player_two is None:
+        if game.game_schedule.player_one is None or game.game_schedule.player_two is None:
             return HttpInternalError500("game result players are none")
-        p1 = get_object_or_404(Player, user=game.player_one)
-        p2 = get_object_or_404(Player, user=game.player_two)
-        item = {
-            'match_id': game.pk,
-            'game_id': game.game_id,
-            'game_mode': game.game_mode,
-            'tournament': game.tournament.pk if game.tournament else None,
-            'player_one': serialize_player_details(game.player_one,  p1),
-            'player_two': serialize_player_details(game.player_two, p2),
-            'player_one_score': game.player_one_score,
-            'player_two_score': game.player_two_score,
-            'date': game.timestamp,
-            'winner': Player.objects.get(user=game.winner).alias
-            # 'winner': game.winner.username
-        }
+        
+        # # p1 = get_object_or_404(Player, user=game.game_schedule.player_one)
+        # # p2 = get_object_or_404(Player, user=game.game_schedule.player_two)
+        # item = {
+        #     'match_id': game.pk,
+        #     'game_id': game.game_schedule.game_id,
+        #     'game_mode': game.game_schedule.game_mode,
+        #     'tournament': game.game_schedule.tournament.pk if game.game_schedule.tournament else None,
+        #     'player_one': .get_player_data('finished'),
+        #     'player_two': game.game_schedule.player_two.get_player_data('finished'),
+        #     'player_one_score': game.player_one_score,
+        #     'player_two_score': game.player_two_score,
+        #     'date': game.timestamp,
+        #     'winner': Player.objects.get(user=game.winner).alias
+        #     # 'winner': game.winner.username
+        # }
+        item = serializer_game_result(game)
         history.append(item)
     return HttpSuccess200("game results", history)
 
@@ -351,7 +365,7 @@ def create_tournament(request, *args, **kwargs):
                         return JsonResponse({'success': False, 'message': 'Blocklist: cannot invite user'}, status=400)
             tournament_player_creator(user, tournament)
             tournament.save()
-            return JsonResponse({'success': True, 'message': 'Tournament created'}, status=200)
+            return JsonResponse({'success': True, 'message': 'Tournament created', 'data': {'tournament_id':tournament.pk}}, status=200)
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 

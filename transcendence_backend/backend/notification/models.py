@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.humanize.templatetags.humanize import naturaltime
 from .types import NotificationData
+from user.serializers import serializer_basic_user_data
 
 
 class Notification(models.Model):
@@ -49,7 +50,7 @@ class Notification(models.Model):
             "action_id": int(model.pk if model and active else -1),
             "is_active": active,
             "redirect_url": str(self.redirect_url.rstrip('/')) if self.redirect_url else None,
-            "user": self.from_user.get_basic_user_data() if self.from_user else None
+            "user": serializer_basic_user_data(self.from_user) if self.from_user else None
         }
 
 

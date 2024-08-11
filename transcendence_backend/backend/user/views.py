@@ -3,6 +3,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from friends.models import *
 from .utils import *
+from .serializers import *
 from .models import UserAccount, Player
 from friends.views import friend_list, block_list_view
 from django.contrib.auth import authenticate, login, logout

@@ -5,6 +5,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 import logging
 import struct
+from game.serializers import GameResultData
 
 
 HEARTBEAT_INTERVAL_MS = 1000
@@ -30,6 +31,7 @@ class WebsocketErrorCode(Enum):
     GAME_SERVER_TIMEOUT = 4209
     PLAYER_TIMEOUT = 4210
     ALREADY_CONNECTED = 4211
+    USER_HAS_NO_RUNNING_GAME = 4213
 
     INTERNAL_ERROR = 4212
 
@@ -91,6 +93,7 @@ async def async_send_to_consumer(server_broadcast: "BaseBroadcast | BaseBroadcas
     if not layer:
         logging.error("Error: send_to_consumer: Channel Layer not configured")
         return False
+    # print(f"SERVER BROADCAST: {server_broadcast}")
     if isinstance(server_broadcast, BaseBroadcastBin):
         msg: ConsumerMessage = {
                 "type": "handle_broadcast_binary",
@@ -265,6 +268,7 @@ class GameEnd(BaseBroadcast):
     player_one_score: int
     player_two_score: int
     reason: GameEndReason
+    game_result: GameResultData
 
 @dataclass
 class GamePlayerScored(BaseBroadcast):

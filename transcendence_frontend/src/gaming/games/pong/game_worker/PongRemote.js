@@ -380,7 +380,7 @@ export class PongRemote extends Pong {
             this.manager.makeAction(b.side, "remote-set-score-message-main")
         })
         this.#messageHandlerMap.setHandler("server-game-end", (b) => {
-            this.manager.makeAction(b.winner_side, "remote-game-end-message-main-winner-side", b.reason)
+            this.manager.makeAction(b.winner_side, "remote-game-end-message-main-winner-side", b.reason, b.game_result)
             super.quitGame();
         });
 

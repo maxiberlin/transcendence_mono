@@ -1,11 +1,13 @@
 import time
 import logging
 import asyncio
+import json
 
 from typing import Final, Callable
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from channels.db import database_sync_to_async
 
 from .pong_ball import PongBall
 from .pong_paddle import PongPaddle
@@ -24,6 +26,20 @@ logger.setLevel(logging.CRITICAL)
 from dataclasses import dataclass, field
 from typing import Any
 
+from game.models import GameSchedule
+from game.serializers import serializer_game_result
+
+@database_sync_to_async
+def create_game_result(data: 'GameData'):
+    game = GameSchedule.objects.filter(pk=data.schedule_id).first()
+    if game is None:
+        return
+    try:
+        result = game.finish_game_and_update(data.player_one_score, data.player_two_score)
+        result_data = serializer_game_result(result)
+        return result_data
+    except Exception as e:
+        logger.error(f"Error finish game when called: finish_game_and_update: {e}")
 
 
 @dataclass
@@ -161,7 +177,7 @@ class PongGame:
                     )
                 
             elif CMD_NAME == "client-leave-game":
-                self.handle_player_leave(command.get("user_id"))
+                await self.handle_player_leave(command.get("user_id"))
 
         except msg_server.CommandError as e:
             logger.error(f"Error processing command: CommandResponse {e}, status_code: {e.error_code}")
@@ -192,10 +208,10 @@ class PongGame:
         # self.__start_cmd_coro(cmd, True, "Game resumed", msg_server.WebsocketErrorCode.OK)
         await msg_server.async_send_to_consumer(msg_server.GameResumed(), group_name=self.group_name)
 
-    def handle_player_leave(self, user_id: int | None):
+    async def handle_player_leave(self, user_id: int | None):
         if not user_id or not isinstance(user_id, int):
             raise msg_server.CommandError("invalid user_id", msg_server.WebsocketErrorCode.INVALID_COMMAND)
-        self.__end_game(user_id, "surrender")
+        await self.__end_game(user_id, "surrender")
         # self.__start_cmd_coro(cmd, True, f"client {user_id} left", msg_server.WebsocketErrorCode.OK)       
 
 
@@ -210,7 +226,7 @@ class PongGame:
             player_two_score=self.gameResults.player_two_score
         ), group_name=self.group_name)
 
-    def __end_game(self, loser_user_id: int, reason: msg_server.GameEndReason):
+    async def __end_game(self, loser_user_id: int, reason: msg_server.GameEndReason):
         if self.gameResults.player_one_pk == loser_user_id:
             winner_user_id = self.gameResults.player_two_pk
             winner_side: msg_server.GameSide = "right"
@@ -223,6 +239,7 @@ class PongGame:
             raise ValueError("invalid user_id")
         if not (reason == "surrender" or reason == "timeout" or reason == "win"):
             raise ValueError("invalid reason")
+        res = await create_game_result(self.gameResults)
         self.__start_msg_coro(msg_server.GameEnd(
                 loser_id=loser_user_id,
                 winner_id=winner_user_id,
@@ -232,23 +249,26 @@ class PongGame:
                 player_two_id=self.gameResults.player_two_pk,
                 player_one_score=self.gameResults.player_one_score,
                 player_two_score=self.gameResults.player_two_score,
-                reason=reason
+                reason=reason,
+                game_result=res
             ), group_name=self.group_name)
+        
+            
         self.running = False
 
-    def __check_scores(self, score):
+    async def __check_scores(self, score):
         if score == PongBall.Scored.SCORE_PLAYER_LEFT:
             self.gameResults.player_one_score += 1
             self.__send_score("left", self.gameResults.player_one_score)
             print(f"scored player one: {self.gameResults.player_one_score}, max score: {self.settings.max_score}")
             if self.gameResults.player_one_score == self.settings.max_score:
-                self.__end_game(self.gameResults.player_two_pk, "win")
+                await self.__end_game(self.gameResults.player_two_pk, "win")
         elif score == PongBall.Scored.SCORE_PLAYER_RIGHT:
             self.gameResults.player_two_score += 1
             self.__send_score("right", self.gameResults.player_two_score)
             print(f"scored player one: {self.gameResults.player_two_score}, max score: {self.settings.max_score}")
             if self.gameResults.player_two_score == self.settings.max_score:
-                self.__end_game(self.gameResults.player_one_pk, "win")
+                await self.__end_game(self.gameResults.player_one_pk, "win")
 
 
 
@@ -354,7 +374,7 @@ class PongGame:
                     pass
                 self.move_items.clear()
                 if self.ball.state.score != PongBall.Scored.SCORE_NONE:
-                    self.__check_scores(self.ball.state.score)
+                    await self.__check_scores(self.ball.state.score)
                     self.ball.state.apply_timeout()
                 state = self.game_state.update_and_safe_state(self.game_timer.get_tick_duration("s"), self.game_timer.get_tick_time_since_start("ms"), self.game_timer.get_current_tick())
                 await msg_server.async_send_to_consumer(msg_server.GameSnapshotListDataclass(list=state), group_name=self.group_name)

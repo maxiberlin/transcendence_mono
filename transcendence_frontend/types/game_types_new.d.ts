@@ -121,6 +121,7 @@ declare namespace PongServerTypes {
         player_one_score: number;
         player_two_score: number;
         reason: PongGameplayTypes.GameEndReason;
+        game_result: APITypes.GameScheduleItem;
     }
     export interface PlayerScored extends ServerBaseMessage {
         tag: 'server-game-player-scored';
@@ -327,7 +328,9 @@ declare namespace FromWorkerGameMessageTypes {
         player_one_score: number;
         player_two_score: number;
         reason: PongGameplayTypes.GameEndReason;
+        game_result: APITypes.GameScheduleItem | null;
     }
+
     export type FromWorkerMessage =
         | GameTouchValid
         | GameReady

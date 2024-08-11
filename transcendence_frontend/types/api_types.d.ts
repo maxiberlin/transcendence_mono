@@ -96,6 +96,35 @@ declare namespace APITypes {
         xp?: number;
     }
 
+
+    // export interface GameResultItem {
+    //     [key: string]: number | string | PlayerData;
+    //     match_id: number;
+    //     game_id: GameIdString;
+    //     game_mode: GameMode;
+    //     tournament: number;
+    //     player_one: PlayerData;
+    //     player_two: PlayerData;
+    //     player_one_score: number;
+    //     player_two_score: number;
+    //     date: string;
+    //     winner: string;
+    // }
+
+    export interface GameScheduleResult {
+        [key: string]: number | string | PlayerData;
+        player_one_score: number;
+        player_two_score: number;
+        time_started: string;
+        time_finished: string;
+        winner: string;
+        loser: string;
+        winner_xp: number;
+        loser_xp: number;
+        winner_id: number;
+        loser_id: number;
+    }
+
     export interface GameScheduleItem {
         [key: string]: JSONValue;
         schedule_id: number;
@@ -106,21 +135,9 @@ declare namespace APITypes {
         duration: number;
         player_one: PlayerData;
         player_two: PlayerData;
+        result: GameScheduleResult;
     }
 
-    export interface GameResultItem {
-        [key: string]: number | string | PlayerData;
-        match_id: number;
-        game_id: GameIdString;
-        game_mode: GameMode;
-        tournament: number;
-        player_one: PlayerData;
-        player_two: PlayerData;
-        player_one_score: number;
-        player_two_score: number;
-        date: string;
-        winner: string;
-    }
 
     export type TournamentStatus = "waiting" | "in progress" | "finished";
     export type TournamentMode = "single elimination" | "round robin";
@@ -149,8 +166,8 @@ declare namespace APITypes {
         winner: string | null,
         players: PlayerData[];
         schedules: GameScheduleItem[] | null;
-        results: [] | null;
-        leaderboard: [] | null;
+        results: GameScheduleItem[] | null;
+        leaderboard: PlayerData[] | null;
     }
 
     export interface SearchResult extends BasicUserData {
@@ -184,7 +201,8 @@ declare namespace APITypes {
         game_invitations_sent?: GameInvitationItem[];
         game_schedule?: GameScheduleItem[];
         tournaments?: TournamentItem[];
-        game_results?: GameResultItem[];
+        // game_results?: GameResultItem[];
+        game_results?: GameScheduleItem[];
         friend_requests_received?: FriendRequestItem[];
         friend_requests_sent?: FriendRequestItem[];
     }

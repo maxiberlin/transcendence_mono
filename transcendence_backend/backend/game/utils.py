@@ -18,7 +18,7 @@ def send_invite(user, invitee, game_id, game_mode, tournament):
             return 'invitation was sent'
         except Exception as e:
             return str(e)
-    
+
 def parse_results(schedule_id, score_one, score_two): #TODO send user xp gained ot lost + winner to consumer
     try:
         schedule = GameSchedule.objects.get(id=schedule_id, is_active=True)
@@ -101,95 +101,6 @@ def tournament_player_update(result):
     #     )
 
 
-def tournament_details(tournament):
-    players = []
-    fixtures = []
-    details = model_object_serializer(tournament)
-    details['game_id'] = tournament.get_game_id_display()
-    details['creator'] = Player.objects.get(user=tournament.creator).alias
-    # details['creator'] = tournament.creator.pk
-    # tournament_players: QuerySet[Player] = tournament.players.all()
-    players_with_status: QuerySet[Player] = query_players_with_status(tournament)
-    
-    for player in players_with_status:
-        print(f"PLAYER: {player}")
-        item = player.get_player_data(getattr(player, 'game_request_status', 'UNKNOWN'))
-        # item = {
-        #     'id': player.user.pk,
-        #     'username': player.user.username,
-        #     'avatar': player.user.avatar.url,
-        #     'status': getattr(player, 'game_request_status', 'UNKNOWN'),
-        #     'alias': player.alias
-        # }
-        players.append(item)
-    # for player in tournament_players:
-    #     player_details = UserAccount.objects.get(username=player)
-    #     item = {
-    #         'id': player_details.pk,
-    #         'username': player_details.username,
-    #         'avatar': player_details.avatar.url,
-    #         'alias': player.alias
-    #     }
-    #     players.append(item)
-    details['players'] = players
-    # schedules = GameSchedule.objects.filter(tournament=tournament, is_active=True)
-    schedules = GameSchedule.objects.filter(tournament=tournament)
-    for schedule in schedules:
-        ply_1 = UserAccount.objects.get(username=schedule.player_one)
-        ply_2 = UserAccount.objects.get(username=schedule.player_two)
-        item = {
-            'id': schedule.pk,
-            'game_id': schedule.get_game_id_display(), # type: ignore
-            'tournament': schedule.tournament.pk if schedule.tournament else None,
-            'round': schedule.round,
-            'player_one': {
-                'id': ply_1.pk,
-                'username': ply_1.username,
-                'avatar': ply_1.avatar.url,
-                'alias': schedule.player_one.alias
-            },
-            'player_two': {
-                'id': ply_2.pk,
-                'username': ply_2.username,
-                'avatar': ply_2.avatar.url,
-                'alias': schedule.player_two.alias
-            }
-        }
-        fixtures.append(item)
-    details['schedules'] = fixtures
-    results = []
-    games_played = GameResults.objects.filter(tournament=tournament)
-    for game in games_played:
-        ply_one_user_acc = UserAccount.objects.get(username=game.game_schedule.player_one)
-        ply_two_user_acc = UserAccount.objects.get(username=game.game_schedule.player_two)
-        item = {
-			'match_id': game.pk,
-			'game_id': game.game_id,
-			'game_mode': game.game_mode,
-			'tournament': game.tournament.pk if game.tournament else None,
-			'player_one': {
-				'id': ply_one_user_acc.pk,
-				'username': ply_one_user_acc.username,
-				'avatar': ply_one_user_acc.avatar.url,
-				'alias': Player.objects.get(user=ply_one_user_acc).alias,
-			},
-			'player_two': {
-				'id': ply_two_user_acc.pk,
-				'username': ply_two_user_acc.username,
-				'avatar': ply_two_user_acc.avatar.url,
-				'alias': Player.objects.get(user=ply_two_user_acc).alias
-			},
-			'player_one_score': game.player_one_score,
-			'player_two_score': game.player_two_score,
-			'date': game.timestamp,
-			'winner': Player.objects.get(user=game.winner).alias
-        }
-        results.append(item)
-    details['results'] = results
-    leaderboard = tournament_leaderboard(tournament)
-    details['leaderboard'] = leaderboard
-    return details
-
 
 def tournament_player_creator(user, tournament):
     try:
@@ -244,48 +155,6 @@ def update_tournament(tournament):
     if len(schedules) == 0:
         tournament.matchmaking()
         tournament.update()
-
-def tournament_leaderboard(tournament: Tournament):
-    leaderboard = []
-    
-    # players = tournament.players.prefetch_related('user').all().order_by('-xp')  # Holt alle Spieler des Turniers
-
-    # players = players
-    # return players
-    
-    ordered_player = (
-        TournamentPlayer.objects.filter(tournament=tournament)
-        .select_related('player')
-        .order_by('-xp')
-        .annotate(game_request_status=models.Subquery(
-            GameRequest.objects.filter(
-                invitee_id=models.OuterRef('player__user_id'),
-                tournament=tournament,
-                is_active=True
-            ).values('status')[:1]
-        ))
-    )
-    print(f"SUBQUERY SQP: ", str(ordered_player.query))
-    print(f"SUBQUERY: ", ordered_player)
-    if ordered_player:
-        for tournament_player in ordered_player:
-            item = tournament_player.player.get_player_data(getattr(tournament_player, 'game_request_status', 'UNKNOWN'))
-            item['xp'] = tournament_player.xp
-            leaderboard.append(item)
-            print(f'--> {tournament_player}')
-    else:
-        print(f'Value: error')    
-    # ordered_player = (TournamentPlayer.objects.filter(tournament=tournament)
-    #                .select_related('player')
-    #                .order_by('-xp')
-    #                )
-    # if ordered_player:
-    #     for player in ordered_player:
-    #         print(f'--> {player}')
-    # else:
-    #     print(f'Value: error')    
-    return leaderboard
-
 
 def update_leaderboard():
     Leaderboard.objects.all().delete()

@@ -65,7 +65,7 @@ class ChatRoomView(View):
     def get(self, request: HttpRequest):
         user = request.user
         rooms = ChatRoom.rooms.filter(users__id=user.pk, is_active=True)
-        return HttpSuccess200(data=[room.get_room_data() for room in rooms])
+        return HttpSuccess200(data=[serializer_chat_room_data(room) for room in rooms])
 
 
 class ChatMessageView(View):
@@ -80,7 +80,7 @@ class ChatMessageView(View):
         print(f"room_id: {room_id}, MESSAGES: {messages}")
         paginator = Paginator(messages, 20)
         messagepage = paginator.get_page(pageno)
-        m = [msg.get_message_data() for msg in messagepage if isinstance(msg, ChatMessage)]
+        m = [serializer_chat_message_data(msg) for msg in messagepage if isinstance(msg, ChatMessage)]
         
         return HttpSuccess200(data={
             'room_id': room_id,

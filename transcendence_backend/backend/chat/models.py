@@ -6,6 +6,7 @@ from django.db.models.query import QuerySet
 from .types import ChatMessageData, ChatRoomData, Literal
 from websocket_server.utils import sync_send_consumer_internal_command
 from websocket_server import constants as c
+from user.serializers import serializer_basic_user_data
 
 
 
@@ -42,11 +43,32 @@ from websocket_server import constants as c
 #                 raise RuntimeError(str(e))
 #     return room
 
+
+def serializer_chat_message_data(chat_message: 'ChatMessage') -> ChatMessageData:
+	userdata = serializer_basic_user_data(chat_message.user)
+	return {
+		'user_id': userdata['id'],
+		'avatar': userdata['avatar'],
+		'username': userdata['username'],
+		'timestamp': int(chat_message.timestamp.timestamp()*1000),
+		'message': str(chat_message.content)
+	}
+ 
+def serializer_chat_room_data(chat_room: 'ChatRoom') -> ChatRoomData:
+	users = chat_room.users.all()
+	userdata = [serializer_basic_user_data(u) for u in users if isinstance(u, UserAccount)]
+	return {
+		'room_id': int(chat_room.pk),
+		'type': str(chat_room.type), # type: ignore
+		'title': chat_room.title,
+		'users': userdata
+	}
+
 def notify_consumer_chat_room(room: "ChatRoom", user: UserAccount, action: Literal['add', 'remove']):
     msg: c.InternalCommandChatRoom = {
         'type': 'chat.room.add' if action == 'add' else 'chat.room.remove',
         'chat_room_channel_name': room.group_name,
-        'data': room.get_room_data()
+        'data': serializer_chat_room_data(room)
     }
     sync_send_consumer_internal_command(user.get_private_user_room(), msg)
 
@@ -54,7 +76,7 @@ def notify_chat_room_members_update(room: "ChatRoom", users: QuerySet[UserAccoun
     msg: c.InternalCommandChatRoom = {
         'type': 'chat.room.update',
         'chat_room_channel_name': room.group_name,
-        'data': room.get_room_data()
+        'data': serializer_chat_room_data(room)
     }
     for user in users:
         sync_send_consumer_internal_command(user.get_private_user_room(), msg)
@@ -219,15 +241,15 @@ class ChatRoom(models.Model):
         return self.title
     
 
-    def get_room_data(self) -> ChatRoomData:
-        users = self.users.all()
-        userdata = [u.get_basic_user_data() for u in users if isinstance(u, UserAccount)]
-        return {
-            'room_id': int(self.pk),
-            'type': str(self.type), # type: ignore
-            'title': self.title,
-            'users': userdata
-        }
+    # def get_room_data(self) -> ChatRoomData:
+    #     users = self.users.all()
+    #     userdata = [serializer_basic_user_data(u) for u in users if isinstance(u, UserAccount)]
+    #     return {
+    #         'room_id': int(self.pk),
+    #         'type': str(self.type), # type: ignore
+    #         'title': self.title,
+    #         'users': userdata
+    #     }
 
     # def connect_user(self, user):
     #     is_user_added = False
@@ -274,15 +296,15 @@ class ChatMessage(models.Model):
     def __str__(self):
         return self.content
     
-    def get_message_data(self) -> ChatMessageData:
-        userdata = self.user.get_basic_user_data()
-        return {
-            'user_id': userdata['id'],
-            'avatar': userdata['avatar'],
-            'username': userdata['username'],
-            'timestamp': int(self.timestamp.timestamp()*1000),
-            'message': str(self.content)
-        }
+    # def get_message_data(self) -> ChatMessageData:
+    #     userdata = serializer_basic_user_data(self.user)
+    #     return {
+    #         'user_id': userdata['id'],
+    #         'avatar': userdata['avatar'],
+    #         'username': userdata['username'],
+    #         'timestamp': int(self.timestamp.timestamp()*1000),
+    #         'message': str(self.content)
+    #     }
 
 
 class UnreadMessages(models.Model):

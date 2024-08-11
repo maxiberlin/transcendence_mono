@@ -13,6 +13,8 @@ import { fetcher, gameAPI, sessionService, userAPI } from '../../services/api/AP
 import router from '../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
 import { humanizedDate } from '../../components/utils.js';
+import { detailedTimeAgo } from '../../services/api/GlobalSockHandler.js';
+import { formatDateString } from '../social/SingleChatView.js';
 
 export class ProfileView extends BaseElement {
     constructor() {
@@ -26,7 +28,7 @@ export class ProfileView extends BaseElement {
     profileResponse;
     /** @type {APITypes.UserData | undefined} */
     profileUserData;
-    /** @type {APITypes.GameResultItem[] | undefined} */
+    /** @type {APITypes.GameScheduleItem[] | undefined} */
     profileUserGameResults
     /** @type {number | undefined} */
     profileUserId;
@@ -342,17 +344,19 @@ export class ProfileView extends BaseElement {
         
     `
 
-    /** @param {APITypes.GameResultItem} data */
+    /** @param {APITypes.GameScheduleItem} data */
     renderGameHistoryItem = (data) => {
-        const winnerProfile = data.player_one_score > data.player_two_score ? data.player_one : data.player_two;
+        if (!data.result) return;
+        const winnerProfile = data.result.player_one_score > data.result.player_two_score ? data.player_one : data.player_two;
         const profileUserIsWinner = winnerProfile.id === this.profileUserData?.id;
         return html`
         <div class="d-flex w-100 px-2 align-items-center justify-content-between border-start border-4
                 ${ profileUserIsWinner ? 'border-success-subtle' : 'border-danger-subtle'}"
             >
                 ${ avatarLink(data.player_one.id === this.profileUserData?.id ? data.player_two : data.player_one, true) }
-                ${ renderCardInfo('Score', `${data.player_one_score} : ${data.player_two_score}` ) }
-                ${ renderCardInfo( 'Date',  new Date(data.date).toLocaleDateString( 'de-DE', { dateStyle: 'short' } ) ) }
+                ${ renderCardInfo('Winner', `${data.result.winner}`) }
+                ${ renderCardInfo('Score', `${data.result.player_one_score} : ${data.result.player_two_score}` ) }
+                ${ renderCardInfo( 'Date',  formatDateString(data.result.time_finished)) }
             </div>
         `
     }

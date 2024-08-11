@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from user.models import *
 from user.utils import *
 from django.db.models.functions import Random # type: ignore
@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.contrib.contenttypes.fields import GenericRelation
 from notification.models import Notification
 from chat.models import ChatRoom
-from typing import Literal
+from typing import Literal, LiteralString
 from django.shortcuts import get_object_or_404
 from notification.utils import create_notification, update_notification
 
@@ -45,9 +45,55 @@ class Tournament(models.Model):
     ended = models.DateTimeField(null=True, blank=True)
     winner = models.ForeignKey(UserAccount, related_name='tournament_winner', on_delete=models.SET_NULL, null=True, blank=True)
 
+
+
     def __str__(self):
         return self.name
     
+    def start_tournament(self):
+        self.status = 'in progress'
+        self.started = timezone.now()
+        self.rounds += 1
+        self.stage = get_nth_string(self.rounds) + ' ' + 'round'
+        self.save()
+        self.matchmaking()
+
+    def finish_tournament(self):
+        self.status = 'finished'
+        self.ended = timezone.now()
+        players = TournamentPlayer.objects.filter(tournament=self)
+        for player in players:
+            player.player.xp += player.xp
+            player.player.save()
+        self.save()
+
+    def update_tournament(self):
+        self.rounds += 1
+        num = TournamentPlayer.objects.filter(tournament=self, round=self.rounds).count()
+        if self.mode != 'round robin':
+            if num == 16 and self.mode == 'group and knockout':
+                self.stage = 'round of 16'
+            elif num == 8:
+                self.stage = 'quarter-final'
+            elif num > 2 and num < 5:
+                self.stage = 'semi-final'
+            elif num == 2:
+                self.stage = 'final'
+            else:
+                self.stage = get_nth_string(self.rounds) + ' round'
+            self.save()
+            self.matchmaking()
+            if len(GameSchedule.objects.filter(tournament=self, round=self.rounds, is_active=True)) == 0:
+                self.rounds -= 1
+                self.save()
+        else:
+            self.stage = get_nth_string(self.rounds) + ' round'
+            self.save()
+            self.matchmaking()
+
+
+
+
     def update(self, start, end):
         if start:
             self.status = 'in progress'
@@ -163,39 +209,82 @@ class Tournament(models.Model):
                     return JsonResponse({'success': False, 'message': 'GameScheduleError'}, status=500)
 
 
-    # def group_and_knockout(self, players):
-    #     if self.rounds == 1:
-    #         pass
-    #     else:
-    #         pass
+    def group_and_knockout(self, players):
+        if self.rounds == 1:
+            pass
+        else:
+            pass
 
+
+class TournamentPlayerManager(models.Manager['TournamentPlayer']):
+    
+    def get_tournament_players_with_request_status(self, tournament: Tournament):
+        return (TournamentPlayer.objects.filter(tournament=tournament)
+            .select_related('player')
+            .order_by('-xp')
+            .annotate(game_request_status=models.Subquery(
+                GameRequest.objects.filter(
+                    invitee_id=models.OuterRef('player__user_id'),
+                    tournament=tournament,
+                    is_active=True
+                ).values('status')[:1]
+            ))
+        )
+        
+    def get_tournament_players_sorted_by_xp(self, tournament: Tournament):
+        return (TournamentPlayer.objects.filter(tournament=tournament)
+            .select_related('player')
+            .order_by('-xp')
+        )
+    
+    # def update_or_create_tournament_player(self, tournament: 'Tournament', user: UserAccount, alias: str | None):
+    #     player = get_object_or_404(Player, user)
+    #     if alias is None or len(alias) == 0:
+    #         alias = player.alias
+    #     aliases = self.filter(tournament=tournament, alias=alias)
+    #     if len(aliases) != 0:
+    #         alias = player.alias
+    #         # aliases = Player.objects.filter(alias=self.alias)
+    #     # if self.update_or_create()
+    #     return self.create(
+    #         tournament=tournament,
+    #         player=player,
+    #         alias=alias
+    #     )
 
 
 class TournamentPlayer(models.Model):
     tournament = models.ForeignKey(Tournament, related_name='tournament_players', on_delete=models.CASCADE)
     player = models.ForeignKey(Player, related_name='player_tournaments', on_delete=models.CASCADE)
-    alias = models.CharField(max_length=30, default='')
+    # alias = models.CharField(max_length=30, default='')
     xp = models.IntegerField(default=0)
     round = models.PositiveIntegerField(default=0)
     stage = models.CharField(max_length=20, null=True, blank=True)
     group = models.PositiveIntegerField(default=0)
+    
+    objects = models.Manager()
+    players = TournamentPlayerManager()
+    
+    def update_xp(self, xp: int):
+        self.xp += xp
+        self.save()
 
     # def __str__(self):
     # 	return self.player.user
 
-    def save(self, *args, **kwargs):
-        aliases = self.objects.filter(tournament=self.tournament, alias=self.alias)
-        if len(aliases) == 0:
-            aliases = Player.objects.filter(alias=self.alias)
-        if len(aliases) > 0:
-            raise ValueError('Duplicate alias not allowed for this tournament')
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     aliases = self.objects.filter(tournament=self.tournament, alias=self.alias)
+    #     if len(aliases) == 0:
+    #         aliases = Player.objects.filter(alias=self.alias)
+    #     if len(aliases) > 0:
+    #         raise ValueError('Duplicate alias not allowed for this tournament')
+    #     super().save(*args, **kwargs)
 
 
-class TournamentLobby(models.Model):
-    tournament = models.ForeignKey(Tournament, related_name='tournament_tl', on_delete=models.CASCADE)
-    winners = models.ManyToManyField(Player, related_name='winners')
-    losers = models.ManyToManyField(Player, related_name='losers')
+# class TournamentLobby(models.Model):
+#     tournament = models.ForeignKey(Tournament, related_name='tournament_tl', on_delete=models.CASCADE)
+#     winners = models.ManyToManyField(Player, related_name='winners')
+#     losers = models.ManyToManyField(Player, related_name='losers')
 
 
 class GameSchedule(models.Model):
@@ -213,12 +302,70 @@ class GameSchedule(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.id} - {self.player_one} vs {self.player_two}'
+        return f'{self.pk} - {self.player_one} vs {self.player_two}'
+   
+        
+    
+    def finish_game_and_update(self, score_one: int, score_two: int): #TODO send user xp gained ot lost + winner to consumer
+        try:
+            if score_one > score_two:
+                winner, loser = self.player_one, self.player_two
+            else:
+                winner, loser = self.player_two, self.player_one,
+            result = GameResults.objects.create(
+                game_schedule=self,
+                player_one_score=score_one,
+                player_two_score=score_two,
+                winner=winner.user,
+                loser=loser.user,
+            )
+        except Exception as e:
+            print(f"Error: GameSchedule: finish_game_create_result: {e}")
+            raise RuntimeError("!!!!")
+        self.is_active = False
+        self.save()
+
+        margin = abs(score_one - score_two)
+        winner_xp = calculate_user_xp(margin=margin, winner=True)
+        loser_xp = calculate_user_xp(margin=margin, winner=False)
+        if self.tournament is None:
+            winner.update_game(xp=winner_xp, margin=margin, winner=True)
+            loser.update_game(xp=loser_xp, margin=-margin, winner=False)
+            return result
+
+        t_player = TournamentPlayer.objects.get(player=winner, tournament=self.tournament)
+        t_player.xp += winner_xp
+        t_player.save()
+
+        scheduled_tournament_games = self.objects.filter(tournament=self.tournament, is_active=True)
+        # check final game and set winner
+        if self.tournament.mode == 'round robin' and len(scheduled_tournament_games) == 0:
+            tournament_player_winner = TournamentPlayer.objects.filter(tournament=self.tournament).order_by('-xp').first()
+            if tournament_player_winner:
+                self.tournament.winner = tournament_player_winner.player.user
+                self.tournament.finish_tournament()
+        elif self.tournament.stage == 'final':
+            self.tournament.winner = winner.user
+            self.tournament.finish_tournament()
+        else:
+            tournament_player_winner = TournamentPlayer.objects.get(player=winner, tournament=self.tournament)
+            tournament_player_winner.round += 1
+            tournament_player_winner.save()
+            if len(scheduled_tournament_games) == 0:
+                self.tournament.update_tournament()
+            
+        Leaderboard.objects.all().delete()
+        players = Player.objects.all().order_by('-xp')
+        for rank, player in enumerate(players, start=1):
+            Leaderboard.objects.create(player=player, rank=rank)
+        return result
+
+
+
 
 
 class GameResults(models.Model):
     game_schedule = models.ForeignKey(GameSchedule, related_name='schedule_id', on_delete=models.CASCADE)
-    tournament = models.ForeignKey(Tournament, related_name='tournament_name', on_delete=models.SET_NULL, null=True, blank=True)
     player_one_score = models.IntegerField()
     player_two_score = models.IntegerField()
     winner = models.ForeignKey(UserAccount, related_name='winner', on_delete=models.SET_NULL, null=True)
@@ -250,46 +397,47 @@ class GameRequest(models.Model):
     status = models.CharField(max_length=20, default='pending')
     notifications = GenericRelation(Notification)
     timestamp = models.DateTimeField(auto_now_add=True)
- 
-    def _handle_tournament(self, accepted: bool, alias):
-        if self.game_mode != 'tournament' or self.tournament is None:
+    
+    def clear_tournament_invitation(self):
+        if self.tournament is None:
             return
-        player = get_object_or_404(Player, user=self.invitee)
-        print(f'@@@@@@---> {player}')
-        if alias is None:
-            alias = player.alias
-        if accepted == False:
-            self.tournament.players.remove(Player.objects.get(user=self.invitee))
-            ChatRoom.rooms.remove_user_from_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
-            # handle_tournament_chatroom_message_consumer('remove_player', self.tournament.name, self.invitee)
-        else:
-            ChatRoom.rooms.add_user_to_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
-            # handle_tournament_chatroom_message_consumer('add_player', self.tournament.name, self.invitee)
-            # add_user_to_chat_room(self.invitee, self.tournament.name)
-            try:
-                t_player = TournamentPlayer.objects.create(tournament=self.tournament, player=player, alias=alias, round=1)
-            except Exception as e:
-                try:
-                    t_player = TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=player, alias=player.alias, round=1)
-                except Exception as e:
-                    raise ValueError(e)
-            print(f'~~~~~~>>')
-            t_player.save()
+        self.tournament.players.remove(get_object_or_404(Player, self.invitee))
+        ChatRoom.rooms.remove_user_from_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
         if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
             self.tournament.update(True, False)
 
-   
+    def accept_tournament_invitation(self):
+        if self.tournament is None:
+            return
+        player = get_object_or_404(Player, user=self.invitee)
+        ChatRoom.rooms.add_user_to_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
+        try:
+            t_player = TournamentPlayer.objects.create(tournament=self.tournament, player=player, round=1)
+        except Exception as e:
+            try:
+                t_player = TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=player, round=1)
+            except Exception as e:
+                raise ValueError(e)
+        # TournamentPlayer.players.update_or_create_tournament_player(tournament=self.tournament, user=self.invitee, alias=alias)
+        if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
+            self.tournament.update(True, False)
+ 
+
     def _update_status(self, state: Literal["accepted", "rejected", "cancelled"]):
         self.status = state
         self.is_active = False
         self.save()
 
-    def accept(self, alias):
+    def accept(self):
         if not self.is_active: return
+        print(f"deb11")
         if self.game_mode == 'tournament' and self.tournament != None:
             print(f'<<<------>>>>')
-            self._handle_tournament(True, alias)
+            print(f"deb12")
+            self.accept_tournament_invitation()
+            # self._handle_tournament(True, alias)
         else:
+            print(f"deb13")
             GameSchedule.objects.create(
                 player_one=get_object_or_404(Player, user=self.user),
                 player_two=get_object_or_404(Player, user=self.invitee),
@@ -297,6 +445,7 @@ class GameRequest(models.Model):
                 game_mode=self.game_mode,
                 tournament=None
             )
+        print(f"deb14")
         self._update_status("accepted")
         # self._update_notification(f"You accepted {self.user.username}'s game invite.")
         # return self._create_notification(self.user, f"{self.invitee.username} accepted your game request.")
@@ -307,7 +456,7 @@ class GameRequest(models.Model):
     def reject(self):
         if not self.is_active: return
         if self.tournament:
-            self._handle_tournament(False)
+            self.clear_tournament_invitation()
         self._update_status("rejected")
         # self._update_notification(f"You declined {self.user}'s game request.")
         # return self._create_notification(self.user, f"{self.invitee.username} declined your game request.")
@@ -318,14 +467,42 @@ class GameRequest(models.Model):
     def cancel(self):
         if not self.is_active: return
         if self.tournament:
-            self._handle_tournament(False)
+            self.clear_tournament_invitation()
+            # self._handle_tournament(False, None)
         self._update_status("cancelled")
         # self._update_notification( f"{self.user.username} cancelled the game request.")
         # return self._create_notification(self.user, f"You cancelled the game request to {self.invitee.username}.")
         update_notification(self, f"{self.user.username} cancelled the game request.")
         create_notification(self, self.invitee, self.user, f"You cancelled the game request to {self.invitee.username}.")
 
-        
+         # def _handle_tournament(self, accepted: bool, alias):
+    #     if self.game_mode != 'tournament' or self.tournament is None:
+    #         return
+    #     player = get_object_or_404(Player, user=self.invitee)
+    #     print(f'@@@@@@---> {player}')
+    #     if alias is None:
+    #         alias = player.alias
+    #     if accepted == False:
+    #         self.tournament.players.remove(player)
+    #         ChatRoom.rooms.remove_user_from_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
+    #         # handle_tournament_chatroom_message_consumer('remove_player', self.tournament.name, self.invitee)
+    #     else:
+    #         ChatRoom.rooms.add_user_to_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
+            
+    #         # handle_tournament_chatroom_message_consumer('add_player', self.tournament.name, self.invitee)
+    #         # add_user_to_chat_room(self.invitee, self.tournament.name)
+    #         # try:
+    #         #     t_player = TournamentPlayer.objects.create(tournament=self.tournament, player=player, alias=alias, round=1)
+    #         # except Exception as e:
+    #         #     try:
+    #         #         t_player = TournamentPlayer.objects.get_or_create(tournament=self.tournament, player=player, alias=player.alias, round=1)
+    #         #     except Exception as e:
+    #         #         raise ValueError(e)
+    #         # t_player.save()
+    #         # print(f'~~~~~~>>')
+    #     if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
+    #         self.tournament.update(True, False)
+
     # def _update_notification(self, description: str):
     #     notification: Notification | None = self.notifications.first()
     #     if notification is None:
