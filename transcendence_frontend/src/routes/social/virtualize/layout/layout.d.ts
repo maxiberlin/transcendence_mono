@@ -69,12 +69,13 @@ declare namespace LayoutT {
         type: 'unpinned';
     }
 
-    export type LayoutHostMessage =
-        | StateChangedMessage
-        | UnpinnedMessage
-        | VisibilityChangedMessage;
+    export type LayoutHostMessage = StateChangedMessage;
+    // export type LayoutHostMessage =
+    //     | StateChangedMessage
+    //     | UnpinnedMessage
+    //     | VisibilityChangedMessage;
 
-    export type LayoutHostSink = (message: LayoutHostMessage) => void;
+    export type LayoutChangedCb = (message: LayoutHostMessage) => void;
 
     export type ChildPositions = Map<number, Positions>;
 
@@ -87,23 +88,23 @@ declare namespace LayoutT {
         block?: ScrollLogicalPosition;
     }
 
-    export type LayoutConstructor = new (
-        sink: LayoutHostSink,
-        config?: object
-    ) => Layout;
+    // export type LayoutConstructor = new (
+    //     sink: LayoutHostSink,
+    //     config?: object
+    // ) => Layout;
 
-    export interface LayoutSpecifier {
-        type: LayoutConstructor;
-    }
+    // export interface LayoutSpecifier {
+    //     type: LayoutConstructor;
+    // }
 
-    export type LayoutSpecifierFactory = (config?: object) => LayoutSpecifier;
+    // export type LayoutSpecifierFactory = (config?: object) => LayoutSpecifier;
 
-    export interface BaseLayoutConfig {
-        direction?: ScrollDirection;
-        pin?: PinOptions;
-    }
+    // export interface BaseLayoutConfig {
+    //     direction?: ScrollDirection;
+    //     pin?: PinOptions;
+    // }
 
-    export type LayoutConfigValue = LayoutSpecifier | BaseLayoutConfig;
+    // export type LayoutConfigValue = LayoutSpecifier | BaseLayoutConfig;
 
     export interface ScrollToCoordinates {
         top?: number;
@@ -121,7 +122,7 @@ declare namespace LayoutT {
         items: unknown[];
 
 
-        viewportSize: Size;
+        _viewportSize: Size;
 
         viewportScroll: Positions;
 
@@ -196,16 +197,16 @@ declare namespace FlowLayoutT {
         size: number;
     };
 
-    type FlowLayoutConstructor = {
-        prototype: FlowLayout;
-        new(hostSink: LayoutT.LayoutHostSink, config?: LayoutT.BaseLayoutConfig): FlowLayout;
-    };
+    // type FlowLayoutConstructor = {
+    //     prototype: FlowLayout;
+    //     new(onChangeCb: LayoutT.LayoutHostSink, config?: LayoutT.BaseLayoutConfig): FlowLayout;
+    // };
 
-    type FlowLayoutSpecifier = LayoutT.BaseLayoutConfig & {
-        type: FlowLayoutConstructor;
-    };
+    // type FlowLayoutSpecifier = LayoutT.BaseLayoutConfig & {
+    //     type: FlowLayoutConstructor;
+    // };
 
-    type FlowLayoutSpecifierFactory = (config?: LayoutT.BaseLayoutConfig) => FlowLayoutSpecifier;
+    // type FlowLayoutSpecifierFactory = (config?: LayoutT.BaseLayoutConfig) => FlowLayoutSpecifier;
 
 }
 

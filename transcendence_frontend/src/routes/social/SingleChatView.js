@@ -23,7 +23,7 @@ const MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT = 106
 const MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED = 107
 const MSG_TYPE_CHAT_MESSAGE_PAGE = 108
 
-function formatDateString(dateString) {
+export function formatDateString(dateString) {
     const date = new Date(dateString);
     const now = new Date();
 
@@ -106,6 +106,7 @@ export class SingleChatView extends BaseElement {
             // // @ts-ignore
             this.chats = sessionService.messageSocket?.subscribeSingleChat(value, this, (msg_type) => {});
             console.log('SingleChatView: onPropChange: created Chats: ', this.chats);
+            this.isValidChat = this.chats !== undefined;
             // if (this.chats) {
             //     sessionService.messageSocket?.getNextMessagePage(this.chats.value.room?.room_id);
             // }
@@ -271,17 +272,22 @@ export class SingleChatView extends BaseElement {
         console.log('OFFCANVAS?: ', this.props.offcanvas);
         
         return html`
-
-            ${this.props.offcanvas ? this.renderOffcanvas() : html`
-                <div class="">
-                     <div class="col d-flex flex-column" style="${"height: 80vh"}" >
-                             <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
-                                 class="flex-grow-1 overflow-scroll" >
-                                 ${this.chats?.value.messages.map(m => this.renderMessage(m))}
-                             </div>
-                         <div class="px-2" >${this.renderMessageInput()}</div>
+            ${this.isValidChat === false ? html`
+                <div>
+                    There is no chat :o
+                </div>
+                ` : html`
+                ${this.props.offcanvas ? this.renderOffcanvas() : html`
+                    <div class="">
+                         <div class="col d-flex flex-column" style="${"height: 80vh"}" >
+                                 <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
+                                     class="flex-grow-1 overflow-scroll" >
+                                     ${this.chats?.value.messages.map(m => this.renderMessage(m))}
+                                 </div>
+                             <div class="px-2" >${this.renderMessageInput()}</div>
+                         </div>
                      </div>
-                 </div>
+                `}
             `}
             
         `

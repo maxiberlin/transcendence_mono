@@ -1,5 +1,6 @@
-import { BaseElement, html } from '../../lib_templ/BaseElement.js';
+import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
 import { Modal } from 'bootstrap';
+import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
 
 // import * as bootstrap from "../../../assets/bootstrap-5.3.2-dist/js/bootstrap.esm.js";
 
@@ -69,16 +70,32 @@ import { Modal } from 'bootstrap';
 // customElements.define("bs-modal", BsModal);
 
 /**
+ * @typedef {{header?: TemplateAsLiteral, content: TemplateAsLiteral, footer?: TemplateAsLiteral}} BsModalData
+ * 
+ * @typedef {object} MyProps
+ * @property {BsModalData} data
+ * @property {TemplateAsLiteral} header
+ * @property {TemplateAsLiteral} content
+ * @property {TemplateAsLiteral} footer
+ * 
+ * @typedef {import('../../lib_templ/BaseBase.js').BaseBaseProps & MyProps} BsModalProps
+ */
+
+/**
  * @attr centered
  * @attr show_close
  * @prop header
  * @prop footer
  * @prop content
+ * @prop data
+ * @attr fade
+ * @extends BaseElement<BsModalProps>
  */
 export default class BsModal extends BaseElement {
-    static observedAttributes = ['centered', 'show_close'];
+    static observedAttributes = ['centered', 'show_close', 'fade'];
 
     static #nbr = 0;
+    
 
     static #getAvailId() {
         this.#nbr++;
@@ -87,17 +104,26 @@ export default class BsModal extends BaseElement {
 
     constructor() {
         super(false, false);
-
         this.centered = true;
-        this.props.header = '';
-        this.props.content = '';
-        this.props.footer = '';
+        // this.props.header = html``;
+        // this.props.content = html``;
+        // this.props.footer = html``;
+        this.props.data = { content: html`` };
         this.show_close = false;
         this.__id = BsModal.#getAvailId();
+        this.fade = false;
     }
 
     connectedCallback() {
         super.connectedCallback();
+         /** @type {Partial<Modal.Options>} */
+        // const options = {
+        //     focus: true,
+        //     keyboard: false,
+        //     backdrop: "static"
+        // }
+        if (this.myModal.value)
+            this.#modalControl = new Modal(this.myModal.value, );
     }
     
     disconnectedCallback() {
@@ -105,44 +131,93 @@ export default class BsModal extends BaseElement {
         this.#modalControl?.dispose();
     }
 
+    /** @param {BsModalData} data  */
+    setContentAndShow(data) {
+        console.log('BsModal: setContentAndShow: ', data);
+        
+        this.props.data = data;
+        this.showModal();
+    }
+
     showModal() {
-        console.log('BS BUTTON: SHOW THE MODAL');
-        this.#modalControl?.show();
+        console.log('BS MODAL: showModal() func');
+
+        if (this.modalState === 'closed') {
+            console.log('is closed');
+            
+            this.#modalControl?.show();
+        } else if (this.modalState === 'opening') {
+            console.log('is opening');
+            // super.requestUpdate();
+        } else if (this.modalState === 'open') {
+            console.log('is open');
+            // super.requestUpdate();
+            this.shouldShow = true;
+            this.hideModal();
+        } else if (this.modalState === 'closing') {
+            console.log('is closing');
+            this.shouldShow = true;
+        }
     }
     hideModal() {
         console.log('BS BUTTON: HIDE THE MODAL');
         this.#modalControl?.hide();
     }
 
+    /** @type {'open' | 'opening' | 'closing' | 'closed'} */
+    modalState = 'closed';
     #isOpen = false;
     /** @type {Modal | undefined} */
     #modalControl;
+    myModal = createRef();
     render() {
+        
         // console.log('render Modal');
         // console.log(this.props);
         // console.log(this.props._children);
-        /** @type {Partial<Modal.Options>} */
-        const options = {
-            focus: true,
-            keyboard: false,
-            backdrop: "static"
-        }
+       
         
         return html`
             
             <div
                 @hide.bs.modal=${() => {
+                    console.log('BS MODAL HIDE');
+                    this.modalState = 'closing';
+                    
                     this.#isOpen = false;
+                    // console.log('request Update');
+                    // super.requestUpdate();
+                }}
+                @hidden.bs.modal=${() => {
+                    console.log('BS MODAL HIDDEN');
+                    this.modalState = 'closed';
+                    if (this.shouldShow) {
+                        this.showModal();
+                        this.shouldShow = false;
+                    } else {
+                        this.#isOpen = false;
+                        console.log('request Update');
+                        super.requestUpdate();
+                    }
+                }}
+                @show.bs.modal=${() => {
+                    console.log('BS MODAL SHOW');
+                    this.modalState = 'opening';
+                    this.#isOpen = true;
+                    console.log('request Update');
                     super.requestUpdate();
                 }}
                 @shown.bs.modal=${() => {
+                    console.log('BS MODAL SHOWN');
+                    this.modalState = 'open';
                     this.#isOpen = true;
-                    super.requestUpdate();
+                    // console.log('request Update');
+                    // super.requestUpdate();
                 }}
 
-                ${ (el) => { this.#modalControl = Modal.getOrCreateInstance(el, options) } }
+                ${ref(this.myModal)}
 
-                class="modal fade"
+                class="modal ${this.fade ? 'fade' : ''}"
                 id="${this.__id}"
                 tabindex="-1"
                 aria-labelledby="${this.__id}-label"
@@ -150,16 +225,15 @@ export default class BsModal extends BaseElement {
             >
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <div class="modal-header">
-                            ${this.props.header ?
-                                html`<h1
+                        ${(this.props.data.header ?? this.props.header) ? html`
+                            <div class="modal-header">
+                                <h1
                                     class="modal-title fs-5"
                                     id="${this.__id}-label"
                                 >
-                                    ${this.props.header}
-                                </h1>`
-                            : ''}
-                            ${ this.show_close ? html`
+                                    ${(this.props.data.header ?? this.props.header)}
+                                </h1>
+                                ${ this.show_close ? html`
                                 <button
                                     type="button"
                                     class="btn-close"
@@ -167,14 +241,15 @@ export default class BsModal extends BaseElement {
                                     aria-label="Close"
                                 ></button>
                                     ` : '' }
-                        </div>
+                            </div>
+                            ` : ''}
                         <div class="modal-body">
-                            ${this.#isOpen ? this.props.content : ''}
+                            ${this.#isOpen ? (this.props.data.content ?? this.props.content) : ''}
                         </div>
-                        ${this.props.footer ?
+                        ${(this.props.data.footer ?? this.props.footer) ?
                             html`
                                 <div class="modal-footer">
-                                    ${this.props.footer}
+                                    ${(this.props.data.footer ?? this.props.footer)}
                                 </div>
                             `
                         :   ''}

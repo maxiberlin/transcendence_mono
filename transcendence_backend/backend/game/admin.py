@@ -6,7 +6,7 @@ from .models import *
 class GameResultAdmin(admin.ModelAdmin):
     list_display = ['game_schedule', 'player_one_score', 'player_two_score', 'winner', 'timestamp']
     list_search = ['game_schedule']
-    list_filter = ['tournament', 'game_schedule']
+    list_filter = ['game_schedule']
     readonly_fields = ['game_schedule', 'player_one_score', 'player_two_score', 'winner', 'loser', 'timestamp']
 
     class Meta:

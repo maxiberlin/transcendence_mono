@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse, Http404
 from django.core.exceptions import PermissionDenied
+# from user.models import UserAccount, Player
 
 def set_default_avatar():
     return 'avatars/default_avatar.png'
@@ -12,17 +13,6 @@ def get_avatar_path(self, filename):
 def get_default_user():
     return get_user_model().objects.get(username='root')
 
-
-def model_object_serializer(object: models.Model):
-    data = {}
-    for field in object._meta.fields:
-        field_value = getattr(object, field.name)
-        if hasattr(field_value, 'serialize'):
-            field_value = field_value.serialize()
-        elif hasattr(field_value, 'pk'):
-            field_value = field_value.pk
-        data[field.name] = field_value
-    return data
 
 def calculate_user_xp(margin, winner):
     xp_map = {
@@ -46,66 +36,6 @@ def get_nth_string(num):
     else:
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(num % 10, 'th')
     return str(num) + suffix
-
-def serializer_minimal_account_details(account):
-    data = {
-        'id': account.pk,
-        'username': account.username,
-        'email': account.email,
-        'first_name': account.first_name,
-        'last_name': account.last_name,
-        'avatar': account.avatar.url,
-        'online_status': account.status
-    }
-    return data
-
-def serializer_full_profile_details(account, player):
-    data = {
-        'id': account.pk,
-        'username': account.username,
-        'email': account.email,
-        'first_name': account.first_name,
-        'last_name': account.last_name,
-        'avatar': account.avatar.url,
-        'last_login': account.last_login,
-        'date_joined': account.date_joined,
-        'alias': player.alias,
-        'games_played': player.games_played,
-        'wins': player.wins,
-        'losses': player.losses,
-        'online_status': account.status
-    }
-    return data
-
-def serializer_inviter_invitee_details(invite, account, player, inviter: bool):
-    data = {
-        'invite_id': invite.pk,
-        'game_id': invite.get_game_id_display(), # type: ignore
-        'game_mode': invite.game_mode,
-        'tournament': invite.tournament.pk if invite.tournament else None,
-        'tournament_name': invite.tournament.name if invite.tournament else None,
-        'status': invite.status,
-        'id': account.pk,
-        'alias': player.alias,
-        'avatar': account.avatar.url,
-        'online_status': account.status
-	}
-    if inviter:
-        data['inviter'] = account.username
-    else:
-        data['invitee'] = account.username
-    return data
-
-def serialize_player_details(account, player_object):
-    # print(f'---> Start')
-    data = {
-        'id': account.pk,
-        'username': account.username,
-        'avatar': account.avatar.url,
-        'alias': player_object.alias,
-    }
-    # print(f'--------> Done')
-    return data
 
 
 

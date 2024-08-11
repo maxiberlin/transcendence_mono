@@ -79,6 +79,8 @@ export class TournamentDetailsView extends BaseElement {
                 Promise.reject();
             } else {
                 this.tournamentData = this.tournamentResponse.data;
+                console.log('tournament data: ', this.tournamentData);
+                
                 this.myTournamentGames = this.sessionUser.value?.game_schedule?.filter(i => i.tournament === this.tournamentData?.id) ?? []
                 this.tournamentInvitation = this.sessionUser.value.game_invitations_received?.find(i => i.tournament === this.tournamentData?.id);
                 super.requestUpdate();
@@ -116,9 +118,12 @@ export class TournamentDetailsView extends BaseElement {
                             </div>
                            
                             <div class="col-auto">${renderCardInfo('Game', 'pong')}</div>
-                            <div class="col-auto">${renderCardInfo('Mode', '1v1')}</div>
+                            <div class="col-auto">${renderCardInfo('Mode', data.game_mode)}</div>
                             <div class="col-auto">
-                                ${actions.pushRandomGameResult(data.schedule_id)}
+                                <a href="/games/pong/play/${data.schedule_id}" role="button" class="btn btn-outline-primary">
+                                                <i class="fa-solid fa-gamepad"></i>
+                                                start Match
+                                            </a>
                             </div>
                         `),
                     ),
@@ -150,7 +155,7 @@ export class TournamentDetailsView extends BaseElement {
                     : ''
                 }
                 ${avatarLink(player)}
-                ${index === 0 ? html`<i class="text-warning fa-solid fa-crown"></i>` : ''}
+                ${(!pending && index === 0) ? html`<i class="text-warning fa-solid fa-crown"></i>` : ''}
                 ${this.playerIsSelf(player) ? html`<i class="text-success fa-solid fa-diamond"></i>` : ''}
             </span>
             <div>
@@ -165,8 +170,9 @@ export class TournamentDetailsView extends BaseElement {
         const running = this.tournamentData?.status === "in progress";
         const finished = this.tournamentData?.status === "finished";
         const title = pending ? 'waiting for players to accept' : 'Leaderboard';
-        const icon = pending ? 'trophy' : 'Leaderboard';
-        return renderListCard(title, icon, this.tournamentData?.leaderboard?.map((p,i) => 
+        const icon = pending ? 'trophy' : '';
+        const renderList = pending ? this.tournamentData?.players : this.tournamentData?.leaderboard;
+        return renderListCard(title, icon, renderList?.map((p,i) => 
             this.renderPlayersListItem(p, i, pending)));
     }
 
@@ -189,6 +195,29 @@ export class TournamentDetailsView extends BaseElement {
         return (0);
     }
 
+    /** @param {APITypes.GameScheduleItem} data */
+    renderMatchBracket = (data) => {
+        let badgeStyleOne = '', badgeStyleTwo = '';
+        if (data.result != undefined) {
+            badgeStyleOne = this.playerIsWinner(data, data.player_one) ? 'badge text-bg-success px-2 py-1 rounded-2' : 'badge text-bg-danger px-2 py-1 rounded-2';
+            badgeStyleTwo = this.playerIsWinner(data, data.player_two) ? 'badge text-bg-success px-2 py-1 rounded-2' : 'badge text-bg-danger px-2 py-1 rounded-2';
+        }
+        return html`
+            <div class="card my-4 w-100">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex align-items-center justify-content-between">
+                        ${avatarInfo(data.player_one)}
+                        <span class="${ data.result ? badgeStyleOne : '' }">${data.result ? data.result.player_one_score : ''}</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center justify-content-between">
+                        ${avatarInfo(data.player_two)}
+                        <span class="${ data.result ? badgeStyleTwo : '' }">${data.result ? data.result.player_two_score : ''}</span>
+                    </li>
+                </ul>
+            </div>
+        `
+    }
+
     renderMatches = () => {
         const rounds = this.getNumberOfRounds();
         const isMobile = window.innerWidth <= 500;
@@ -198,25 +227,29 @@ export class TournamentDetailsView extends BaseElement {
                     <div class="tournament-grid-item-e">
                         <h2>${this.tournamentData?.mode} | ${this.tournamentData?.stage}</h2>
                     </div>
-                    ${Array.from({ length: rounds }, (_, index) => html`
+                    ${this.tournamentData?.mode === 'single elimination' ? Array.from({ length: rounds }, (_, index) => html`
                         <div class="flex-grow-1 d-flex flex-column justify-content-stretch align-items-center me-4">
                             <h6>Round ${index + 1}</h6>
                             <div class="flex-grow-1 w-100 d-flex flex-column justify-content-evenly align-items-center">
-                                ${this.tournamentData?.schedules?.filter(g => g.round === index + 1).map((data, i) => html`
-                                    <div class="card my-4 w-100">
-                                        <ul class="list-group list-group-flush">
-                                            <li class="list-group-item">${avatarInfo(data.player_one)}</li>
-                                            <li class="list-group-item">${avatarInfo(data.player_two)}</li>
-                                        </ul>
-                                    </div>
-                                `)}
+                                ${this.tournamentData?.schedules?.filter(g => g.round === index + 1).map((data, i) => this.renderMatchBracket(data)) }
                             </div>
                         </div>
-                    `)}
+                    `) : html`
+                        <div class="flex-grow-1 w-100 d-flex flex-column justify-content-evenly align-items-center">
+                                ${this.tournamentData?.schedules?.map((data, i) => this.renderMatchBracket(data))}
+                            </div>
+                    `}
                 </div>
             </div>
         `)
     }
+
+    /**
+     * @param {APITypes.GameScheduleItem} result 
+     * @param {APITypes.PlayerData} player 
+     * @returns 
+     */
+    playerIsWinner = (result, player) => (result.result && result.result.winner_id) === player.id;
 
     render() {
         
@@ -238,15 +271,17 @@ export class TournamentDetailsView extends BaseElement {
                         <div class="tournament-grid-item-a">
                             ${this.renderPlayersList()}
                         </div>
-                        <div class="tournament-grid-item-b">
-                            ${this.renderGameScheduleList("Your Games", "", this.myTournamentGames)}
-                        </div>
-                        <div class="tournament-grid-item-c">
-                            <div class="d-flex flex-column">
-                                ${this.renderMatches()}
+                        ${this.tournamentData?.status === 'waiting' ? '' : html`
+                            <div class="tournament-grid-item-b">
+                                ${this.renderGameScheduleList("Your Games", "", this.myTournamentGames)}
                             </div>
-                        </div>
+                            <div class="tournament-grid-item-c">
+                                <div class="d-flex flex-column">
+                                    ${this.renderMatches()}
+                                </div>
+                            </div>
                             ${renderCard('Tournament Chat', '', html`<single-chat-view icon="paper-plane" text="tournament chat" .offcanvas=${true} .user_or_tournament=${this.tournamentData} ></single-chat-view>`)}
+                        `}
                     </div>
                 </div>
         `}

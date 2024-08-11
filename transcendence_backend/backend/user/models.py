@@ -1,9 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+
 from .utils import get_avatar_path, set_default_avatar
-from .types import BasicUserData, Literal
+from .types import BasicUserData, Literal, PlayerData
 
 
 
@@ -74,13 +73,13 @@ class UserAccount(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
     
-    def get_basic_user_data(self) -> BasicUserData:
-        return {
-            'id': int(self.pk),
-            'username': str(self.username),
-            'avatar': str(self.avatar.url),
-            'online_status': str(self.status) # type: ignore
-        }
+    # def get_basic_user_data(self) -> BasicUserData:
+    #     return {
+    #         'id': int(self.pk),
+    #         'username': str(self.username),
+    #         'avatar': str(self.avatar.url),
+    #         'online_status': str(self.status) # type: ignore
+    #     }
         
     def get_private_user_room(self):
         return f"user-room-private-{hash(self.username)}"
@@ -104,11 +103,6 @@ class UserAccount(AbstractBaseUser):
 
 
 
-class PlayerData(BasicUserData):
-    alias: str
-    xp: int
-    status: str
-
 class Player(models.Model):
     user = models.OneToOneField(UserAccount, related_name='player', on_delete=models.CASCADE)
     alias = models.CharField(max_length=30, unique=True)
@@ -126,32 +120,40 @@ class Player(models.Model):
         if not self.alias:
             self.alias = self.user.username
         super().save(*args, **kwargs)
-        
-    def get_player_data(self, status) -> PlayerData:
-        u = self.user.get_basic_user_data()
-        return {
-            'alias': str(self.alias),
-            'xp': int(self.xp),
-            'avatar': u['avatar'],
-            'id': u['id'],
-            'username': u['username'],
-            'status': status,
-            'online_status': u['online_status']
-        }
     
+    def update_xp(self, xp: int, winner: bool):
+        self.xp += xp
+        self.save()
+    
+    def update_game(self, xp: int | None, margin: int, winner: bool):
+        if xp is not None:
+            self.xp += xp
+        self.games_played += 1
+        if winner:
+            self.wins += 1
+        else:
+            self.losses += 1
+        self.win_loss_margin.append(margin)
+        self.save()
+        
+        
 class Leaderboard(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    rank = models.IntegerField()
+    rank = models.IntegerField(default=0)
 
     def __str__(self):
         return f'{self.rank} - {self.player.user}'
 
 
-@receiver(post_save, sender=UserAccount)
-def post_user_account_creation(sender, instance, **kwargs):
-    from friends.models import FriendList, BlockList
-    FriendList.objects.get_or_create(user=instance)
-    Player.objects.get_or_create(user=instance)
-    BlockList.objects.get_or_create(user=instance)
-
-
+    # def get_player_data(self, status) -> PlayerData:
+    #     u = self.user.get_basic_user_data()
+    #     return {
+    #         'alias': str(self.alias),
+    #         'xp': int(self.xp),
+    #         'avatar': u['avatar'],
+    #         'id': u['id'],
+    #         'username': u['username'],
+    #         'status': status,
+    #         'online_status': u['online_status']
+    #     }
+    

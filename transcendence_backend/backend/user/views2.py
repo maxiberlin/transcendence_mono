@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 # from friends.models import *
 from friends.models import BlockList, FriendList
 from .utils import *
+from .serializers import serializer_full_profile_details
 from .models import UserAccount, Player, Leaderboard
 from friends.utils import get_my_block_list, get_user_friend_list
 # from friends.views import friend_list, block_list_view
@@ -101,7 +102,9 @@ def profile_view(request, *args, **kwargs):
     data['blocked'] = block_list
     data['is_self'] = False if user.is_authenticated and user != account else True
     data['is_friend'] = is_friend
-    data['rank'] = Leaderboard.objects.get(player=player).rank
+    leaderb, created = Leaderboard.objects.get_or_create(player=player)
+    print(f"leaderboard: {leaderb}")
+    data['rank'] = leaderb.rank
     return HttpSuccess200(data=data)
 
 
@@ -150,7 +153,7 @@ def profile_delete(request, *args, **kwargs):
         account.delete()
         return HttpSuccess200(message='Your account and data has been deleted')
     else:
-        return HttpForbidden403()
+        return HttpForbidden403("")
 
 
 

@@ -41,7 +41,7 @@ const MSG_TYPE_FRIEND_STATUS_CHANGED = 201
 //     }
 // }
 
-function detailedTimeAgo(now, timestamp) {
+export function detailedTimeAgo(now, timestamp) {
     const secondsPast = Math.floor(now - timestamp);
   
     const days = Math.floor(secondsPast / (3600 * 24));
@@ -157,7 +157,7 @@ class MessageData {
     /** @param {T} data @param {keyof T} lookup  */
     updateMessage(data, lookup) {
         const i = this.messages.findIndex(i => i[lookup] === data[lookup]);
-        console.log('update message: ', data, ', lookup: ', lookup, ' , index: ', i);
+        // console.log('update message: ', data, ', lookup: ', lookup, ' , index: ', i);
         if (i !== -1) this.messages[i] = data;
     }
     insertMessages() {}
@@ -207,15 +207,15 @@ class ChatMap {
      * @param {APITypes.ChatMessageData} message
      */
     addNewMessageBottom(roomIdOrTitle, message) {
-        console.log('ADD NEW MESSAGE');
+        // console.log('ADD NEW MESSAGE');
         
         const roomId = this.getRoomId(roomIdOrTitle);
-        console.log('ADD NEW MESSAGE: room_id: ', roomId);
+        // console.log('ADD NEW MESSAGE: room_id: ', roomId);
         if (typeof roomId === 'number') {
-            console.log('ADD NEW MESSAGE: room_id is number: ');
+            // console.log('ADD NEW MESSAGE: room_id is number: ');
             const chat = this.chatsMap.get(roomId);
             if (chat) {
-                console.log('ADD NEW MESSAGE: has chat handle: ');
+                // console.log('ADD NEW MESSAGE: has chat handle: ');
                 chat.messages.addEnd(message);
                 chat.pubsub.publish(chat.messages);
                 this.pubsubChat.publish(this.chatsMap);
@@ -333,7 +333,7 @@ export class GlobalSockHandler {
     async init() {
         this.#socket = new ReconnectingSocket(`wss://api.${window.location.host}/ws/`)
         this.#socket.addHandler("initial_connected", () => {
-            console.log('INITIAL CONNECTED');
+            // console.log('INITIAL CONNECTED');
             this.#initialized = true;
             this.#sendCommand({module: "notification", command: "get_notifications", page_number: this.#notifications.currentPage});
             this.#sendCommand({module: "notification", command: "get_unread_notifications_count"})
@@ -345,7 +345,7 @@ export class GlobalSockHandler {
             })
         });
         this.#socket.addHandler('error_json', (e) => {
-            console.log('json error: ', e);
+            // console.log('json error: ', e);
             
         })
         this.#socket.addHandler("message", this.handleSocketMessage);
@@ -355,7 +355,7 @@ export class GlobalSockHandler {
          /** @type {Promise<APITypes.ApiResponse<APITypes.ChatMessageList>>[]} */
          const chatMessagePromises = [];
          data.data.forEach((room) => {
-             console.log('room: ', room);
+            //  console.log('room: ', room);
              this.#chatsMap.addOrUpdateChat(room);
          });
     }
@@ -400,7 +400,7 @@ export class GlobalSockHandler {
                 sessionService.updateData(['friend_requests_received', 'friend_requests_sent'])
                 break;
             case 'gamerequest':
-                sessionService.updateData(['game_invitations_received', 'game_invitations_sent', 'tournaments'])
+                sessionService.updateData(['game_schedule', 'game_invitations_received', 'game_invitations_sent', 'tournaments'])
                 break;
             default:
                 break;
@@ -430,10 +430,10 @@ export class GlobalSockHandler {
     /** @param {MessageSocketTypes.MessageSocketEvents} data */
     handleSocketMessage = (data) => {
         if (!this.#initialized) return;
-        console.log('new message: ', data);
+        // console.log('new message: ', data);
         if (data.msg_type === MSG_TYPE_FRIEND_STATUS_CHANGED) {
             userStatusMap.set(data.payload.user_id, data.payload.status);
-            console.log('dispatch event: UserStatusChangeEvent');
+            // console.log('dispatch event: UserStatusChangeEvent');
             
             this.#pubsubStatus.publish(data.payload.status);
         } else if (data.module === 'chat') {
@@ -524,7 +524,7 @@ export class GlobalSockHandler {
      */
     subscribeSingleChat(userOrTournament, host, callback) {
         const handle = this.#chatsMap.getChatroomHandle(userOrTournament);
-        console.log('HANDLE OF ROOM: ', userOrTournament, ': ', handle);
+        // console.log('HANDLE OF ROOM: ', userOrTournament, ': ', handle);
         
         if (handle) return handle.pubsub.subscribe(handle.messages, host, true);
     }

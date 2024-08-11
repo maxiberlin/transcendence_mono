@@ -5,3 +5,9 @@ class BasicUserData(TypedDict):
     username: str
     avatar: str
     online_status: Literal['online', 'offline']
+
+
+class PlayerData(BasicUserData):
+    alias: str
+    xp: int
+    status: str | None

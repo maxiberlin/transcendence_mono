@@ -87,7 +87,7 @@ export class NotificationView extends BaseElement {
         // console.log('render: notification list data?!: ', this.notifications?.value.unreadCount);
         // class=" ${isMobile ? 'btn-group dropup' : 'dropdown'} "
         const isMobile = window.innerWidth <= 576;
-        console.log('render notification, update: ', this.notifications);
+        // console.log('render notification, update: ', this.notifications);
         
         return html`
         <div class="py-2 w-100" >

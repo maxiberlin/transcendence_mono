@@ -13,6 +13,7 @@ class UserConfig(AppConfig):
     def ready(self):
         from django.db.models.signals import post_migrate
         from .models import UserAccount
+        import user.signals
 
         post_migrate.connect(reset_user_status, sender=self)
 

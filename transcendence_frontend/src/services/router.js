@@ -94,7 +94,12 @@ const routes = [
     },
     {
         path: '/games/:game/play/:schedule_id',
-        component: 'game-modaln',
+        component: 'game-screen',
+        title: 'Game View ',
+    },
+    {
+        path: '/virtualizer',
+        component: 'virt-test',
         title: 'Game View ',
     },
 ];

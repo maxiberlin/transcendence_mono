@@ -278,7 +278,7 @@ export class ReconnectingSocket {
     /** @param {SocketEvent[]} types @param {any} [data]  */
     #emit(types, data) {
         if (!types.includes("message"))
-            console.log('emit events: ', types);
+            // console.log('emit events: ', types);
         types.forEach((type) => {
             const arr = this.#handlerMap.get(type);
             if (arr)
@@ -301,7 +301,7 @@ export class ReconnectingSocket {
             console.log('socket closed: ', e);
         };
         s.onopen = (e) => {
-            console.log('websocket opened: ', e);
+            // console.log('websocket opened: ', e);
             successCb(true);
             s.onclose = this.onClose;
             s.onerror = this.onError;
@@ -329,9 +329,9 @@ export class ReconnectingSocket {
         }
         const tryReconnect = () => {
             const timeoutHandler = () => {
-                console.log('timeout func -> try to connect');
+                // console.log('timeout func -> try to connect');
                 this.#connectSock((success) => {
-                    console.log('connection callback: succes? ', success);
+                    // console.log('connection callback: succes? ', success);
                     if (success === false) {
                         attempts -= 1;
                         tryReconnect();

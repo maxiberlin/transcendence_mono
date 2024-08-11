@@ -46,7 +46,7 @@ export default class FriendsView extends BaseElement {
         }
         if (route === '/social')
             return router.redirect('/social/friends');
-        sessionService.updateData(["all"]);
+        // sessionService.updateData(["all"]);
         this.selectRoute(route);
         return undefined;
     }
@@ -115,7 +115,7 @@ export default class FriendsView extends BaseElement {
         if (ct === t) return;
         if (t.tagName === 'I') t = t.parentElement;
         if (this.#lCurr === t.dataset.list) {
-            sessionService.updateData(["all"]);
+            // sessionService.updateData(["all"]);
         } else {
             this.#lCurr = t.dataset.list;
             if (this.#lCurr === "fv$friends")

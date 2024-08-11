@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Results with Animations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #animationLayer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            display: none;
+            /* Hidden by default */
+        }
+
+        #animationText {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FFD700;
+            /* Gold for winner */
+        }
+
+        #rainEffect {
+            display: none;
+            /* Hidden by default */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="animationLayer">
+        <div id="animationText">🏆 Congratulations! 🏆</div>
+        <canvas id="rainEffect"></canvas>
+    </div>
+
+    <!-- Buttons to trigger modal -->
+    <button id="buttonWinnerAnimation" class="btn btn-success">Show Winner Result</button>
+    <button id="buttonLoserAnimation" class="btn btn-danger">Show Loser Result</button>
+
+    <!-- Modal for Match Results -->
+    <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resultModalLabel">Match Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Player results go here -->
+                    <!-- Similar to previous example -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const modal = new bootstrap.Modal(document.getElementById('resultModal'), {});
+
+        const animationLayer = document.getElementById('animationLayer');
+        const animationText = document.getElementById('animationText');
+        const rainEffect = document.getElementById('rainEffect');
+        const ctx = rainEffect.getContext('2d');
+
+        function showResult(resultType) {
+            modal.show();
+            animationLayer.style.display = 'flex';
+            if (resultType === 'winner') {
+                animationText.innerHTML = '🏆 Congratulations! 🏆';
+                animationText.style.color = '#FFD700';
+                rainEffect.style.display = 'none';
+            } else {
+                animationText.innerHTML = '💧 Sorry, better luck next time! 💧';
+                animationText.style.color = '#B0C4DE';
+                rainEffect.style.display = 'block';
+                startRainEffect();
+            }
+        }
+
+        function startRainEffect() {
+            // Similar to previous rain effect implementation
+        }
+
+        // Canvas setup for rain effect
+        rainEffect.width = window.innerWidth;
+        rainEffect.height = window.innerHeight;
+        // Add implementation details for rain effect animation
+
+        const buttonWinner = document.getElementById('buttonWinnerAnimation')?.addEventListener('click', () => { showResult('winner'); });
+        // if (buttonWinner) buttonWinner
+        const buttonLoser = document.getElementById('buttonLoserAnimation')?.addEventListener('click', () => { showResult('loser'); });
+        // if (buttonLoser) buttonWinner.onclick = showResult('loser');
+    </script>
+</body>
+
+</html>

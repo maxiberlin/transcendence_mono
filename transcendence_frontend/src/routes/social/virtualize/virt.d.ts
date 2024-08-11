@@ -15,22 +15,22 @@ declare namespace VirtT {
         [virtualizerRef]?: Virtualizer;
     }
 
-    export interface VirtualizerChildElementProxy {
-        scrollIntoView: (options?: ScrollIntoViewOptions) => void;
-    }
+    // export interface VirtualizerChildElementProxy {
+    //     scrollIntoView: (options?: ScrollIntoViewOptions) => void;
+    // }
 
-    interface ScrollElementIntoViewOptions extends ScrollIntoViewOptions {
-        index: number;
-    }
+    // interface ScrollElementIntoViewOptions extends ScrollIntoViewOptions {
+    //     index: number;
+    // }
 
-    export interface VirtualizerConfig {
-        layout?: LayoutT.LayoutConfigValue;
+    // export interface VirtualizerConfig {
+    //     layout?: LayoutT.LayoutConfigValue;
 
-        /**
-         * The parent of all child nodes to be rendered.
-         */
-        hostElement: VirtualizerHostElement;
+    //     /**
+    //      * The parent of all child nodes to be rendered.
+    //      */
+    //     hostElement: VirtualizerHostElement;
 
-        scroller?: boolean;
-    }
+    //     scroller?: boolean;
+    // }
 }

@@ -424,10 +424,10 @@ export class SessionStore {
 
     /** @param {number} user_id */
     canSend1vs1GameInvitation = (user_id) => {
-        console.log('canSend1vs1GameInvitation: user_id: ', user_id);
-        console.log('canSend1vs1GameInvitation: getReceivedGameInvitation: ', this.getGameInvitations(user_id, "received", "1vs1"));
-        console.log('canSend1vs1GameInvitation: getSentGameInvitation: ', this.getGameInvitations(user_id, "received", "1vs1"));
-        console.log('canSend1vs1GameInvitation: getGamesWithUser: ', this.getGamesWithUser(user_id, "1vs1"));
+        // console.log('canSend1vs1GameInvitation: user_id: ', user_id);
+        // console.log('canSend1vs1GameInvitation: getReceivedGameInvitation: ', this.getGameInvitations(user_id, "received", "1vs1"));
+        // console.log('canSend1vs1GameInvitation: getSentGameInvitation: ', this.getGameInvitations(user_id, "received", "1vs1"));
+        // console.log('canSend1vs1GameInvitation: getGamesWithUser: ', this.getGamesWithUser(user_id, "1vs1"));
         const rec = this.getGameInvitations(user_id, "received", "1vs1");
         if (rec && rec.length > 0) return false;
         const sent = this.getGameInvitations(user_id, "sent", "1vs1");

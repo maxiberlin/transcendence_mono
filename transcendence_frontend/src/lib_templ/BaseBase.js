@@ -61,6 +61,8 @@ export default class BaseBase extends HTMLElement {
     }
 
     connectedCallback() {
+        // console.log('BaseBase: connectedCallback of: ', this);
+        
         Object.keys(this).forEach((prop) => {
             const elem = this[prop];
             if (elem && typeof elem.onConnected === 'function') elem.onConnected();
