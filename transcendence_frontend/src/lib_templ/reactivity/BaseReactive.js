@@ -2,7 +2,7 @@
  * @template T
  */
 export default class BaseReactive {
-    /** @type {import('../BaseBase.js').default | undefined} */
+    /** @type {import('../BaseBase.js').default | undefined |  ((value: T) => void)} */
     #host;
 
     /** @type {T} */
@@ -14,7 +14,7 @@ export default class BaseReactive {
 
     /**
      * @param {any} initialValue - The initial value.
-     * @param {import('../BaseBase.js').default} [host] - The host object.
+     * @param {import('../BaseBase.js').default | (value: T) => void} [host] - The host object.
      */
     constructor(initialValue, host = undefined) {
         this.#host = host;
@@ -29,7 +29,10 @@ export default class BaseReactive {
     onNewValue(value, force) {
         // console.log('BaseReactive: update value: ', value);
         this.#value = value;
-        if (this.#host && typeof this.#host.requestUpdate === 'function') {
+
+        if (typeof this.#host === 'function') {
+            this.#host(value);
+        } else if (this.#host && typeof this.#host.requestUpdate === 'function') {
             // console.log('BaseReactive: trigger reqestUpdate of host: ', this.#host);
             
             this.#host.requestUpdate();
@@ -40,6 +43,7 @@ export default class BaseReactive {
         //         this.#host.requestUpdate();
         // }
     }
+
 
     onConnected() {}
 

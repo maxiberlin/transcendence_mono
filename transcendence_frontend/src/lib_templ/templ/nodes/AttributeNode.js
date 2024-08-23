@@ -24,8 +24,13 @@ import BaseNode from './BaseNode.js';
 
 const isNotDefinedSymbol = Symbol('TEMPL_ATTRIBUTE_IS_NOT_DEFINED');
 
+/**
+ * @template T
+ * @param {T} value 
+ * @returns {Symbol | T}
+ */
 export function ifDefined(value) {
-    if (value == undefined) return isNotDefinedSymbol;
+    if (value == undefined || value == null) return isNotDefinedSymbol;
     else return value;
 }
 
@@ -127,7 +132,8 @@ export default class AttributeMultiNode extends BaseNode {
      */
     setValue(value, index) {
         // // // console.log("SET ATTRIBUTE MULTLI: ATTRNAME: ", this.attrName, " VALUE: ", value)
-
+        // console.log('attr i: ', index, ', v: ', value);
+        
         if (value === isNotDefinedSymbol && this.element instanceof HTMLElement) {
             this.element.removeAttribute(this.attrName);
             return;

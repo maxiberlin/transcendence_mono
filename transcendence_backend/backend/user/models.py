@@ -82,10 +82,11 @@ class UserAccount(AbstractBaseUser):
     #     }
         
     def get_private_user_room(self):
-        return f"user-room-private-{hash(self.username)}"
+        print(f"typeof username: {type(self.username)}")
+        return f"user-room-private-{hash(str(self.username))}"
 
     def get_friends_user_room(self):
-        return f"user-room-friends-{hash(self.username)}"
+        return f"user-room-friends-{hash(str(self.username))}"
     
     def update_status_count(self, online: bool) -> Literal['offline', 'online'] | None:
         status = None

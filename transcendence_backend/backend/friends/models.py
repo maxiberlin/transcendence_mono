@@ -6,6 +6,7 @@ from notification.models import Notification
 from user.utils import ConflictExcept
 from django.shortcuts import get_object_or_404       
 from notification.utils import create_notification, update_notification
+from django.db.models import Q
 
 class FriendRequest(models.Model):
     
@@ -22,10 +23,10 @@ class FriendRequest(models.Model):
     def accept(self):
         receiver_list = get_object_or_404(FriendList, user=self.receiver)
         sender_list = get_object_or_404(FriendList, user=self.sender)
-        update_notification(self, f"You accepted {self.sender.username}'s friend request.")
         receiver_list.add_friend(self.sender)
         sender_list.add_friend(self.receiver)
         self._update_state()
+        update_notification(self, f"You accepted {self.sender.username}'s friend request.")
         ChatRoom.rooms.create_private_chat(self.sender, self.receiver)
         return create_notification(self, self.receiver, self.sender, f"{self.receiver.username} accepted your friend request.")
 
@@ -75,15 +76,16 @@ class FriendList(models.Model):
             raise ConflictExcept("You can not remove yourself from your friendlist")
         self.friends.remove(account)
         self.save()
-        ChatRoom.rooms.toggle_private_chat('inactivate', account, self.user)
+        
         # handle_private_chatroom_message_consumers('inactivate', account, self.user)
         # self._handle_chat_room(account, False)
         
     
     def unfriend(self, friend: UserAccount):
-        user = self
-        user._remove_friend(friend)
+        self._remove_friend(friend)
         get_object_or_404(FriendList, user=friend)._remove_friend(self.user)
+        ChatRoom.rooms.toggle_private_chat('inactivate', friend, self.user)
+        cancel_game_request_schedules(self.user, friend)
         create_notification(self, self.user, friend, f"You are no longer friends with {self.user.username}.")
         create_notification(self, friend, self.user, f"You are no longer friends with {friend.username}.")
         
@@ -118,6 +120,7 @@ class BlockList(models.Model):
         self.save()
         print('@@@@@@@@---> BLocked')
         ChatRoom.rooms.toggle_private_chat('inactivate', self.user, account)
+        cancel_game_request_schedules(self.user, account)
         # room = get_private_room_or_create(self.user, account)
         # if room.is_active:
         #     room.is_active = False
@@ -153,6 +156,36 @@ class BlockList(models.Model):
         return False
 
 
+
+def cancel_game_request_schedules(user, friend):
+    from game.models import GameSchedule, GameRequest
+    from user.models import Player
+    
+    #  player_two=Player.objects.get(user=friend))
+    p1 = Player.objects.get(user=user)
+    p2 = Player.objects.get(user=friend)
+    print(f"p1: {p1}")
+    print(f"p1: {p2}")
+    schedules=GameSchedule.objects.filter(( ( Q(player_one=p1) & Q(player_two=p2) ) | ( Q(player_one=p2) & Q(player_two=p1) ) ), game_mode='1vs1', is_active=True)
+    # schedules=GameSchedule.objects.filter(
+    #     (
+    #         ( Q(player_one=Player.objects.get(user=user))   & Q(player_two=Player.objects.get(user=friend)) ) |
+    #         ( Q(player_one=Player.objects.get(user=friend)) & Q(player_one=Player.objects.get(user=user))   )
+    #     ), 
+    #     game_mode='1vs1',
+    #     is_active=True
+    # )
+    
+    print(f"cancel_game_request_schedules schedule: {schedules}")
+    if len(schedules) > 0:
+        for schedule in schedules:
+            schedule.is_active = False
+            schedule.save()
+    requests = GameRequest.objects.filter(Q(user=user, invitee=friend) | Q(user=friend, invitee=user), is_active=True)
+    if len(requests) > 0:
+        for request in requests:
+            request.is_active = False
+            request.save()
 # class FriendRequest(models.Model):
     
 #     sender = models.ForeignKey(UserAccount, related_name='sent_requests', on_delete=models.CASCADE)

@@ -6,6 +6,10 @@ export default class DrawObj {
      */
     constructor(initial) {
         // console.log('init draw: ', initial);
+        // /** @type {number} */ this.sx = initial.x;
+        // /** @type {number} */ this.sy = initial.y;
+        // /** @type {number} */ this.sw = initial.w;
+        // /** @type {number} */ this.sh = initial.h;
         /** @type {number} */ this.#x = initial.x;
         /** @type {number} */ this.#y = initial.y;
         /** @type {number} */ this.w = initial.w;
@@ -37,12 +41,14 @@ export default class DrawObj {
     get x() { return this.#x; }
     set x(value) {
         this.#x = value;
+        // this.sx = value * this.canvasWidth;
         this.left = value;
         this.right = value + this.w;
     }
     get y() { return this.#y; }
     set y(value) {
         this.#y = value;
+        // this.sy = value * this.canvasHeight;
         this.top = value;
         this.bottom = value + this.h;
     }
@@ -54,6 +60,10 @@ export default class DrawObj {
     setCanvasSizes(width, height) {
         this.canvasWidth = width;
         this.canvasHeight = height;
+        // this.sx = this.x * width;
+        // this.sy = this.y * height;
+        // this.sw = this.w * width;
+        // this.sh = this.h * height;
     }
 
     /**
@@ -82,18 +92,32 @@ export default class DrawObj {
     /**
      * @param {PongGameplayTypes.GameObjPositionData | PongServerTypes.GameObjPosBinary} lastUpdate 
      * @param {PongGameplayTypes.GameObjPositionData | PongServerTypes.GameObjPosBinary} nextUpdate
+     * @param {boolean} updateX
+     * @param {boolean} setDYX
      * @param {number} elapsedSinceUpdate
      */
-    interpolate(lastUpdate, nextUpdate, elapsedSinceUpdate) {
-        this.x = this.lerp2(lastUpdate.x, nextUpdate.x, elapsedSinceUpdate);
-        this.dx = 'dx' in lastUpdate ? lastUpdate.dx : this.dx;
+    interpolate(lastUpdate, nextUpdate, elapsedSinceUpdate, updateX, setDYX) {
+        if (updateX === true) {
+            this.x = this.lerp2(lastUpdate.x, nextUpdate.x, elapsedSinceUpdate);
+        }
         this.y = this.lerp2(lastUpdate.y, nextUpdate.y, elapsedSinceUpdate);
-        this.dy = 'dy' in lastUpdate ? lastUpdate.dy : this.dy;
+        if (setDYX) {
+            this.dx = lastUpdate.dx;
+            this.dy = lastUpdate.dy;
+        }
+        // this.dx = 'dx' in lastUpdate ? lastUpdate.dx : this.dx;
+        // this.dy = 'dy' in lastUpdate ? lastUpdate.dy : this.dy;
     }
 
     /** @param {OffscreenCanvasRenderingContext2D} ctx */
     draw(ctx) {
         ctx.fillStyle = this.color;
+        // ctx.fillRect(
+        //     this.sx,
+        //     this.sy,
+        //     this.sw,
+        //     this.sh,
+        // );
         ctx.fillRect(
             this.x * this.canvasWidth,
             this.y * this.canvasHeight,

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sanfte Größenänderung</title>
+    <script type="module" src="/src/tests/anim.js"></script>
+    <link rel="stylesheet" href="/src/tests/style.css">
+</head>
+
+<body>
+    <ma-list></ma-list>
+</body>
+
+</html>
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Sanfte Größenänderung</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    .container {
+        width: 300px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        padding: 20px;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease-out;
+    }
+    .content {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #e8eaff;
+        border-radius: 4px;
+    }
+    button {
+        background-color: #007BFF;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        outline: none;
+    }
+    button:hover {
+        background-color: #0056b3;
+    }
+</style>
+</head>
+<body>
+
+<div class="container" id="animatedContainer">
+    <div class="content">Standard-Inhalt</div>
+</div>
+
+<button id="addButton">Inhalt hinzufügen</button>
+<button id="removeButton">Inhalt entfernen</button>
+
+<script>
+    document.getElementById('addButton').addEventListener('click', addElement);
+    document.getElementById('removeButton').addEventListener('click', removeElement);
+
+    function animateHeight(element) {
+        element.style.height = element.scrollHeight + 'px';
+        element.addEventListener('transitionend', () => {
+            element.style.height = '';
+        }, { once: true });
+    }
+
+    function addElement() {
+        const newElement = document.createElement('div');
+        newElement.className = 'content';
+        newElement.textContent = 'Neuer Inhalt!';
+        const container = document.getElementById('animatedContainer');
+        container.appendChild(newElement);
+        animateHeight(container);
+    }
+
+    function removeElement() {
+        const container = document.getElementById('animatedContainer');
+        if (container.children.length > 1) {  // Ignoriere den Standard-Inhalt
+            container.removeChild(container.lastChild);
+            animateHeight(container);
+        }
+    }
+</script>
+
+</body>
+</html> -->

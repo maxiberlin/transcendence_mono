@@ -87,6 +87,8 @@ const useMouseTouchEvents = (canvas, worker) => {
     /** @param {MouseEvent} e */
     const handleMouseEnd = (e) => {removeTouchAndPostWorker()};
 
+    // canvas.addEventListener('touchstart', handleTouchStart, {passive: true});
+    // canvas.addEventListener('touchmove', handleTouchMove, {passive: true});
     canvas.addEventListener('touchstart', handleTouchStart);
     canvas.addEventListener('touchmove', handleTouchMove);
     canvas.addEventListener('touchend', handleTouchEnd);
@@ -139,6 +141,8 @@ class GameWorkerManager {
      * @param {Transferable[]} [transfer]
      */
     postMessage(message, transfer = []) {
+        console.log('POST MESSAGE FROM HUB: transfer: ', transfer);
+        
         this.worker.postMessage(message, transfer);
     }
 }
@@ -194,6 +198,7 @@ export default class GameHub {
             const url = new URL(window.location.origin);
             const socketUrl = `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`;
             const offscreencanvas = canvas.transferControlToOffscreen();
+            
             console.log('create msg to worker: userid: ', GameHub.currentUser.value?.user?.id);
             this.worker.postMessage(
                 {

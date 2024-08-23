@@ -277,7 +277,7 @@ export class ReconnectingSocket {
 
     /** @param {SocketEvent[]} types @param {any} [data]  */
     #emit(types, data) {
-        if (!types.includes("message"))
+        // if (!types.includes("message"))
             // console.log('emit events: ', types);
         types.forEach((type) => {
             const arr = this.#handlerMap.get(type);

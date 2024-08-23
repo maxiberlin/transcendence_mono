@@ -1,10 +1,14 @@
-import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { renderListCard, renderListItem, renderCardInfo, renderListItemAnchor, renderListItemInfos, renderTableCard } from '../../components/bootstrap/BsCard.js';
+import { BaseElement, html, ifDefined } from '../../lib_templ/BaseElement.js';
+import { renderListCard, renderListItem, renderCardInfo, renderListItemAnchor, renderListItemInfos, renderTableCard, renderTablelikeCard } from '../../components/bootstrap/BsCard.js';
 
 import { actions, actionButtonGroups } from '../../components/ActionButtons.js';
 import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 
 import { sessionService } from '../../services/api/API_new.js';
+import { get1vs1MatchImg, getMatchIcon, getRRMatchImg, getSEMatchImg, getStatusBadge, getTournamentIcon, renderInlineMatch } from '../../components/gameUtils.js';
+
+import { Tooltip } from 'bootstrap';
+import { getTournamentLink } from './utils.js';
 
 export default class GameWindow extends BaseElement {
     constructor() {
@@ -46,13 +50,23 @@ export default class GameWindow extends BaseElement {
     // `)
 
     /** @param {APITypes.GameInvitationItem} data @param {boolean} received */
-    renderInvitationItem = (data, received) => renderListItem(html`
-            <div class="col-6 col-sm-4 text-center">
+    renderInvitationItem = (data, received) => {
+        const tdata = this.sessionUser.value?.tournaments?.find(t => t.id === data.tournament);        
+        return renderListItem(html`
+            <div class="col-6 col-sm-4 text-start">
                 ${avatarLink(data)}
             </div>
             <div class="col-3 col-sm-2 text-center">
-                ${renderCardInfo('Mode', data.game_mode)}
+                ${renderCardInfo('Mode', data.game_mode === '1vs1' ? html`<span><i class="fa-solid fa-hand-fist me-2"></i>${data.game_mode}</span>`
+                : html`<span >T  <i class="fa-solid fa-skull-crossbones me-2"></i></span>`)}
             </div>
+            ${tdata ? html`
+                <div class="col-3 col-sm-2 text-center">
+                    ${renderCardInfo('Name', html`<a class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" href="${ifDefined(`/games/${tdata.game_id.toLowerCase()}/tournament/${tdata.id}`)}" >${tdata?.name}</a>`)}
+                </div>
+            ` : ''}
+
+         
             <div class="col-12 col-sm-auto text-end mt-2 mt-sm-0">
                 <div class="row">
                     ${received ? html`
@@ -67,10 +81,23 @@ export default class GameWindow extends BaseElement {
                     `}
                 </div>
             </div>
-    `)
+    `)}
 
-    renderRunningTournaments = () => renderListCard( 'Tournaments', 'trophy',
-        !this.sessionUser.value.tournaments?.length ?
+    /** @param {'received' | 'sent'} type @param {APITypes.GameInvitationItem[]} [invitationList] */
+    renderInvitationList = (type, invitationList) => renderListCard( `Invitations ${type}`, 'scroll',
+        !invitationList || invitationList.length === 0 ?
+            renderListItem(html`<p class="text-center m-0">No Invitations ${type}</p>`)
+        :   invitationList.map((data) => this.renderInvitationItem(data, type === 'received'))
+    )
+
+    renderRunningTournaments2 = () => {
+        // console.log('hallo: ',this.sessionUser);
+        // console.log('hallo: ',this.sessionUser.value);
+        // console.log('hallo: ',this.sessionUser.value?.tournaments);
+        // return "";
+        
+        return  renderListCard( 'Tournaments', 'trophy',
+        !this.sessionUser.value?.tournaments?.length ?
             renderListItem(html`<p class="text-center m-0">You are not in any Tournaments</p>`)
         :   this.sessionUser.value.tournaments.map((tournament) => renderListItemAnchor(
                 `/games/${tournament.game_id.toLowerCase()}/tournament/${tournament.id}`,
@@ -81,81 +108,149 @@ export default class GameWindow extends BaseElement {
                         <div class="col" >${renderCardInfo('Status', tournament.status)}</div>
                     </div>
             `))
-    )
-   
-    // renderRunningTournaments = () => renderTableCard( 'Tournaments', 'trophy', this.sessionUser.value.tournaments, [
-    //     { heading: 'Name', cb: (a, b) => html`${b.name}` },
-    //     { heading: 'Game', cb: (a, b) => html`${b.game_id}` },
-    //     { heading: 'Status', cb: (a, b) => html`${b.status}` },
-    // ])
-   
+    )}
+
+    renderRunningTournaments = () => {
+        return  renderTablelikeCard('Tournaments', 'trophy', this.sessionUser.value?.tournaments, [
+            {
+                heading: 'Mode',
+                col: 'col text-start align-middle py-1',
+                cb: (n, v) => getTournamentIcon(v.mode)
+            },
+            {
+                heading: 'Name',
+                col: 'col text-start align-middle py-1',
+                cb: (n, v) => html`
+                    <a class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                        href="${getTournamentLink(undefined, v.id)}"
+                    >
+                    ${v.name}
+                </a>
+                `
+            },
+            {
+                heading: 'Status',
+                col: 'col text-start align-middle py-1',
+                cb: (n, v) => getStatusBadge(v.status)
+            },
+        ])
+    }
+
+
+    /** @param {APITypes.GameScheduleItem[]} gameSchedule */
+    renderGameMatches = (gameSchedule) => {
+        return  renderTablelikeCard('Tournaments', 'trophy', gameSchedule, [
+            {
+                heading: 'Left Side',
+                col: 'col-6 col-sm-4 text-start text-truncate py-2',
+                cb: (n, v) => avatarLink(v.player_one, true)
+            },
+            {
+                heading: 'Right Side',
+                col: 'col-6 col-sm-4  text-start text-truncate py-2',
+                cb: (n, v) => avatarLink(v.player_two, true)
+            },
+            {
+                heading: '',
+                col: 'col-6 col-sm-2 col-md-2 text-start align-middle py-2',
+                cb: (n, v) => getMatchIcon(v)
+            },
+            {
+                heading: '',
+                col: 'col-6 col-sm-2 col-md-2 text-start py-2',
+                cb: (n, v) => html`
+                    <a href="/games/pong/play/${v.schedule_id}" role="button" class="w-100 btn btn-outline-primary">
+                        <i class="fa-solid fa-gamepad"></i>
+                        start
+                    </a>
+                `
+            },
+        ])
+    }
+        
+
+    /** @param {APITypes.GameScheduleItem[]} gameSchedule */
+    renderGameMatches2 = (gameSchedule) => {
+        const tdata = this.sessionUser.value?.tournaments?.find(t => t.id === gameSchedule.tournament);
+        console.log('tdata: ', tdata);
+        
+        return renderListCard( 'New Matches', 'gamepad',
+        !gameSchedule || gameSchedule.length === 0 ?
+            renderListItem(html`<p class="text-center m-0">No Invitations received</p>`)
+        :   gameSchedule.map((data) => html`
+                <li class="list-group-item p-0">
+                    <div class="row py-2 justify-content-between align-items-center bg-light-subtle">
+
+                        <div class="col-12 col-sm-7">
+                            ${renderInlineMatch(data)}
+                        </div>
+                        <div class="col-3 col-sm-2 text-center">
+                            ${renderCardInfo('Mode', data.game_mode === '1vs1' ? html`<span><i class="fa-solid fa-hand-fist me-2"></i>${data.game_mode}</span>`
+                            : html`<span >T  <i class="fa-solid fa-skull-crossbones me-2"></i></span>`)}
+                        </div>
+                        ${tdata ? html`
+                            <div class="col-3 col-sm-2 text-center">
+                                ${renderCardInfo('Name', html`<a class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" href="${ifDefined(`/games/${tdata.game_id.toLowerCase()}/tournament/${tdata.id}`)}" >${tdata?.name}</a>`)}
+                            </div>
+                        ` : ''}
+                        <div class="col-3 col-sm-2">${renderCardInfo('Mode', data.game_mode)}</div>
+                        <div class="col-9 col-sm-3 text-end mt-2 mt-sm-0">
+                            
+                            <a href="/games/pong/play/${data.schedule_id}" role="button" class="btn btn-outline-primary">
+                                <i class="fa-solid fa-gamepad"></i>
+                                start Match
+                            </a>
+                        </div>
+                    </div>
+                </li>
+                `
+            ),
+        )}
+        
+    
+    // updated() {
+    //     const elem = document.getElementById('testtooltip');
+    //     let tooltip = Tooltip.getInstance('#testtooltip');
+
+    //     console.log('elem: ', elem);
+    //     console.log('tooltip: ', tooltip);
+        
+    //     tooltip = Tooltip.getOrCreateInstance('#testtooltip');
+        
+    //     console.log('tooltip2: ', tooltip);
+
+    // }
+
     render() {
-
-        /** @type {APITypes.UserData | undefined} */
-        const userData = this.sessionUser.value?.user;
-        const gameInvitationsReceived = this.sessionUser.value?.game_invitations_received;
-        const gameInvitationsSent = this.sessionUser.value?.game_invitations_sent;
-        const gameSchedule = this.sessionUser.value?.game_schedule;
-        // console.log('game schedule: ', gameSchedule);
-        // console.log('render GAME window, invitations sent: ', gameInvitationsSent);
-
         return html`
             <div class="mt-3 container-fluid text-center">
-                <a class="btn btn-primary mb-2 w-100" href="/games/pong/tournament/create" role="button">
+                <a class="btn btn-primary mb-4 w-100" href="/games/pong/tournament/create" role="button">
                     <i class="fa-solid fa-gamepad"></i>
                     Create a Tournament
+                </a>
+                <a class="btn btn-primary mb-4 w-100" href="/games/pong/info" role="button">
+                    <i class="fa-solid fa-gamepad"></i>
+                    Pong Info Page
                 </a>
                 <div class="startpage-grid">
                     <div class="startpage-grid-item-a">
                         ${this.renderRunningTournaments()}
                     </div>
                     <div class="startpage-grid-item-b">
-                        ${renderListCard( 'Invitations Received', 'scroll',
-                            !gameInvitationsReceived || gameInvitationsReceived.length === 0 ?
-                                renderListItem(html`<p class="text-center m-0">No Invitations received</p>`)
-                            :   gameInvitationsReceived.map((data) => this.renderInvitationItem(data, true))
-                        )}
+                           ${this.renderInvitationList('received', this.sessionUser.value?.game_invitations_received)}
                     </div>
                     <div class="startpage-grid-item-c">
-                        ${renderListCard( 'Invitations Received', 'scroll',
-                            !gameInvitationsSent || gameInvitationsSent.length === 0 ?
-                                renderListItem(html`<p class="text-center m-0">No Invitations received</p>`)
-                            :   gameInvitationsSent.map((data) => this.renderInvitationItem(data, false))
-                        )}
+                        ${this.renderInvitationList('sent', this.sessionUser.value?.game_invitations_sent)}
                     </div>
                     
                     <div class="startpage-grid-item-d">
-                        ${renderListCard(
-                            'New Matches',
-                            'gamepad',
-                            !gameSchedule || gameSchedule.length === 0 ?
-                                renderListItem(html`<p class="text-center m-0">No Invitations received</p>`)
-                            :   gameSchedule.map((data) =>
-                                    renderListItem(html`
-                                        <div class="col-12 col-md-6  text-sm-start d-flex justify-content-center align-items-center">
-                                            ${avatarLink(data.player_one)}
-                                            ${renderCardInfo('VS', '')}
-                                            ${avatarLink(data.player_two)}
-                                        </div>
-                                        <div class="col-3 col-md-2">${renderCardInfo('Game', 'pong')}</div>
-                                        <div class="col-3 col-md-2">${renderCardInfo('Mode', '1v1')}</div>
-                                        <div class="col-6 col-sm-auto text-end mt-2 mt-sm-0">
-                                           
-                                          
-                                            <a href="/games/pong/play/${data.schedule_id}" role="button" class="btn btn-outline-primary">
-                                                <i class="fa-solid fa-gamepad"></i>
-                                                start Match
-                                            </a>
-                                        </div>
-                                    `),
-                                ),
-                        )}
-
+                        ${this.renderGameMatches(this.sessionUser.value?.game_schedule)}
                     </div>
                 </div>
                 
             </div>
         `;
+       
     }
 }
 customElements.define('game-window', GameWindow);

@@ -1,3 +1,5 @@
+import { TemplateAsLiteral } from './templ/TemplateAsLiteral';
+
 /**
  * @template T
  * @param {T} object
@@ -13,20 +15,15 @@ function getUpdateProxy(object, host) {
     return new Proxy(object, { set: setFunc });
 }
 
+
 /**
- * @typedef {import('./templ/TemplateAsLiteral').TemplateAsLiteral} Tpl
+ * @typedef {{
+ *  children?: TemplateAsLiteral | TemplateAsLiteral[] | string | number | boolean | undefined
+ * }} BaseBaseProps
  */
 
 /**
- * @typedef {Tpl | Tpl[] | string | number | boolean | undefined} TemplateValues
- */
-
-/**
- * @typedef {object} BaseBaseProps
- * @property {TemplateValues} propChildren
- */
-
-/**
+ * @prop children
  * @template {BaseBaseProps} K
  */
 export default class BaseBase extends HTMLElement {
@@ -35,20 +32,17 @@ export default class BaseBase extends HTMLElement {
 
         
        
-        this.#props = /** @type {K} */ ({
-            propChildren: '',
+        this._props = /** @type {K} */ ({
+            children: '',
         });
+
         
-        // this.#props = {
-            //     propChildren: '',
-            // };
-        this.#state = {};
-            
-        this.props = getUpdateProxy(this.#props, this);
-        this.state = getUpdateProxy(this.#state, this);
+        this.props = getUpdateProxy(this._props, this);
+
+
+        this._state = {};
+        this.state = getUpdateProxy(this._state, this);
         
-        /** @type {import('./templ/TemplateAsLiteral').TemplateAsLiteral | Array<import('./templ/TemplateAsLiteral').TemplateAsLiteral> | string | number | boolean} */
-        this.propChildren = '';
     }
 
     /**
@@ -78,9 +72,9 @@ export default class BaseBase extends HTMLElement {
     }
 
     /** @type {K} */
-    #props;
+    _props;
 
-    #state;
+    _state;
 
     requestUpdate() { }
 }

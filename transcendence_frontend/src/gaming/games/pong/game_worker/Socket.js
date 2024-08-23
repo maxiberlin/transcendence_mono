@@ -200,6 +200,9 @@ export class GameSocket {
                 }
                 this.connect();
             }
+            
+            // console.log('SEND PING TO SERVER');
+            
             this.sendMessage({
                 cmd: 'ping',
                 client_timestamp_ms: performance.timeOrigin + performance.now(),
@@ -213,6 +216,7 @@ export class GameSocket {
 
     #checkHeartBeatData = (data) => {
         if (data && data.tag === 'hello' && typeof data.heartbeat_ms === 'number') {
+            console.log('START HEARTBEAT');
             this.#startHeartBeat(data.heartbeat_ms);
         }
     };
@@ -253,6 +257,7 @@ export class GameSocket {
         // console.log('SEND MESSAGE, socket state: ', this.#socket?.readyState);
         // if (this.#state !== 'connected') throw new InvalidSocketStateError(`${this.state}`);
         const d = JSON.stringify(data);
+        // console.log('send to server');
         this.#socket?.send(d);
     }
 

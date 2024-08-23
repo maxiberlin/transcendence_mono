@@ -91,6 +91,8 @@ declare namespace PongServerTypes {
     export interface GameObjPosBinary {
         x: number;
         y: number;
+        dx: number;
+        dy: number;
     }
     export interface GameUpdateBinaryItem {
         tickno: number;
@@ -98,6 +100,7 @@ declare namespace PongServerTypes {
         ball: GameObjPosBinary;
         paddle_left: GameObjPosBinary;
         paddle_right: GameObjPosBinary;
+        predicted?: boolean;
     }
 
     export interface GameUpdate extends ServerBaseMessage {
@@ -160,6 +163,10 @@ declare namespace PongServerTypes {
         tag: 'server-user-surrendered';
         user_id: number;
     }
+    export interface GameDismissed extends ServerBaseMessage {
+        tag: 'server-game-dismissed';
+        user_id: number;
+    }
 
     export interface ServerInternalErr extends ServerBaseMessage {
         tag: 'server-game-error';
@@ -184,7 +191,8 @@ declare namespace PongServerTypes {
         | UserDisconnected
         | UserReconnected
         | UserSurrendered
-        | ServerInternalErr;
+        | ServerInternalErr
+        | GameDismissed
 
     export type ServerMessageTags = ServerMessage['tag'];
 
@@ -219,8 +227,27 @@ declare namespace PongClientTypes {
         action?: ClientMoveDirection;
         new_y?: number;
         tickno?: number;
-        tick_diff?: number;
+        tickdiff?: number;
     }
+    // tick_diff?: number;
+
+    interface MovementKey {
+        tickno: number;
+        tickdiff: number;
+        action: ClientMoveDirection
+    }
+    interface MovementMouse {
+        tickno: number;
+        tickdiff: number;
+        new_y: number;
+    }
+    type ClientMovement = MovementKey | MovementMouse;
+
+    interface ClientMoveCommandList extends ClientBaseCommand {
+        cmd: 'client-move-list';
+        movements: ClientMovement[]
+    }
+
 
     interface ClientPauseCommand extends ClientBaseCommand {
         cmd: 'client-pause';
@@ -244,6 +271,7 @@ declare namespace PongClientTypes {
         | ClientJoinCommand
         | ClientReadyCommand
         | ClientMoveCommand
+        | ClientMoveCommandList
         | ClientPauseCommand
         | ClientResumeCommand
         | ClientLeaveCommand;
@@ -330,6 +358,10 @@ declare namespace FromWorkerGameMessageTypes {
         reason: PongGameplayTypes.GameEndReason;
         game_result: APITypes.GameScheduleItem | null;
     }
+    export interface GameDismissed {
+        message: 'from-worker-game-dismissed';
+        user_id: number;
+    }
 
     export type FromWorkerMessage =
         | GameTouchValid
@@ -342,7 +374,8 @@ declare namespace FromWorkerGameMessageTypes {
         | ClientReconnected
         | GameError
         | PlayerScored
-        | GameEnd;
+        | GameEnd
+        | GameDismissed
 
     export type FromWorkerMessageTags = FromWorkerMessage['message'];
 }
@@ -351,6 +384,7 @@ declare namespace ToWorkerGameMessageTypes {
     export interface Create {
         message: 'game_worker_create_remote' | 'game_worker_create_local';
         offscreencanvas: OffscreenCanvas;
+        calccanvas?: OffscreenCanvas;
         socketUrl?: string;
         data: APITypes.GameScheduleItem;
         userId: number;
@@ -427,6 +461,104 @@ declare namespace ToWorkerGameMessageTypes {
 
     export type ToWorkerMessageTags = ToWorkerMessage['message'];
 }
+
+
+declare namespace FromWorkerSocketMessageTypes {
+    export interface Disconnected {
+        message: 'from-worker-socket-disconnected';
+    }
+    export interface Reconnected {
+        message: 'from-worker-socket-reconnected';
+    }
+    export interface ReconnectFailure {
+        message: 'from-worker-socket-reconnect-failure';
+    }
+    export interface Closed {
+        message: 'from-worker-socket-closed';
+        code: number;
+        reason: string;
+        wasClean: boolean;
+    }
+    export interface NewSnapshots {
+        message: 'from-worker-socket-new-snapshots';
+        snapshots: PongServerTypes.GameUpdateBinaryItem[];
+    }
+    export interface SocketError {
+        message: 'from-worker-socket-error';
+        error: string;
+        code?: number;
+    }
+    export interface SocketMessage {
+        message: 'from-worker-socket-message';
+        broadcast?: PongServerTypes.ServerMessage
+        response?: PongClientTypes.ClientCommandResponse
+    }
+    export interface SocketUpdates {
+        message: 'from-worker-socket-update';
+        snapshots: PongServerTypes.GameUpdateBinaryItem[];
+        currentTick?: number;
+        tickBuffer?: number;
+    }
+
+   
+    export type FromWorkerMessage =
+            | Disconnected
+            | Reconnected
+            | ReconnectFailure
+            | Closed
+            | NewSnapshots
+            | SocketError
+            | SocketMessage
+            | SocketUpdates
+
+       
+
+    export type FromWorkerMessageTags = FromWorkerMessage['message'];
+}
+
+declare namespace ToWorkerSocketMessageTypes {
+    export interface Close {
+        message: 'socket_worker_close';
+    }
+    export interface GetUpdate {
+        message: 'socket_worker_get_update';
+    }
+    export interface Create {
+        message: 'socket_worker_create';
+        socketUrl: string;
+        calccanvas?: OffscreenCanvas;
+    }
+    export interface ClientMove {
+        message: 'socket_worker_client_move';
+        move: PongClientTypes.MovementKey | PongClientTypes.MovementMouse
+    }
+    export interface ClientCommand {
+        message: 'socket_worker_client_command';
+        command: PongClientTypes.ClientCommand
+    }
+    export interface ClearSnapshots {
+        message: 'socket_worker_client_clear_snapshots';
+        timestampMs: number;
+    }
+    export interface StartUpdates {
+        message: 'socket_worker_client_start_updates';
+        interval?: number;
+        tickrate?: number;
+        gameStartTime?: number;
+        data?: PongServerTypes.GameReady;
+    }
+   
+    export type ToWorkerMessage =
+        | Create
+        | ClientMove
+        | ClientCommand
+        | ClearSnapshots
+        | StartUpdates
+        | Close
+        | GetUpdate
+}
+
+
 
 // declare namespace WorkerGameTypes {
 //     export type GeneralWorkerMessage = FromWorkerGameMessageTypes.FromWorkerMessage | ToWorkerGameMessageTypes.ToWorkerMessage;

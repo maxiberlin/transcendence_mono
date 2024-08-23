@@ -1,5 +1,7 @@
 import { Pong, PongLocal } from './Pong';
 import { PongRemote } from './PongRemote';
+// import { PongRemote } from './PongRemoteOnlyRender';
+// import { PongRemote } from './PongRemote_old';
 
 /** @type {Pong | undefined} */
 let game;

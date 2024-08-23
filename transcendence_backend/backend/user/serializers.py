@@ -32,6 +32,7 @@ def serializer_full_profile_details(account: UserAccount, player: Player):
         'email': account.email,
         'first_name': account.first_name,
         'last_name': account.last_name,
+        'bio': account.bio,
         'avatar': account.avatar.url,
         'last_login': account.last_login,
         'date_joined': account.date_joined,
@@ -39,7 +40,9 @@ def serializer_full_profile_details(account: UserAccount, player: Player):
         'games_played': player.games_played,
         'wins': player.wins,
         'losses': player.losses,
-        'online_status': account.status
+        'online_status': account.status,
+        'xp': player.xp,
+        'oauth': account.oauth
     }
     return data
 

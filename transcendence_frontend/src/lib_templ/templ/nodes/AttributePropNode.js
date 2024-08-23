@@ -24,10 +24,12 @@ export default class AttributePropNode extends BaseNode {
                  */
                 const attr = /** @type {KEY} */ this.#attrName;
                 const val = /** @type {T[KEY]} */ value;
+                
                 shouldUpdate = el.onPropChange(attr, val);
             }
-            if (shouldUpdate)
+            if (shouldUpdate) {
                 el.props[this.#attrName] = value;
+            }
         }
         // this.element[this.#attrName] = value;
     }

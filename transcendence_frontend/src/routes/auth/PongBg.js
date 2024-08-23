@@ -12,6 +12,7 @@ export default class PongBg extends BaseElement {
                 overflow: hidden;
                 background-color: black;
                 font-family: Arial, sans-serif;
+                z-index: 21;
             }
             .pong-text {
                 position: absolute;
@@ -69,7 +70,7 @@ export default class PongBg extends BaseElement {
                     transform: translateY(-70%);
                 }
                 to {
-                    transform: translateY(70%);
+                    transform: Y(70%);
                 }
             }
             @keyframes movePaddle2 {
@@ -110,8 +111,12 @@ export default class PongBg extends BaseElement {
         `,
     ];
 
-    connectedCallback() {
-        super.connectedCallback();
+    constructor() {
+        super(false, true);
+    }
+
+    async init() {
+        await this.updateComplete;
         const letters = this.shadowRoot?.querySelectorAll('span');
         const colors = [
             '#ff0000',
@@ -137,6 +142,11 @@ export default class PongBg extends BaseElement {
         };
         changeColors();
         this.#interValId = setInterval(changeColors, 2000);
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+        this.init();
     }
 
     #interValId;

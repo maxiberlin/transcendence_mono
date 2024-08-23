@@ -28,21 +28,25 @@ from django.contrib.auth import views as auth_view
 
 urlpatterns = [
     path('register', views2.register_view, name='register'),
+    path('register', views2.register_view, name='register'),
     path('login', views2.login_view, name='login'),
     path('logout', views2.logout_view, name='logout'),
+    path('csrf', views2.csrf, name='csrf'),
 
     path('profile/<int:user_id>', views2.profile_view, name='profile'),
     path('profile/<int:user_id>/edit', views2.profile_edit_view, name='profile-edit'),
     path('profile/<int:user_id>/delete', views2.profile_delete, name='profile-delete'),
     path('search', views2.search, name='search'),
 
+    path('password-change', views2.password_change, name='password-change'), # type: ignore
+
     path('password-reset', auth_view.PasswordResetView.as_view(), name='password-reset'),
     path('reset/<uidb64>/<token>', auth_view.PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('password-reset/done/', auth_view.PasswordResetDoneView.as_view(), name='password-reset-done'),
     path('reset/done', auth_view.PasswordResetCompleteView.as_view(), name='password-reset-complete'),
-    path('password-change', auth_view.PasswordChangeView.as_view(), name='password-change'),
     path('password-change-done', auth_view.PasswordChangeDoneView.as_view(), name='password-change-done'),
 ]
+    # path('password-change', auth_view.PasswordChangeView.as_view(), name='password-change'),
 
 
 # urlpatterns = [

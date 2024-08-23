@@ -1,11 +1,12 @@
-import { sessionService } from '../services/api/API_new.js';
+// import { sessionService } from '../services/api/API_new.js';
+import { Dropdown, Popover, Tooltip } from 'bootstrap';
 import BaseBase from './BaseBase.js';
+export { BaseBase }
 import Template from './templ/Template.js';
 
-export { html, css } from './templ/TemplateAsLiteral.js';
+export { html, css, TemplateAsLiteral } from './templ/TemplateAsLiteral.js';
 export {ref, createRef} from './templ/nodes/FuncNode.js';
 export { ifDefined } from './templ/nodes/AttributeNode.js';
-export { BaseBase }
 
 /**
  * @template {HTMLElement} T
@@ -61,7 +62,8 @@ export class BaseElement extends BaseBase {
 
         pObj.oVal = this[pObj.camel];
         if (typeof this[pObj.camel] === 'boolean') {
-            this[pObj.camel] = nVal !== null;
+            // this[pObj.camel] = nVal !== null;
+            this[pObj.camel] = nVal != null;
         } else if (typeof this[pObj.camel] === 'number') {
             this[pObj.camel] = Number(nVal);
         } else if (typeof this[pObj.camel] === 'object') {
@@ -70,13 +72,14 @@ export class BaseElement extends BaseBase {
             this[pObj.camel] = String(nVal);
         }
 
-        this.onAttributeChange(name);
+        this.onAttributeChange(name, pObj.oVal, this[pObj.camel]);
         if (this.#isConnected) this.update();
     }
 
-    onBeforeUpdate() {}
+    // eslint-disable-next-line no-unused-vars
+    onAttributeChange(attributeName, oldValue, newValue) {}
 
-    onAfterUpdate() {}
+  
 
 
 
@@ -86,6 +89,35 @@ export class BaseElement extends BaseBase {
     updated() {}
     willUpdate() {}
 
+    bs_init() {
+        let elems = this.querySelectorAll('[data-bs-toggle="tooltip"]');
+        elems.forEach((e) => {
+            Tooltip.getOrCreateInstance(e);
+        });
+        elems = this.querySelectorAll('[data-bs-toggle="dropdown"]');
+        elems.forEach((e) => {
+            Dropdown.getOrCreateInstance(e);
+        });
+        elems = this.querySelectorAll('[data-bs-toggle="popover"]');
+        elems.forEach((e) => {
+            Popover.getOrCreateInstance(e);
+        });
+    }
+
+    bs_dispose() {
+        let elems = this.querySelectorAll('[data-bs-toggle="tooltip"]');
+        elems.forEach((e) => {
+            Tooltip.getOrCreateInstance(e).dispose();
+        });
+        elems = this.querySelectorAll('[data-bs-toggle="dropdown"]');
+        elems.forEach((e) => {
+            Dropdown.getOrCreateInstance(e).dispose();
+        });
+        elems = this.querySelectorAll('[data-bs-toggle="popover"]');
+        elems.forEach((e) => {
+            Popover.getOrCreateInstance(e).dispose();
+        });
+    }
     
     performUpdate() {
         // console.log('performUpdate');
@@ -94,6 +126,7 @@ export class BaseElement extends BaseBase {
             return;
         }
         try {
+            
             if (this.shouldUpdate()) {
                 // console.log('performUpdate -> schouldUpdate!');
                 this.willUpdate();
@@ -103,8 +136,10 @@ export class BaseElement extends BaseBase {
                 if (!this.hasUpdated) {
                     // console.log('performUpdate -> not hasUpdated -> first Update');
                     this.hasUpdated = true;
+                    this.bs_init()
                     this.firstUpdated();
                 }
+
                 this.updated();
             } else {
                 // console.log('performUpdate -> schould not update');
@@ -153,7 +188,8 @@ export class BaseElement extends BaseBase {
     __updatePromise;
 
     requestUpdate() {
-        // console.log('requestUpdate, i am: ', this, ', myPromise: ', this.__updatePromise);
+        // if (this.updateDirect) {
+            // return this.requestUpdateDirect();
         if (this.isUpdatePending === false) {
             // console.log('requestUpdate: isUpdatePending is false -> call enqueueUpdate');
             this.__updatePromise = this.__enqueueUpdate();
@@ -161,14 +197,15 @@ export class BaseElement extends BaseBase {
         }
     }
 
-    // requestUpdate() {
-    //     // console.log("request Update");
-    //     // console.log('request Update');
-    //     if (this.#isConnected) {
-    //         // console.log("is connected! update")
-    //         this.update();
-    //     }
-    // }
+    requestUpdateDirect() {
+        return this.requestUpdate();
+        // console.log("request Update");
+        // console.log('request Update');
+        if (this.#isConnected) {
+            // console.log("is connected! update")
+            this.update();
+        }
+    }
 
     /**
      * @param {string} route
@@ -191,7 +228,7 @@ export class BaseElement extends BaseBase {
     /**
      * @param {string} route
      * @param {object} params
-     * @param {URL} url
+     * @returns {Promise<symbol | void> | symbol | void}
      */
     onRouteChange(route, params, url) {}
 
@@ -206,15 +243,18 @@ export class BaseElement extends BaseBase {
     /**
      * @param {boolean} useBootstrap
      * @param {boolean} useShadow
-     * @param {object | undefined} [shadowOption]
+     * @param {boolean} updateDirect
      */
     constructor(
         // eslint-disable-next-line no-unused-vars
         useBootstrap = false,
         useShadow = false,
-        shadowOption = undefined,
+        updateDirect = false,
     ) {
         super();
+        this.updateDirect = updateDirect;
+        /** @type {null | Promise} */
+        this.awaitRender = null;
         // console.log('constructor of this: ', this);
         
 
@@ -222,7 +262,7 @@ export class BaseElement extends BaseBase {
         // eslint-disable-next-line no-underscore-dangle
         this.#attrPropMapRef = this.constructor.___attrPropMap___;
         if (useShadow) {
-            const shadow = this.attachShadow(shadowOption ?? { mode: 'open' });
+            const shadow = this.attachShadow( { mode: 'open' } );
             shadow.adoptedStyleSheets = [];
             // @ts-ignore
             if (this.constructor.styles instanceof Array) {
@@ -241,7 +281,7 @@ export class BaseElement extends BaseBase {
         //     console.log('request update after statusChange');
         //     this.requestUpdate();
         // }
-        this.userStatusChange = sessionService.messageSocket?.subscribeUserStatusChange(this, true);
+        // this.userStatusChange = sessionService.messageSocket?.subscribeUserStatusChange(this, true);
     }
 
     onSlotChange() {
@@ -260,11 +300,18 @@ export class BaseElement extends BaseBase {
         
         this.shadowRoot?.addEventListener('slotchange', this.onSlotChange.bind(this));
         this.enableUpdating(true);
+
+        // this.requestUpdateDirect();
+        // if (this.updateDirect) {
+        //     this.requestUpdateDirect();
+        // } else {
+        // }
         this.requestUpdate();
         // this.update();
     }
 
     disconnectedCallback() {
+        this.bs_dispose();
         super.disconnectedCallback();
         this.#isConnected = false;
         if (this.#templ) {
@@ -276,8 +323,6 @@ export class BaseElement extends BaseBase {
         // console.log("BASE ELEM DISCONNECT!!!!", this)
     }
 
-    // eslint-disable-next-line no-unused-vars
-    onAttributeChange(attributeName) {}
 
     attributeChangedCallback(name, oVal, nVal) {
         this.#mapMyAttr(name, nVal, oVal);
@@ -287,18 +332,36 @@ export class BaseElement extends BaseBase {
     #templ = undefined;
 
     update() {
+        // console.log('BaseElement - now update, ', this);
         const res = this.render();
-        this.onBeforeUpdate();
+        // console.log('update: result: ', res);
+        
 
         if (res === null || res === undefined) return;
         if (this.#templ === undefined) {
-            this.#templ = Template.createLiveAppendElement(this.root, res);
+            try {
+                this.#templ = Template.createLiveAppendElement(this.root, res);
+            } catch (error) {
+                console.log('error update: ', error);
+            }
         } else {
-            this.#templ.update(res.values);
+
+            if (this.awaitRender != null) {
+                console.log('await promise');
+                this.awaitRender.then(() => {
+                    this.awaitRender = null;
+                    if (!this.#templ) return;
+                    console.log('promise awaited -> update');
+                    this.#templ.update(res.values);
+                })
+            } else {
+                this.#templ.update(res.values);
+            }
+
+
         }
 
         this.isUpdatePending = false;
-        this.onAfterUpdate();
     }
 
     /** @returns {import('./templ/TemplateAsLiteral.js').TemplateAsLiteral | null}  */

@@ -22,7 +22,7 @@ export default class PubSub extends EventTarget {
 
     /**
      * @param {any} initialValue initial value
-     * @param {BaseBase} [host] host element, that triggers a rerender
+     * @param {BaseBase | ((value: T) => void)} [host] host element, that triggers a rerender
      * @param {boolean} [force] force update, event if values are same
      * @returns {PubSubConsumer<T>} returns new PubSubConsumer instance
      */
@@ -30,9 +30,17 @@ export default class PubSub extends EventTarget {
         return new PubSubConsumer(this, initialValue, force, host);
     }
 
+    /**
+     * @param {() => void} cb initial value
+     * @returns {PubSubConsumer<T>} returns new PubSubConsumer instance
+     */
+    subscribeCallback(cb) {
+        return new PubSubConsumer(this, cb);
+    }
+
     /** @param {T} data data to publish */
     publish(data) {
-        // console.log('PubSub: iam: ', this, ' publish data: ', data);
+        console.log('PubSub: iam: ', this, ' publish data: ', data);
         // console.log('eventType: ', this.eventType);
         this.dispatchEvent(new CustomEvent(this.eventType, { detail: data }));
     }

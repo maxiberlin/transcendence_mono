@@ -15,18 +15,19 @@ export default class PubSubConsumer extends BaseReactive {
      * @param {import('./PubSub.js').default} pubSubInst The PubSub instance.
      * @param {any} initialValue The initial value.
      * @param {boolean} force The force flag.
-     * @param {import('../BaseBase').default} [host] The host object.
+     * @param {import('../BaseBase').default | ((value: T) => void)} [host] The host object.
      */
     constructor(pubSubInst, initialValue, force = false, host = undefined) {
         super(initialValue, host);
         this.host = host;
+
         // console.log('PubSubConsumer: constructor: host: ', this.host,', pubsub: ', pubSubInst, ', initial value: ', initialValue, ', force: ', force);
         this.#pubSubInst = pubSubInst;
         if (host == undefined) force = true;
         this.#force = force;
 
         this.#handler = (event) => {
-            // console.log('PubSubConsumer: eventHandler: host: ', this.host, ': event.detail: ',event.detail);
+            console.log('PubSubConsumer: eventHandler: host: ', this.host, ': event.detail: ',event.detail);
             this.onNewValue(event.detail, this.#force);
         };
 

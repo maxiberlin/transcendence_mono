@@ -40,12 +40,10 @@
 // }
 {
     "plugins": [
-        "prettier",
         "jsdoc"
     ],
     "extends": [
         "airbnb-base",
-        "plugin:prettier/recommended",
         "plugin:jsdoc/recommended"
     ],
     "env": {
@@ -77,7 +75,6 @@
             "extends": [
                 "eslint:recommended",
                 "plugin:@typescript-eslint/recommended",
-                "prettier"
             ],
             "rules": {
                 // Add TypeScript-specific rules here
@@ -85,9 +82,6 @@
         }
     ],
     "rules": {
-        "prettier/prettier": [
-            "error"
-        ],
         "max-len": "off",
         "jsdoc/require-property-description": "off",
         "jsdoc/require-param-description": "off",

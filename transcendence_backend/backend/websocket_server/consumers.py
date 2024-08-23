@@ -29,6 +29,8 @@ from notification.models import Notification, NotificationData
 # from django.db import close_old_connections
 # from asgiref.sync import SyncToAsync
 
+from pong_server.game_engine_curr import messages_client as game_engine_client_messages
+
 def use_timeout(timeout_ms: int):
     def get_time():
         return time.perf_counter_ns()//1_000_000
@@ -93,11 +95,17 @@ def get_user_channels(user: UserAccount) -> tuple[list[str], list[ChatGroupnameR
 
 @database_sync_to_async
 def add_online_count(user: UserAccount):
-    return UserAccount.objects.get(pk=user.pk).update_status_count(True)
+    try:
+        return UserAccount.objects.get(pk=user.pk).update_status_count(True)
+    except Exception as e:
+        pass
 
 @database_sync_to_async
 def remove_online_count(user: UserAccount):
-    return UserAccount.objects.get(pk=user.pk).update_status_count(False)
+    try:
+        return UserAccount.objects.get(pk=user.pk).update_status_count(False)
+    except Exception as e:
+        pass
 
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
@@ -105,7 +113,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     INITIALIZATION AND QUITTING
     """
     async def __heartbeat_loop(self):
-        timeout = HEARTBEAT_TIMEOUT_MS / 1000
+        timeout = HEARTBEAT_INTERVAL_MS / 1000
         while True:
             await asyncio.sleep(timeout)
             currtime = time.perf_counter()*1000
@@ -125,6 +133,8 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         self.user: UserAccount = self.scope["user"]
         
         self.newest_timestamp = time.time()
+        
+        
 
         await self.accept()
 
@@ -132,6 +142,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         
 
         self.private_user_room = self.user.get_private_user_room()
+        print(f"PRIVATE ROOM: {self.user.username} : {self.private_user_room}")
         await self.channel_layer.group_add(self.private_user_room, self.channel_name)
 
         user_channels: tuple[list[str], list[ChatGroupnameRoomId]] = await get_user_channels(self.user)
@@ -139,7 +150,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
 
         for friend_room in self.friend_public_group:
             await self.channel_layer.group_add(friend_room, self.channel_name)
-
+# user-room-private--1617526665411301783
         for i in self.chatrooms:
             await self.channel_layer.group_add(i.groupname, self.channel_name)
 
@@ -182,7 +193,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
     """
     SEND MESSAGES OF A SPECIFIC TYPE TO THE CONSUMER
     """
-    async def send_message(self, module: Literal['chat', 'notification', 'friend'], msg_type: int, payload: MessagePayload | None = None):
+    async def send_message(self, module: Literal['chat', 'notification', 'friend', 'game'], msg_type: int, payload: MessagePayload | None = None):
         await self.send_json({
             'module': module,
             'msg_type': msg_type,
@@ -207,6 +218,9 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             'user_id': event['user_id']
         })
 
+    async def game_message(self, event: InternalCommandGameMessage):
+        print(f"GAME MESSAGE: {event}")
+        await self.send_message('game', event['msg_type'], {'game_id': event['id']})
 
     """
     CHAT MESSAGES: SEND TO CONSUMER FUNCTIONS
@@ -246,9 +260,10 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
         except StopIteration:
             print(f"chatroom to update does not exist")
     
-    async def chat_message_new(self, event):
+    async def chat_message_new(self, event: InternalCommandChatMessageNew):
         # print(f"HIER: new chat message: {event}")
-        await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_NEW, {"room_id": event['room_id'], "chat_message": event['data']})
+        count = await self.get_chatmessages_unread_count(event['room_id'])
+        await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_NEW, {"room_id": event['room_id'], "chat_message": event['data'], 'count': count})
     
 
     """
@@ -273,8 +288,11 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             
     @database_sync_to_async
     def get_chatmessages_unread_count(self, room_id: int):
-        UnreadMessages.objects.filter(user=self.user, room_id=room_id).count()
-        pass
+        return UnreadMessages.objects.filter(user=self.user, room_id=room_id).count()
+
+    @database_sync_to_async
+    def mark_chatmessages_as_read(self, room_id: int):
+        UnreadMessages.objects.filter(user=self.user, room_id=room_id).delete()
     
     """
     CHAT MESSAGES: PARSE AND HANDLE COMMAND
@@ -295,8 +313,17 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                         'data': message_data,
                         'room_id': room_id,
                     })
+                case 'mark_chatmessages_read':
+                    next(item for item in self.chatrooms if item.room_id == content['room_id'])
+                    await self.mark_chatmessages_as_read(content['room_id'])
+                    await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT, {'room_id': content['room_id'], 'count': 0})
+                case 'get_unread_chatmessages_count':
+                    next(item for item in self.chatrooms if item.room_id == content['room_id'])
+                    count: int = await self.get_chatmessages_unread_count(content['room_id'])
+                    await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_UNREAD_COUNT, {'room_id': content['room_id'], 'count': count})
                 case 'get_chatmessages_page' :
                     # print(f"handle get_chatmessages_page")
+                    next(item for item in self.chatrooms if item.room_id == content['room_id'])
                     data: list[ChatMessageData] | None = await self.get_chatmessages_page(content['room_id'], content['page_number'])
                     if data is None:
                         await self.send_message_chat(MSG_TYPE_CHAT_MESSAGE_PAGINATION_EXHAUSTED, {'room_id': content['room_id']})
@@ -306,6 +333,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                             'new_page_number': content['page_number'] + 1,
                             'room_id': content['room_id'],
                         })
+                
                 # case "mark_notifications_read":
                 #     data = await database_sync_to_async(self.mark_notifications_read)(content['oldest_timestamp'])
                 #     await self.send_json(data)
@@ -329,9 +357,27 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
                 await self.handle_notification_command(content)
             elif content.get('module') == 'chat':
                 await self.handle_chat_command(content)
+            else:
+                if content.get('command') == 'game_dismissed':
+                    schedule_id: int | None = content.get('schedule_id')
+                    print(f"try send to game engine from main socket: {schedule_id}")
+                    if isinstance(schedule_id, int):
+                        await self.send_game_engine_command(schedule_id, {'cmd': 'client-game-dismissed', 'schedule_id': schedule_id, 'user_id': self.user.pk, 'id': -1})
         except Exception as e:
             print("\nEXCEPTION: receive_json: " + str(e) + '\n') #TODO:
         
+        
+    async def send_game_engine_command(self, schedule_id: int, cmd: game_engine_client_messages.InternalCommand):
+        print(f"send to game engine from main socket: {schedule_id}, {cmd}")
+        if not isinstance(schedule_id, int):
+            return
+        await self.channel_layer.send('game_engine', {
+            "type": "handle_command",
+            "game_group_name": f'game_{schedule_id}',
+            "consumer_channel_name": self.channel_name,
+            "client_command": cmd
+        })
+    
     """
     NOTIFICATIONS: PARSE AND HANDLE COMMAND
     """

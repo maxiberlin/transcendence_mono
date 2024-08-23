@@ -45,30 +45,35 @@ from user.serializers import serializer_basic_user_data
 
 
 def serializer_chat_message_data(chat_message: 'ChatMessage') -> ChatMessageData:
-	userdata = serializer_basic_user_data(chat_message.user)
-	return {
-		'user_id': userdata['id'],
-		'avatar': userdata['avatar'],
-		'username': userdata['username'],
-		'timestamp': int(chat_message.timestamp.timestamp()*1000),
-		'message': str(chat_message.content)
-	}
+    userdata = serializer_basic_user_data(chat_message.user)
+    return {
+        'user_id': userdata['id'],
+        'avatar': userdata['avatar'],
+        'username': userdata['username'],
+        'timestamp': int(chat_message.timestamp.timestamp()*1000),
+        'message': str(chat_message.content)
+    }
  
-def serializer_chat_room_data(chat_room: 'ChatRoom') -> ChatRoomData:
-	users = chat_room.users.all()
-	userdata = [serializer_basic_user_data(u) for u in users if isinstance(u, UserAccount)]
-	return {
-		'room_id': int(chat_room.pk),
-		'type': str(chat_room.type), # type: ignore
-		'title': chat_room.title,
-		'users': userdata
-	}
+def serializer_chat_room_data(chat_room: 'ChatRoom', user: UserAccount | None = None) -> ChatRoomData:
+    unread_count = None
+    if user is not None:
+        unread_count = chat_room.get_unread_messages_for_user(user)
+        print(f"unread messages: {unread_count} in room {chat_room}")
+    users = chat_room.users.all()
+    userdata = [serializer_basic_user_data(u) for u in users if isinstance(u, UserAccount)]
+    return {
+        'room_id': int(chat_room.pk),
+        'type': str(chat_room.type), # type: ignore
+        'title': chat_room.title,
+        'users': userdata,
+        'unread_count': unread_count
+    }
 
 def notify_consumer_chat_room(room: "ChatRoom", user: UserAccount, action: Literal['add', 'remove']):
     msg: c.InternalCommandChatRoom = {
         'type': 'chat.room.add' if action == 'add' else 'chat.room.remove',
         'chat_room_channel_name': room.group_name,
-        'data': serializer_chat_room_data(room)
+        'data': serializer_chat_room_data(room, user if action == 'add' else None)
     }
     sync_send_consumer_internal_command(user.get_private_user_room(), msg)
 
@@ -135,9 +140,9 @@ class ChatRoomManager(models.Manager['ChatRoom']):
         
     def remove_user_from_tournament_chat(self, tournament_name: str, user: UserAccount):
         room = self.filter(title=tournament_name, type='tournament').first()
-        if room and room.is_active and len(room.users) > 0:
+        if room and room.is_active and len(room.users.all()) > 0:
             room.users.remove(user)
-            if len(room.users) == 0:
+            if len(room.users.all()) == 0:
                 room.is_active = False
             room.save()
             notify_consumer_chat_room(room, user, 'remove')
@@ -145,7 +150,7 @@ class ChatRoomManager(models.Manager['ChatRoom']):
 
     def clear_tournament_chat(self, tournament_name: str, user: UserAccount):
         room = self.filter(title=tournament_name, type='tournament').first()
-        if room and room.is_active and len(room.users) > 0:
+        if room and room.is_active and len(room.users.all()) > 0:
             room.is_active = False
             room.users.clear()
             room.save()
@@ -231,6 +236,13 @@ class ChatRoom(models.Model):
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, help_text="users who are connected to chat room.")
 
     rooms = ChatRoomManager()
+    objects = models.Manager()
+    
+    def get_unread_messages_for_user(self, user: UserAccount):
+        return UnreadMessages.objects.filter(user=user, room=self).count()
+    
+    def clear_unread_messages_for_user(self, user: UserAccount):
+        UnreadMessages.objects.filter(user=user, room=self).delete()
 
     # def save(self, notify_consumer=False, **kwargs):
     #     self.notify_consumer = notify_consumer

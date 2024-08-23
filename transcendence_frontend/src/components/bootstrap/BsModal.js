@@ -103,7 +103,7 @@ export default class BsModal extends BaseElement {
     }
 
     constructor() {
-        super(false, false);
+        super(false, false, true);
         this.centered = true;
         // this.props.header = html``;
         // this.props.content = html``;
@@ -122,6 +122,13 @@ export default class BsModal extends BaseElement {
         //     keyboard: false,
         //     backdrop: "static"
         // }
+        this.init();
+    }
+
+    async init() {
+        await this.updateComplete;
+        // console.log('modal: this.myModal.value: ', this.myModal.value);
+        
         if (this.myModal.value)
             this.#modalControl = new Modal(this.myModal.value, );
     }
@@ -133,34 +140,34 @@ export default class BsModal extends BaseElement {
 
     /** @param {BsModalData} data  */
     setContentAndShow(data) {
-        console.log('BsModal: setContentAndShow: ', data);
+        // console.log('BsModal: setContentAndShow: ', data);
         
         this.props.data = data;
         this.showModal();
     }
 
     showModal() {
-        console.log('BS MODAL: showModal() func');
+        // console.log('BS MODAL: showModal() func');
 
         if (this.modalState === 'closed') {
-            console.log('is closed');
+            // console.log('is closed');
             
             this.#modalControl?.show();
         } else if (this.modalState === 'opening') {
-            console.log('is opening');
-            // super.requestUpdate();
+            // console.log('is opening');
+            // super.requestUpdateDirect();
         } else if (this.modalState === 'open') {
-            console.log('is open');
-            // super.requestUpdate();
+            // console.log('is open');
+            // super.requestUpdateDirect();
             this.shouldShow = true;
             this.hideModal();
         } else if (this.modalState === 'closing') {
-            console.log('is closing');
+            // console.log('is closing');
             this.shouldShow = true;
         }
     }
     hideModal() {
-        console.log('BS BUTTON: HIDE THE MODAL');
+        // console.log('BS BUTTON: HIDE THE MODAL');
         this.#modalControl?.hide();
     }
 
@@ -181,38 +188,38 @@ export default class BsModal extends BaseElement {
             
             <div
                 @hide.bs.modal=${() => {
-                    console.log('BS MODAL HIDE');
+                    // console.log('BS MODAL HIDE');
                     this.modalState = 'closing';
                     
                     this.#isOpen = false;
                     // console.log('request Update');
-                    // super.requestUpdate();
+                    // super.requestUpdateDirect();
                 }}
                 @hidden.bs.modal=${() => {
-                    console.log('BS MODAL HIDDEN');
+                    // console.log('BS MODAL HIDDEN');
                     this.modalState = 'closed';
                     if (this.shouldShow) {
                         this.showModal();
                         this.shouldShow = false;
                     } else {
                         this.#isOpen = false;
-                        console.log('request Update');
-                        super.requestUpdate();
+                        // console.log('request Update');
+                        super.requestUpdateDirect();
                     }
                 }}
                 @show.bs.modal=${() => {
-                    console.log('BS MODAL SHOW');
+                    // console.log('BS MODAL SHOW');
                     this.modalState = 'opening';
                     this.#isOpen = true;
-                    console.log('request Update');
-                    super.requestUpdate();
+                    // console.log('request Update');
+                    super.requestUpdateDirect();
                 }}
                 @shown.bs.modal=${() => {
-                    console.log('BS MODAL SHOWN');
+                    // console.log('BS MODAL SHOWN');
                     this.modalState = 'open';
                     this.#isOpen = true;
                     // console.log('request Update');
-                    // super.requestUpdate();
+                    // super.requestUpdateDirect();
                 }}
 
                 ${ref(this.myModal)}

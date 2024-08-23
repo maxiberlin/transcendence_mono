@@ -1,16 +1,16 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
 
-// export const rendListItem = (content) => {
-//     return html`
-//         <li class="row px-0 list-group-item d-flex justify-content-center align-items-center bg-light-subtle">
-//             ${content}
-//         </li>
-//     `;
-// };
 export const renderListItem = (content) => {
     return html`
         <li class="row px-0 list-group-item  d-flex justify-content-center align-items-center bg-light-subtle">
+            ${content}
+        </li>
+    `;
+};
+export const renderListItem2 = (content) => {
+    return html`
+        <li class="list-group-item bg-light-subtle ">
             ${content}
         </li>
     `;
@@ -24,11 +24,24 @@ export const renderListItemAnchor = (href, content) => {
     `;
 };
 
-// <div class="card-header">
-// <h6 class="">${icon ? html`<i class="fa-solid fa-scroll m-2">` : ""}</i>${title}</h6>
-// </div>
+export const renderListCardScroll = (title, icon, listItems) => {
+    return html`
+        <div class="card bg-light-subtle text-center">
+            ${title ?
+                html`
+                <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
+            `
+            :   ''}
+            <div class="card-body overflow-scroll" style="${"max-height: 100vh"}">
+                <ul class="list-group list-group-flush" >
+                    ${listItems || ''}
+                </ul>
+            </div>
+        </div>
+    `;
+};
+
 export const renderListCard = (title, icon, listItems) => {
-    // console.log(listItems);
     return html`
         <div class="card bg-light-subtle text-center">
             ${title ?
@@ -51,7 +64,7 @@ export const renderListCard = (title, icon, listItems) => {
  * @param {string} title 
  * @param {string} icon 
  * @param {T[] | undefined} contentArray 
- * @param {{heading: K, cb: ((heading: K, item: T) => TemplateAsLiteral)}[]} headingsArray 
+ * @param {{heading: K, cb: ((heading: K, item: T) => TemplateAsLiteral | string)}[]} headingsArray 
  * @param {boolean} [indexed] 
  * @returns 
  */
@@ -65,7 +78,7 @@ export const renderTableCard = (title, icon, contentArray, headingsArray, indexe
             `
             :   ''}
             <div class="card-body">
-                <table class="table table-dark table-hover">
+                <table class="table  table-hover">
                     <thead>
                         ${indexed ? html`<th scope="col">#</th>` : ''}
                         <tr>${headingsArray.map(i => html`<th scope="col">${i.heading}</th>`)}</tr>
@@ -88,9 +101,58 @@ export const renderTableCard = (title, icon, contentArray, headingsArray, indexe
                 `;
 };
 
+/**
+ * @template {string} K
+ * @template T
+ * @param {string} title 
+ * @param {string} icon 
+ * @param {T[] | undefined} contentArray 
+ * @param {{heading: K, col: string, cb: ((heading: K, item: T) => TemplateAsLiteral | string)}[]} headingsArray 
+ * @param {boolean} [indexed] 
+ * @returns 
+ */
+export const renderTablelikeCard = (title, icon, contentArray, headingsArray, indexed) => {
+    return html`
+        <div class="card bg-light-subtle text-center">
+            ${title ?
+                html`
+                <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
+            `
+            :   ''}
+            <div class="card-body">
+                <ul class="list-group list-group-flush" >
+                   <li class="list-group-item bg-light-subtle">
+                        <div class="row">
+                            ${headingsArray.map(k => html`
+                                <div class="${k.col}">
+                                    ${k.heading}
+                                </div>
+                            `)}
+                        </div>
+                   </li>
+                    ${contentArray?.map((t, i) => html`
+                        <li class="list-group-item bg-light-subtle">
+                            <div class="row align-items-center justify-content-between">
+                                ${headingsArray.map(k => html`
+                                    <div class="${k.col}">
+                                        ${k.cb(k.heading, t)}
+                                    </div>
+                                `)}
+                            </div>
+                        </li>
+                    `)}
+                </ul>
+                </div>
+        </div>
+    `;
+};
+
+
+
+
 export const renderCard = (title, icon, content) => {
     return html`
-        <div class="card text-center bg-light-subtle">
+        <div class="card text-center bg-light-subtle" >
             ${title ?
                 html`
                 <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
@@ -115,10 +177,14 @@ export const renderListItemInfos = (array) => {
 
 export const renderCardInfo = (title, content) => {
     return html`
-        <p class="text-body-secondary p-0 m-0">
-            ${title} <br />
-            <span class="text-body"> ${content} </span>
-        </p>
+        <span class="text-body-secondary p-0 m-0 d-inline-flex flex-column align-items-center justify-content-center w-100 h-100">
+            ${content ? html`
+                ${title}
+                <span class="text-body"> ${content} </span>
+                ` : html`
+                ${title}
+            `}
+        </span>
     `;
 };
 

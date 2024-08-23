@@ -8,6 +8,7 @@ export default class PongApp extends BaseElement {
         super(false, false);
 
         this.sessionUser = sessionService.subscribe(this);
+        this.unreadChatsCount = sessionService.messageSocket?.subscribeUnreadChatsAll(this);
 
         this.onResize = () => {
             super.requestUpdate();
@@ -25,38 +26,38 @@ export default class PongApp extends BaseElement {
         window.removeEventListener("resize", this.onResize);
     }
 
-    /**
-     * 
-     * @param {string} route 
-     * @param {URL} url
-     */
-    onRouteChange(route, url) {
-        const urlstr = url.toString();
+    // /**
+    //  * 
+    //  * @param {string} route 
+    //  * @param {URL} url
+    //  */
+    // onRouteChange(route, url) {
+    //     const urlstr = url.toString();
 
-        // console.log('onRouteChange: root: ', route);
-        /** @type {import('../components/Navs.js').NavItemConf | undefined} */
-        let longestEl;
-        this.configs.forEach((conf)=>{
-            conf.firstActive = false;
-            if (conf.href && route.includes(conf.href)) {
-                if (longestEl === undefined)
-                    longestEl = conf;
-                else if (longestEl.href && conf.href.length > longestEl.href.length)
-                    longestEl = conf;
-            }
-        })
-        if (longestEl)
-            longestEl.firstActive = true;
-        super.requestUpdate();
-    }
+    //     // console.log('onRouteChange: root: ', route);
+    //     /** @type {import('../components/Navs.js').NavItemConf | undefined} */
+    //     let longestEl;
+    //     this.configs.forEach((conf)=>{
+    //         conf.firstActive = false;
+    //         if (conf.href && route.includes(conf.href)) {
+    //             if (longestEl === undefined)
+    //                 longestEl = conf;
+    //             else if (longestEl.href && conf.href.length > longestEl.href.length)
+    //                 longestEl = conf;
+    //         }
+    //     })
+    //     if (longestEl)
+    //         longestEl.firstActive = true;
+    //     super.requestUpdate();
+    // }
 
 
     renderLoginRegister = () => html`
-        <div class="h-100 d-flex align-items-center justify-content-center">
-            <a class="btn btn-outline-dark me-2" href="/login">
+        <div class="d-flex align-items-center justify-content-center">
+            <a class="btn btn-outline-dark me-2" href="/auth/login">
                 Login
             </a>
-            <a class="btn btn-dark me-2" href="/register">
+            <a class="btn btn-dark me-2" href="/auth/register">
                 Register
             </a>
         </div>
@@ -64,28 +65,30 @@ export default class PongApp extends BaseElement {
     /** @type {Array<import('../components/Navs.js').NavItemConf>} */
     configs = [
         {text: '', href: '/', icon: 'home'},
-        {text: '', href: '/social/friends', icon: 'users'},
+        {text: '', href: '/social', icon: 'users'},
         {text: '', href: '/profile', icon: 'user'},
-        {text: '', href: '/profile/settings', icon: 'gear'},
+        {text: '', href: '/settings', icon: 'gear'},
     ];
 
     render() {
+        this.configs[1].displayCount = this.unreadChatsCount?.value;
+
         const isMobile = window.innerWidth <= 576;
         return html`
             <bs-toasts></bs-toasts>
-            ${!sessionService.isLoggedIn ? this.renderLoginRegister()
-                : html`
-                <div  class="pong-navigation" >
-                    
+            
+            <div  class="pong-navigation" >
+                ${!sessionService.isLoggedIn ? this.renderLoginRegister() : html`
                     <vertical-nav
                         notification
+                        ?center=${true}
                         .navconfigs=${this.configs}
                         row
                         ?linebreak=${isMobile}
                     >
                     </vertical-nav>
-                </div>
-            `}
+                    `}
+            </div>
             <div class="pong-content">
                 <main id="root-outlet" class="h-100" ></main>
             </div>

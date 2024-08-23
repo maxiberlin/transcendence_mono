@@ -14,6 +14,7 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
  * @attr text
  * @attr dropdownitem
  * @attr stretch
+ * @attr tooltip
  * @prop _async_handler
  */
 export default class BsButton extends BaseElement {
@@ -31,6 +32,7 @@ export default class BsButton extends BaseElement {
         'text',
         'dropdownitem',
         'stretch',
+        'tooltip',
     ];
 
     constructor() {
@@ -47,10 +49,11 @@ export default class BsButton extends BaseElement {
         this.dropdownitem = false;
         this.stretch = false;
         this.disabled = false;
+        this.tooltip = '';
 
         this.props._async_handler = async () => {
             console.log('_async_handler wait');
-            await new Promise((res) => setTimeout(res, 1000));
+            // await new Promise((res) => setTimeout(res, 1000));
             console.log('done wait');
         };
 
@@ -99,13 +102,13 @@ export default class BsButton extends BaseElement {
         return html`
             <button
                 @click=${this.onClick.bind(this)}
-                class=" ${isActive} btn ${color} ${size} ${radius} ${stretch} ${isDropdown} mx-1"
+                class=" ${isActive} btn ${color} ${size} ${radius} ${stretch} ${isDropdown} "
                 ?disabled=${this._loading || this.disabled}
                 role="button"
                 aria-pressed="${isPressedAria}"
                 aria-disabled="${isDisabledAria}"
 
-                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Tooltip on top"
+                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="${this.tooltip}"
             >
             ${this.dropdownitem ? html`
                 <span>

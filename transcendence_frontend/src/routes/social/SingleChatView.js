@@ -1,4 +1,5 @@
-import { avatarInfo } from '../../components/bootstrap/AvatarComponent.js';
+import { actions } from '../../components/ActionButtons.js';
+import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { renderCard, renderListCard } from '../../components/bootstrap/BsCard.js';
 import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
@@ -88,6 +89,7 @@ export class SingleChatView extends BaseElement {
         this.outline = false;
         this.color = 'primary';
         this.props.offcanvas = false;
+        this.eventlistenerscrolloption = {passive:true};
     }
 
     /**
@@ -96,16 +98,16 @@ export class SingleChatView extends BaseElement {
      * @param {SINGLECHATPROPS[T]} value
      */
     onPropChange(key, value) {
-        console.log('SingleChatView: onPropChange: key: ', key, ' value: ', value);
+        // console.log('SingleChatView: onPropChange: key: ', key, ' value: ', value);
         if ((typeof value === 'object' && key === 'user_or_tournament') ||  (key === 'chatroom_id' && typeof value === 'number')) {
-            console.log('OK');
+            // console.log('OK');
             if (this.chats instanceof PubSubConsumer) {
                 this.chats.cleanupEventlistener();
             }
             
             // // @ts-ignore
             this.chats = sessionService.messageSocket?.subscribeSingleChat(value, this, (msg_type) => {});
-            console.log('SingleChatView: onPropChange: created Chats: ', this.chats);
+            // console.log('SingleChatView: onPropChange: created Chats: ', this.chats);
             this.isValidChat = this.chats !== undefined;
             // if (this.chats) {
             //     sessionService.messageSocket?.getNextMessagePage(this.chats.value.room?.room_id);
@@ -124,8 +126,8 @@ export class SingleChatView extends BaseElement {
 
     /** @param {APITypes.ChatMessageData} [message] */
     renderMessage = (message) => {
-        const self = message?.user_id === this.session.value.user?.id;
-        console.log('renderMessage');
+        const self = message?.user_id === this.session.value?.user?.id;
+        // console.log('renderMessage');
         
         return html`
         <div class="d-flex align-items-start justify-content-${self ? 'end' : 'start'}  p-2">
@@ -142,7 +144,7 @@ export class SingleChatView extends BaseElement {
                     <small class="ms-2 me-1 fw-semibold">${self ? 'you' : message?.username}</small>
                     <small class="fw-light">· ${formatDateString(message?.timestamp)}</small>
                 </div>
-                <p class="border-1 bg-primary-subtle rounded-2 py-2 px-3">${message?.message}</p>
+                <p class="border-1 bg-primary-subtle rounded-2 py-2 px-3" style="${"word-break: break-word;"}">${message?.message}</p>
             </div>
         </div>
     `}
@@ -173,20 +175,20 @@ export class SingleChatView extends BaseElement {
     `
 
     #clientScrolled = false;
-    onAfterUpdate() {
-        console.log('scroll down?!?!?');
+    updated() {
+        // console.log('scroll down?!?!?');
         // if (!this.#clientScrolled && this.chatContainerRef.value) {
         if (this.chatContainerRef.value) {
-            console.log('scroll down');
+            // console.log('scroll down');
             
             this.chatContainerRef.value.scrollTo({top: this.chatContainerRef.value.scrollHeight});
         }
     }
 
     onChatScroll = (e) => {
-        console.log("all nodes: ", document.getElementsByTagName('*').length);
-        console.log('onscroll, fetchPage?: ', this.chats?.value.fetchingPage);
-        console.log('onscroll, currentPage?: ', this.chats?.value.currentPage);
+        // console.log("all nodes: ", document.getElementsByTagName('*').length);
+        // console.log('onscroll, fetchPage?: ', this.chats?.value.fetchingPage);
+        // console.log('onscroll, currentPage?: ', this.chats?.value.currentPage);
         
         // console.log('currentMessageElements: ', this.allCurrentMessageElements);
         
@@ -240,7 +242,7 @@ export class SingleChatView extends BaseElement {
                 </div>
                 <div class="offcanvas-body">
                     <div class="col d-flex flex-column h-100" >
-                        <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
+                        <div ${ref(this.chatContainerRef)}  @scroll=${ {cb: (e)=>{this.onChatScroll(e)}, op: this.eventlistenerscrolloption} }
                             class="flex-grow-1 overflow-scroll" >
                             ${this.chats?.value.messages.map(m => this.renderMessage(m))}
                         </div>
@@ -258,18 +260,35 @@ export class SingleChatView extends BaseElement {
     allCurrentMessageElements = [];
     allCurrentMessageElementsHeights = [];
     selsectedMessageElements = [];
+
+    renderChatHeader = () => {
+        
+        const room = this.chats?.value.room;
+        const user = room?.users.find(u => u.id !== this.session.value?.user?.id);
+        const canSendInvitation = room?.type !== 'tournament' && user && sessionService.canSend1vs1GameInvitation(user.id);
+        return room?.type === 'tournament' ? '' : html`
+            <div class="card">
+                <div class="d-flex m-2">
+                    <div class="me-2">
+                        ${avatarLink(user, true)}
+                    </div>
+                    ${!canSendInvitation ? '' : actions.sendGameInvitation(user.id, { host: this, showText: false })}
+                </div>
+            </div>
+        `
+    }
     render() {
-        console.log('SingleChatView: render: current Chats: ', this.chats?.value);
+        // console.log('SingleChatView: render: current Chats: ', this.chats?.value);
 
         
         if (this.chats != undefined) {
-            console.log('OK render with chats, rendercount: ', this.renderCount);
+            // console.log('OK render with chats, rendercount: ', this.renderCount);
             if (this.renderCount === 0) {
                 this.selsectedMessageElements = this.allCurrentMessageElements.slice(0, 10);
             }
             this.renderCount += 1;
         }
-        console.log('OFFCANVAS?: ', this.props.offcanvas);
+        // console.log('OFFCANVAS?: ', this.props.offcanvas);
         
         return html`
             ${this.isValidChat === false ? html`
@@ -279,7 +298,8 @@ export class SingleChatView extends BaseElement {
                 ` : html`
                 ${this.props.offcanvas ? this.renderOffcanvas() : html`
                     <div class="">
-                         <div class="col d-flex flex-column" style="${"height: 80vh"}" >
+                         <div class="d-flex flex-column chat-window" >
+                                ${this.renderChatHeader()}
                                  <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
                                      class="flex-grow-1 overflow-scroll" >
                                      ${this.chats?.value.messages.map(m => this.renderMessage(m))}
@@ -291,33 +311,9 @@ export class SingleChatView extends BaseElement {
             `}
             
         `
-        // return html`
-        //     <div class="col d-flex flex-column" style="${"min-height: 75vh; max-height: 100vh"}">
-        //         <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
-        //             class="flex-grow-1 overflow-scroll" >
-        //             ${this.chats?.value.messages.map(m => this.renderMessage(m))}
-        //         </div>
-        //         <div class="px-2" >
-        //             ${this.renderMessageInput()}
-        //         </div>
-        //     </div>
-        // `
+       
     }
-    // render() {
-    //     console.log('SingleChatView: render: current Chats: ', this.chats?.value);
-
-    //     return html`
-    //         <div class="col d-flex flex-column" style="${"height: 75vh"}">
-    //             <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
-    //                 class="flex-grow-1 overflow-scroll" >
-    //                 ${this.chats?.value.messages.map(m => this.renderMessage(m))}
-    //             </div>
-    //             <div class="px-2" >
-    //                 ${this.renderMessageInput()}
-    //             </div>
-    //         </div>
-    //     `
-    // }
+    
 }
 customElements.define("single-chat-view", SingleChatView);
 

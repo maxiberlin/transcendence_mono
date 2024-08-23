@@ -4,9 +4,9 @@
 import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
 import GameHub from '../../gaming/manager/gameHub.js';
 import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
-import { sessionService } from '../../services/api/API_new.js';
+import { gameAPI, sessionService } from '../../services/api/API_new.js';
 import router from '../../services/router.js';
-import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent } from '../../components/bootstrap/BsToasts.js';
+import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent, ToastNotificationUserEvent } from '../../components/bootstrap/BsToasts.js';
 import BsModal from '../../components/bootstrap/BsModal.js';
 import { Modal } from 'bootstrap';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
@@ -14,6 +14,7 @@ import { PongGameOverlays } from './PongGameOverlays.js';
 import { Ref } from '../../lib_templ/templ/nodes/FuncNode.js';
 import { getPreferredTheme } from '../../services/themeSwitcher.js';
 import { calcContrastColor } from '../../gaming/manager/colorcalc.js';
+import { getTournamentLink } from './utils.js';
 
 /**
  *
@@ -50,35 +51,11 @@ function useCanvasSizes(obsElem, aspectRatio, cb) {
     };
 }
 
-const renderLoadingModal = () => html`
-    <div
-        class="modal fade"
-        id="loadingModal"
-        tabindex="-1"
-        aria-labelledby="loadingModalLabel"
-        aria-hidden="true"
-    >
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="loadingModalLabel">Verbindung wird hergestellt...</h5>
-                </div>
-                <div class="modal-body text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Laden...</span>
-                    </div>
-                    <p class="mt-3">Bitte warten, während die Verbindung zum Server hergestellt wird.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-`;
-
 export default class GameScreen extends BaseElement {
     static observedAtrributes = ['id'];
 
     constructor() {
-        super(false, false);
+        super(false, false, true);
         this.session = sessionService.subscribe(this);
 
         /** @type {GameHub | undefined} */
@@ -93,12 +70,55 @@ export default class GameScreen extends BaseElement {
     /** @type {import('../../lib_templ/BaseElement.js').Ref<HTMLDivElement>} */
     #wrapper = createRef()
 
+    assertParam() {
+
+    }
 
     /** @type {APITypes.GameScheduleItem | null} */
     #gameData = null;
     onBeforeMount(route, params, url) {
         console.log('game window, params: ', params);
         console.log('session value: ', this.session.value);
+        const shed = params.schedule_id;
+        this.searchParams = params.searchParams;
+        if (typeof shed === 'string') {
+            const pattern = /(\w+)\((\w+)\)/g;
+            const match = pattern.exec(shed);
+            console.log('shed: ', shed);
+            console.log('match: ', match);
+            
+            if(match && typeof match[1] === 'string' && typeof match[2] === 'string' ) {
+                const schedule_id = Number(match[1]);
+                const game = this.session.value?.game_schedule?.find(i => i.schedule_id == schedule_id);
+                console.log('corresponsing match: ', game);
+                if (game == undefined) {
+                    document.dispatchEvent(new ToastNotificationErrorEvent('game not found'));
+                    router.redirect('history.back');
+                    return;
+                }
+                if (game.game_mode === 'tournament') {
+                    
+                }
+                
+                this.isRandom = true;
+                this.isRandomPushed = false;
+                gameAPI.pushRandomResults(schedule_id, 10).then((res) => {
+                    document.dispatchEvent(new ToastNotificationSuccessEvent("random results pushed"));
+                    if (res.success == false) {
+                        document.dispatchEvent(new ToastNotificationErrorEvent(res.message));
+                    }
+                }).catch((error) => {
+                    sessionService.handleFetchError(error);
+                })
+                setTimeout(() => {
+                    if (typeof game.tournament !== 'number') {
+                        router.redirect('/');
+                    } else {
+                        router.redirect(getTournamentLink(game.game_id.toLowerCase(), game.tournament));
+                    }
+                }, 10);
+            }
+        }
         const game = this.session.value?.game_schedule?.find(i => i.schedule_id == params.schedule_id);
         if (game == undefined) {
             document.dispatchEvent(new ToastNotificationErrorEvent("game not found"));
@@ -109,8 +129,8 @@ export default class GameScreen extends BaseElement {
     }
 
     disconnectedCallback() {
-        document.body.classList.remove("overflow-hidden");
         super.disconnectedCallback();
+        document.body.classList.remove("overflow-hidden");
         if (this.#closeObs) this.#closeObs();
         this.currentGame?.quitGame();
     }
@@ -121,11 +141,46 @@ export default class GameScreen extends BaseElement {
     #gameStarted = false;
     connectedCallback() {
         super.connectedCallback();
+        this.init();
+        // document.body.classList.add("overflow-hidden");
+
+        // console.log('canvas: ', this.#canvas.value);
+        // console.log('this.#wrapper.value: ', this.#wrapper.value);
+        
+        // if (!this.#canvas.value || !this.#wrapper.value || !this.#gameData) return;
+       
+        // this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, true);
+        
+        // this.toggleColor();
+
+        // this.#closeObs = useCanvasSizes(this.#wrapper.value, this.#aspectRatio, (newW, newH) => {
+        //     console.log('NEW CANVAS SIZES: ', this.#canvas, ", ", this.#canvas.value);
+        //     if (!this.#canvas.value || !this.#wrapper.value) return;
+        //     this.#canvas.value.style.width = `${newW}px`;
+        //     this.#canvas.value.style.height = `${newH}px`;
+        //     const canvasRect = this.#canvas.value.getBoundingClientRect();
+        //     this.currentGame?.resizeCanvas(canvasRect.x, canvasRect.y, newW, newH, window.devicePixelRatio);
+        // });
+
+        // this.setWorkerHandler();
+
+        // this.pongOverlayRef.value?.showWaitForLaunch('launchSelf', this.#gameData);
+        // this.setupDone = true;
+        // super.requestUpdateDirect();
+    }
+
+    async init() {
+        await this.updateComplete;
         document.body.classList.add("overflow-hidden");
 
+        console.log('canvas: ', this.#canvas.value);
+        console.log('this.#wrapper.value: ', this.#wrapper.value);
+        console.log('this.pongOverlayRef.value: ', this.pongOverlayRef.value);
+        
         if (!this.#canvas.value || !this.#wrapper.value || !this.#gameData) return;
        
         this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, true);
+        // this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, false);
         
         this.toggleColor();
 
@@ -142,7 +197,7 @@ export default class GameScreen extends BaseElement {
 
         this.pongOverlayRef.value?.showWaitForLaunch('launchSelf', this.#gameData);
         this.setupDone = true;
-        super.requestUpdate();
+        super.requestUpdateDirect();
     }
 
     toggleColor() {
@@ -156,28 +211,46 @@ export default class GameScreen extends BaseElement {
     }
 
     setWorkerHandler() {
-        this.currentGame?.setWorkerMessageHandler("from-worker-game-ready", (msg) => {
+        this.currentGame?.setWorkerMessageHandler("from-worker-game-ready", async (msg) => {
             this.#gameReady = true;
             console.log('WORKER GAME READY');
+            if (!this.pongOverlayRef.value) return;
+            await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
             this.pongOverlayRef.value?.hide('waitForLaunchModal');
+            await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
+            // this.pongOverlayRef.value?.hide('all');
             // setTimeout(() => {
                 this.pongOverlayRef.value?.showStartGame(this.#gameData, () => {
                     this.currentGame?.worker.postMessage({message: 'worker_game_start'})
+                    this.pongOverlayRef.value?.showWaitForStart(this.#gameData)
+                   
                 }); 
             // }, 400);
-            // super.requestUpdate();
+            // super.requestUpdateDirect();
+        })
+        this.currentGame?.setWorkerMessageHandler('from-worker-game-dismissed', (msg) => {
+            this.pongOverlayRef.value?.hide('all');
+            this.currentGame?.quitGame();
+            const user = this.#gameData?.player_one.id === msg.user_id ? this.#gameData?.player_one : this.#gameData?.player_two;
+            if (user) {
+                document.dispatchEvent(new ToastNotificationUserEvent(user, 'dismissed the request'));
+            }
+            router.redirect('/');
         })
         this.currentGame?.setWorkerMessageHandler('from-worker-game-started', (msg) => {
             console.log('WORKER GAME STARTED');
             this.pongOverlayRef.value?.hide('all');
+
            
-            // super.requestUpdate();
+            // super.requestUpdateDirect();
         })
         this.currentGame?.setWorkerMessageHandler("from-worker-client-connected", (msg) => {
-            if (msg.user_id === this.session.value.user?.id) {
+            if (msg.user_id === this.session.value?.user?.id) {
                 console.log('client connected: self');
+                
                 this.pongOverlayRef.value?.showWaitForLaunch('launchOther', this.#gameData);
             } else {
+                this.pongOverlayRef.value?.hide('waitForLaunchModal');
                 console.log('client connected: other');
             }
         })
@@ -186,7 +259,7 @@ export default class GameScreen extends BaseElement {
         })
         this.currentGame?.setWorkerMessageHandler("from-worker-client-reconnected", (msg) => {
             this.pongOverlayRef.value?.hide('disconnectModal');
-            super.requestUpdate();
+            super.requestUpdateDirect();
         })
         this.currentGame?.setWorkerMessageHandler("from-worker-game-paused", (msg) => {
             this.#paused = true;
@@ -275,7 +348,7 @@ export default class GameScreen extends BaseElement {
                 @click=${() => {
                     if (!this.#paused) this.currentGame?.pauseGame();
                     else this.currentGame?.continueGame();
-                    super.requestUpdate();
+                    super.requestUpdateDirect();
                 }}
             >
             <i class="fa-solid fa-${this.#paused ? 'play' : 'pause'}"></i>
@@ -293,8 +366,10 @@ export default class GameScreen extends BaseElement {
     pongOverlayRef = createRef();
 
     render() {
+        console.log('render GameScreen');
+        
         return html`
-            <div class="opacity-transition ${this.setupDone ? 'content-loaded' : ''} game-screen-container bg-light-subtle">
+            <div class="game-screen-container bg-light-subtle">
                 <div class="game-screen-flex">
                     <div class="game-screen-header">
                         ${this.renderGameHeader()}
@@ -317,7 +392,7 @@ window.customElements.define('game-screen', GameScreen);
         //             @click=${() => {
         //                 if (!this.#paused) this.currentGame?.pauseGame();
         //                 else this.currentGame?.continueGame();
-        //                 super.requestUpdate();
+        //                 super.requestUpdateDirect();
         //             }}
         //         >
         //         <i class="fa-solid fa-${this.#paused ? 'play' : 'pause'}"></i>
@@ -568,7 +643,7 @@ window.customElements.define('game-screen', GameScreen);
 
         
 
-//         // super.requestUpdate();
+//         // super.requestUpdateDirect();
 
 //         console.log('connected callback canvas: ', this.#canvas.value);
 //         console.log('connected callback wrapper: ', this.#wrapper.value);
@@ -604,7 +679,7 @@ window.customElements.define('game-screen', GameScreen);
 //             reason: 'surrender'
 //         }
 //         this.#gameDoneModal.value?.showModal();
-//         super.requestUpdate();
+//         super.requestUpdateDirect();
 
 
 //         // this.#closeObs = useCanvasSizes(this.#wrapper.value, this.#aspectRatio, (newW, newH) => {
@@ -620,7 +695,7 @@ window.customElements.define('game-screen', GameScreen);
 //             this.#gameReady = true;
 //             console.log('WORKER GAME READY');
 //             this.#startGameModal.value?.showModal();
-//             super.requestUpdate();
+//             super.requestUpdateDirect();
 //         })
 //         this.currentGame?.setWorkerMessageHandler("from-worker-client-connected", (msg) => {
 //             // if (msg.user_id !== this.session.value?.user?.id)
@@ -631,11 +706,11 @@ window.customElements.define('game-screen', GameScreen);
 //             this.#disconnectedUser.self = msg.user_id === this.session.value?.user?.id ? true : false;
 //             this.#disconnectedUser.data = msg.user_id === this.#gameData?.player_one.id ? this.#gameData?.player_one : this.#gameData?.player_two;
 //             this.#disconnectModal.value?.showModal();
-//             super.requestUpdate();
+//             super.requestUpdateDirect();
 //         })
 //         this.currentGame?.setWorkerMessageHandler("from-worker-client-reconnected", (msg) => {
 //             this.#disconnectModal.value?.hideModal();
-//             super.requestUpdate();
+//             super.requestUpdateDirect();
 //         })
 //         this.currentGame?.setWorkerMessageHandler("from-worker-game-paused", (msg) => {
 //             this.#paused = true;
@@ -759,7 +834,7 @@ window.customElements.define('game-screen', GameScreen);
 //                                     @click=${() => {
 //                                         if (!this.#paused) this.currentGame?.pauseGame();
 //                                         else this.currentGame?.continueGame();
-//                                         super.requestUpdate();
+//                                         super.requestUpdateDirect();
 //                                     }}
 //                                 >
 //                                     <i class="fa-solid fa-${this.#paused ? 'play' : 'pause'}"></i>

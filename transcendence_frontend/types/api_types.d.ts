@@ -10,6 +10,12 @@ declare namespace APITypes {
         data: T;
     }
 
+    export interface Intra42Data {
+        [key: string]: string | boolean;
+        redirect: boolean;
+        redirect_url: string;
+    }
+
     export interface LoginData {
         [key: string]: number;
         user_id: number;
@@ -30,6 +36,7 @@ declare namespace APITypes {
         room_id: number;
         type: 'tournament' | 'private';
         title: string;
+        unread_count: number | null;
         users: APITypes.BasicUserData[];
     }
 
@@ -148,6 +155,7 @@ declare namespace APITypes {
         name: string,
         game_id: GameIdString,
         status: TournamentStatus;
+        mode: TournamentMode;
     }
 
     export interface TournamentData {
@@ -184,6 +192,9 @@ declare namespace APITypes {
         last_name: string;
         last_login: string;
         date_joined: string;
+        bio: string;
+        rank: number;
+        xp: number;
         alias: string;
         games_played: string;
         wins: string;
@@ -192,6 +203,7 @@ declare namespace APITypes {
         blocked: BlockedUserData[];
         is_friend: boolean;
         is_self: boolean;
+        oauth: '42api' | null;
     }
 
     export interface UserSession {

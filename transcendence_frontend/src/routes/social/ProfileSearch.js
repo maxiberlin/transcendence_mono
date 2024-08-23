@@ -27,6 +27,11 @@ export class SelectedSearchResult extends Event {
 export default class ProfileSearch extends BaseElement {
     static observedAttributes = ["followlink", "discardprev"];
 
+
+    static #count = 0;
+
+    static getNextId = () => `people-search-input-id-${this.#count++}`;
+
     constructor() {
         super(false, false);
         this.boundInputHandler = this.#handleSearchInputClick.bind(this);
@@ -36,6 +41,7 @@ export default class ProfileSearch extends BaseElement {
         this.discarted = [];
         this.props.todiscard = [];
         this.session = sessionService.subscribe(this);
+        this.inputElemId = ProfileSearch.getNextId();
     }
 
     connectedCallback() {
@@ -90,6 +96,17 @@ export default class ProfileSearch extends BaseElement {
         const newActive = currentEntries ? currentEntries[pos] : undefined;
         newActive?.classList.remove('link-body-emphasis');
         newActive?.classList.add('active', 'link-light');
+        if (newActive && this.#searchListGroupContainer) {
+            const scrollerRect = this.#searchListGroupContainer.getBoundingClientRect();
+            const elemRect = newActive.getBoundingClientRect();
+            if (elemRect.bottom - scrollerRect.bottom > 1) {
+                this.#searchListGroupContainer.scrollTop += (elemRect.bottom - scrollerRect.bottom);
+            }
+            else if (elemRect.top - scrollerRect.top < -1) {
+                this.#searchListGroupContainer.scrollTop += elemRect.top - scrollerRect.top;
+            }
+            this.storedScrollTop = this.#searchListGroupContainer.scrollTop;
+        }
     }
 
     handleSelectedClicked(route) {
@@ -133,6 +150,9 @@ export default class ProfileSearch extends BaseElement {
             // console.log('new item: ', selectedRes);
             this.dispatchEvent(new SelectedSearchResult(selectedRes))
             if (this.discardprev) this.discarted.push(selectedRes.id);
+            this.#inptElem?.blur();
+            this.#showRes = false;
+            super.requestUpdate();
         } else {
             return;
         }
@@ -179,13 +199,24 @@ export default class ProfileSearch extends BaseElement {
                     ev.stopPropagation()
                     ev.preventDefault();
                     const selectedRes = this.#searchData[contDiv.dataset.searchResult];
-                    // console.log('selected result: ', selectedRes);
                     this.handleSelectedClicked(target.closest('a')?.href ?? '');
                     if (this.discardprev) this.discarted.push(selectedRes.id);
                     this.dispatchEvent(new SelectedSearchResult(selectedRes))
+
+                    this.#inptElem?.blur();
+                    this.#showRes = false;
                 } else {
                     makeUpDate = this.#showRes !== true;
                     this.#showRes = true;
+                    setTimeout(() => {
+                        if (this.storedScrollTop != undefined && this.#searchListGroupContainer) {
+                            this.#searchListGroupContainer.scrollTop = this.storedScrollTop;
+                            if (this.#currSearchNavPos !== undefined) {
+                                this.toggleActiveElement(this.#currSearchNavPos);
+                            }
+                        }
+                    }, 0);
+                        
                 }
                 
             } else {
@@ -229,7 +260,11 @@ export default class ProfileSearch extends BaseElement {
             this.#currSearchRes = '';
         }
 
-        
+        // @blur=${(e)=>{
+        //     this.#showRes = false;
+        //     super.requestUpdate();
+        //     // e.preventDefault();
+        // }}
 
         return html`
             <section
@@ -243,10 +278,11 @@ export default class ProfileSearch extends BaseElement {
                     <input
                         ${(el) => { this.#inptElem = el; }}
                         @input=${this.handleInput.bind(this)}
-                        id="user-search"
+                       
+                        id="${this.inputElemId}"
                         class="form-control"
                         type="search"
-                        placeholder="Search other Players"
+                        placeholder="Search for other Players"
                         aria-label="Search"
                         autocomplete="off"
                     />
@@ -260,7 +296,7 @@ export default class ProfileSearch extends BaseElement {
                                 class="position-absolute top-100 left-0 d-flex align-items-center w-100"
                             >
                                 <div
-                                    class="list-group w-100"
+                                    class="list-group w-100 overflow-y-scroll" style="${"max-height: 40vh; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); z-index:100;"}"
                                     ${(el) => { this.#searchListGroupContainer = el; }}
                                 >
                                     ${this.#showRes ? this.#currSearchRes : ''}

@@ -4,6 +4,7 @@ import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent } from '../.
 import BaseBase from '../../lib_templ/BaseBase.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
 import { GlobalSockHandler } from './GlobalSockHandler.js';
+import router from '../router.js';
 
 // export const fetcher = new Fetcher("http://127.0.0.1", {
 
@@ -14,10 +15,38 @@ import { GlobalSockHandler } from './GlobalSockHandler.js';
 // });
 
 // api at subdomain api.
+
+
+export const isStr = (s) => typeof s === 'string';
+
 const url = new URL(window.location.origin);
-export const fetcher = new Fetcher(`${url.protocol}api.${url.host}`, {
+export let fetcher = new Fetcher(`${url.protocol}api.${url.host}`, {
     credentials: 'include',
 });
+
+
+/** @param {boolean} csrftoken  */
+async function createFetcher(csrftoken) {
+    
+    if (csrftoken) {
+        const r = await fetcher.$get('/csrf');
+        if (typeof r.data.csrfToken !== 'string') throw Error("!");
+        const csrfHeader = new Headers();
+        csrfHeader.append('X-CSRFToken', r.data.csrfToken,)
+        fetcher = new Fetcher(`${url.protocol}api.${url.host}`, {
+            credentials: 'include',
+            headers: csrfHeader
+        }, undefined);
+    } else {
+        console.log('createFetcher NO CSRF');
+        fetcher = new Fetcher(`${url.protocol}api.${url.host}`, {
+            credentials: 'include',
+        }, undefined);
+    }
+    return fetcher;
+}
+
+
 
 export const userAPI = {
     /**
@@ -51,6 +80,27 @@ export const userAPI = {
      */
     logout: async () =>
         await fetcher.$post(`/logout`),
+
+    /**
+     * @param {number} user_id
+     * @param {string} current_password
+     * @returns {Promise<APITypes.ApiResponse<null>>}
+     */
+    deleteProfile: async (user_id, current_password) =>
+        await fetcher.$post(`/profile/${user_id}/delete`, {bodyData: {
+            current_password
+        }}),
+
+    /**
+     * @param {string} newPassword
+     * @param {string} oldPassword
+     * @returns {Promise<APITypes.ApiResponse<null>>}
+     */
+    changePassword: async (newPassword, oldPassword) =>
+        await fetcher.$post(`/password-change`, {bodyData: {
+            old_password: oldPassword,
+            new_password: newPassword,
+        }}),
 
     /**
      * @param {number} user_id
@@ -202,12 +252,12 @@ export const gameAPI = {
     },
     
     /**
-     * @param {string | 'all'} [username]
+     * @param {string | true} [username]
      * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentItem[]>>}
      */
     getTournaments: async (username) =>
         !username ? await fetcher.$get(`/game/tournaments`)
-        : username == 'all' ? await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: ''})})
+        : username == true ? await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: ''})})
         : await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: username})}),
     
     /**
@@ -247,14 +297,17 @@ export const gameAPI = {
         await fetcher.$post(`/game/schedule`),
     
     /**
-     * @returns {Promise<APITypes.ApiResponse<APITypes.GameResultItem[]>>}
+     * @param {string | true} [username]
+     * @param {number} [page]
+     * @returns {Promise<APITypes.ApiResponse<{history: APITypes.GameScheduleItem[], max_pages: number}>>}
      */
-    getHistory: async (username) =>
-        username == undefined ? await fetcher.$get(`/game/history`)
-        : await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ user: username }) } ),
+    getHistory: async (username, page) =>
+        !username ? await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ page: page ? page.toString() : '1' }) } )
+        : username == true ? await fetcher.$get(`/game/history`, {searchParams: new URLSearchParams({user: '', page: page ? page.toString() : '1'})})
+        : await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ user: username, page: page ? page.toString() : '1' }) } ),
         
     /**
-     * @returns {Promise<APITypes.ApiResponse<null>>}
+     * @returns {Promise<APITypes.ApiResponse<string>>}
      */
     getStats: async () =>
         await fetcher.$get(`/game/stats`),
@@ -287,104 +340,209 @@ export class SessionStore {
     */
     //  * @param {boolean} notifyBadStatus 
     handleFetchError(error) {
-        if (error instanceof DOMException)
+        if (error instanceof DOMException) {
             document.dispatchEvent(new ToastNotificationErrorEvent(`DOMException: ${error.name}: ${error.message}`))
-        else if (error instanceof TypeError)
+        } else if (error instanceof TypeError) {
             document.dispatchEvent(new ToastNotificationErrorEvent(`TypeError: ${error.message}`))
+        } else if (error instanceof Error) {
+            document.dispatchEvent(new ToastNotificationErrorEvent(error.message))
+        } else if (typeof error === 'string' ) {
+            document.dispatchEvent(new ToastNotificationErrorEvent(error))
+        }
         // else if (notifyBadStatus && error && error.message)
             
     }
 
-    async registerAndLogin(username, email, password, confirmPassword) {
+
+    /**
+     * @template {APITypes.JSONValue} T
+     * @param {Promise<APITypes.ApiResponse<T>>} fetchPromise 
+     * @param {(statusCode: number, message: string) => void} [onError]
+    */
+    async fetchAndNotifyOnUnsuccess(fetchPromise, onError) {
         try {
-            const registerData = await userAPI.register(username, email, password, confirmPassword);
-            if (!registerData.success)
-                return registerData;
-            return await this.login(username, password);
+            const response = await fetchPromise;
+            if (!response.success) {
+                if (typeof onError === 'function') {
+                    onError(response.statuscode, response.message);
+                }
+            } else {
+                return response.data;
+            }
         } catch (error) {
             this.handleFetchError(error);
-            return null;
         }
     }
 
     /**
+     * @template {APITypes.JSONValue} T
+     * @param {Promise<APITypes.ApiResponse<T>>} fetchPromise
+     * @returns {Promise<false | T>}
+    */
+    async fetchShort(fetchPromise) {
+        const r = await this.fetchAndNotifyOnUnsuccess(fetchPromise, (c, m) => {
+            if (c !== 200) throw Error(m);
+        });
+        return r === undefined ? false : r;
+    }
+
+    /**
+     * @template {APITypes.JSONValue} T
+     * @param {Promise<APITypes.ApiResponse<T>>} fetchPromise 
+    */
+    async fetchResponse(fetchPromise) {
+        try {
+            const response = await fetchPromise;
+            return response;
+        } catch (error) {
+            this.handleFetchError(error);
+        }
+    }
+
+    /** @param {string} error  */
+    async createFetcherError(error) {
+        await createFetcher(false);
+        return error;
+    }
+
+    /**
+     * @param {FormDataEntryValue | null} [confirmPassword] 
+     * @param {FormDataEntryValue | null} [email] 
+     * @param {FormDataEntryValue | null} [password]
+     * @param {FormDataEntryValue | null} [username]  
+     */
+    async registerAndLogin(username, email, password, confirmPassword) {
+        if (!isStr(username) || !isStr(email) || !isStr(password) || ! isStr(confirmPassword)) {
+            return 'invalid data';
+        }
+        await createFetcher(true);
+        const r = await this.fetchResponse(userAPI.register(username, email, password, confirmPassword));
+        if (!r) {
+            return this.createFetcherError('unable to fetch data');
+        }
+        if (!r.success) {
+            return this.createFetcherError(r.message);
+        }
+        return this.login(username, password);
+        
+        
+        // try {
+        //     await createFetcher(true);
+        //     const registerData = await userAPI.register(username, email, password, confirmPassword);
+        //     if (!registerData.success) {
+        //         await createFetcher(false);
+        //         document.dispatchEvent(new ToastNotificationErrorEvent(registerData.message));
+        //     } else {
+        //         return await this.login(username, password);
+        //     }
+        // } catch (error) {
+        //     this.handleFetchError(error);
+        //     return null;
+        // }
+    }
+
+    /**
      * 
-     * @param {string} [username] 
-     * @param {string} [password] 
+     * @param {FormDataEntryValue | null} [username] 
+     * @param {FormDataEntryValue | null} [password] 
      * @returns 
      */
     async login(username, password) {
-        try {
-            let loginData
-            if (username && password) {
-                // console.log('login with credentials');
-                loginData = await userAPI.authenticate(username, password);
-            } else {
-                // console.log('login without credentials, fetch active');
-                loginData = await userAPI.getCurrentSession();
-                // console.log(loginData);
-            }
-            if (loginData.success) {
-                this.#isLoggedIn = true;
-                await this.updateData(["all"], loginData.data.user_id);
-                if (this.#sessionData?.user) {
-                    this.messageSocket = new GlobalSockHandler(this.#sessionData?.user);
-                    await this.messageSocket.init();
-                }
-
-                else throw new Error("NO USER DATA?!?!")
-            }
-            return loginData;
-        } catch (error) {
-            this.handleFetchError(error);
-            return null;
+        await createFetcher(true);
+        /** @type {APITypes.ApiResponse<APITypes.LoginData> | undefined} */
+        let loginResponse;
+        if (isStr(username) && isStr(password)) {
+            loginResponse = await this.fetchResponse(userAPI.authenticate(username, password));
+        } else if (username === undefined && password === undefined) {
+            loginResponse = await this.fetchResponse(userAPI.getCurrentSession());
+        } else {
+            return this.createFetcherError('invalid login data');
         }
+
+        if (!loginResponse) {
+            return this.createFetcherError('unable to fetch data');
+        }
+
+        if (!loginResponse.success) {
+            return this.createFetcherError(loginResponse.message);
+        }
+
+        this.#isLoggedIn = true;
+        await createFetcher(true);
+        await this.updateData(["all"], loginResponse.data.user_id);
+        if (this.#sessionData == undefined || this.#sessionData.user == undefined) {
+            this.#isLoggedIn = false;
+            this.#sessionData = undefined
+            return this.createFetcherError('unable to fetch userdata');
+        }
+    
+        this.messageSocket = new GlobalSockHandler(this.#sessionData.user);
+        await this.messageSocket.init();
+        if (router.isInitialized) {
+            router.mountRootAndGoTo('/');
+        }
+
+        return null;
+            
+        
+            
+      
+
+        // }
+        // try {
+        //     await createFetcher(true);
+            
+        //     let loginData
+        //     if (username && password) {
+        //         // console.log('login with credentials');
+        //         loginData = await userAPI.authenticate(username, password);
+                
+        //         await createFetcher(true);
+        //     } else {
+        //         // console.log('login without credentials, fetch active');
+        //         loginData = await userAPI.getCurrentSession();
+                
+        //         // console.log(loginData);
+        //     }
+        //     if (loginData.success) {
+        //         this.#isLoggedIn = true;
+        //         await createFetcher(true);
+        //         await this.updateData(["all"], loginData.data.user_id);
+        //         if (this.#sessionData?.user) {
+        //             this.messageSocket = new GlobalSockHandler(this.#sessionData?.user);
+        //             await this.messageSocket.init();
+        //         }
+
+        //         else throw new Error("NO USER DATA?!?!")
+        //     } else {
+        //         await createFetcher(false);
+        //     }
+        //     return loginData;
+        // } catch (error) {
+        //     this.handleFetchError(error);
+        //     return null;
+        // }
+    }
+
+    async clearSession() {
+        this.#isLoggedIn = false;
+        this.#sessionData = undefined;
+        await createFetcher(false);
+        this.messageSocket?.closeSocket();
+        this.messageSocket = null;
+        this.#pubsub.publish(this.#sessionData);
     }
 
     async logout() {
         try {
             await userAPI.logout();
-            this.#isLoggedIn = false;
-            this.#sessionData = undefined;
-            this.messageSocket?.closeSocket();
-            this.messageSocket = null;
-            this.#pubsub.publish(this.#sessionData);
+            await this.clearSession();
         } catch (error) {
             this.handleFetchError(error);
         }
     }
 
-    // /**
-    //  * @param {"friends" | "blocked" | "game_invitations_received" | "game_invitations_sent" | "friend_requests_received" | "friend_requests_sent"} list
-    //  * @param {number} user_id
-    //  * @returns {APITypes.FriendUserData | APITypes.BlockedUserData | APITypes.GameInvitationItem | APITypes.FriendRequestItem | undefined}
-    //  */
-    // getUserFromList(list, user_id) {
-    //     if (!this.#isLoggedIn || !this.#sessionData) return;
-    //     let item;
-    //     // if (list in this.#sessionData) item = this.#sessionData[list];
-
-    //     if (list === "friend_requests_received")
-    //         return this.#sessionData.friend_requests_received?.find((i)=> i.id == user_id);
-    //     else if (list === "friend_requests_sent")
-    //         return this.#sessionData.friend_requests_sent?.find((i)=> i.id == user_id);
-    //     else if (list === "game_invitations_received")
-    //         return this.#sessionData.game_invitations_received?.find((i)=> i.id == user_id);
-    //     else if (list === "game_invitations_sent")
-    //         return this.#sessionData.game_invitations_sent?.find((i)=> i.id == user_id);
-    //     else if (list == "friends" && this.#sessionData.user)
-    //         return this.#sessionData.user.friends?.find((i)=> i.id == user_id);
-    //     else if (list == "blocked" && this.#sessionData.user)
-    //         return this.#sessionData.user.blocked?.find((i)=> i.id == user_id);
-    // }
-
-    // if (list === "friend_requests_received") item = this.#sessionData.friend_requests_received;
-    // else if (list === "friend_requests_sent") item = this.#sessionData.friend_requests_sent;
-    // else if (list === "game_invitations_received") item = this.#sessionData.game_invitations_received;
-    // else if (list === "game_invitations_sent") item = this.#sessionData.game_invitations_sent;
-    // else if (list == "friends" && this.#sessionData.user) item = this.#sessionData.user.friends;
-    // else if (list == "blocked" && this.#sessionData.user) item = this.#sessionData.user.blocked;
-
+  
     /** @param {number} user_id */
     getReceivedFriendRequest = (user_id) => this.#sessionData?.friend_requests_received?.find((i)=> i.id === user_id);
     /** @param {number} user_id */
@@ -405,6 +563,10 @@ export class SessionStore {
     /** @param {number} schedule_id */
     getGameByScheduleId = (schedule_id) =>
         this.#sessionData?.game_schedule?.find((i)=> i.schedule_id === schedule_id);
+
+    /** @param {number | null} [tournament_id] */
+    getTournamentById = (tournament_id) => tournament_id == undefined ? undefined
+        : this.#sessionData?.tournaments?.find((i)=> i.id === tournament_id);
 
     /** @param {"all" | APITypes.GameMode} mode */
     getGamesByGameMode = (mode) =>
@@ -451,8 +613,10 @@ export class SessionStore {
     */
     async createTournament(tournamentName, mode, players) {
         if (!this.#isLoggedIn || !this.#sessionData) return;
-        const d = await gameAPI.createTournament(tournamentName, mode, players);
-        await this.updateData(["game_invitations_sent"]);
+        const d = await this.fetchShort(gameAPI.createTournament(tournamentName, mode, players));
+        if (d !== false) {
+            await this.updateData(["game_invitations_sent"]);
+        }
         return d;
     }
 
@@ -462,8 +626,11 @@ export class SessionStore {
             const ret = await userAPI.postProfile(this.#sessionData?.user?.id, formData);
             await this.updateData(["user"]);
             // console.log('res uodate user data: ', ret);
-            if (ret.statuscode === 200)
+            if (ret.statuscode === 200) {
                 document.dispatchEvent(new ToastNotificationSuccessEvent(ret.message))
+            } else {
+                document.dispatchEvent(new ToastNotificationErrorEvent(ret.message))
+            }
         } catch (error) {
             this.handleFetchError(error);
         }
@@ -482,9 +649,10 @@ export class SessionStore {
         console.log('SESSIONSERVICE: updateData: ', lists);
         
         if (!user_id) throw new Error("unable to fetch data without the user id");
-        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<APITypes.GameResultItem[]> | APITypes.ApiResponse<APITypes.TournamentItem[]> > []} */
+        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<{ history: APITypes.GameScheduleItem[]; max_pages: number; }> | APITypes.ApiResponse<APITypes.TournamentItem[]> > []} */
         let promises = [];
-        if (lists.length == 1 && lists[0] == "all") {
+        if (1) {
+        // if (lists.length == 1 && lists[0] == "all") {
             // console.log('fetch all');
             lists = ["user", "friend_requests_received", "friend_requests_sent", "game_invitations_received", "game_invitations_sent", "game_schedule", "game_results", "tournaments"]
             promises = [
@@ -536,8 +704,16 @@ export class SessionStore {
             if (this.#sessionData === undefined) this.#sessionData = {}
             data.forEach((val, i) => {
                 // console.log('foreach push.., list[i]', lists[i], ", val: ", val);
-                if (val.statuscode !== 200) document.dispatchEvent(new ToastNotificationErrorEvent(val.message))
-                else if (this.#sessionData) this.#sessionData[lists[i]] = val.data
+                if (val.statuscode !== 200) {
+                    document.dispatchEvent(new ToastNotificationErrorEvent(val.message))
+                } else if (this.#sessionData) {
+                    if (Object.hasOwn(val.data, 'history')) {
+                        // @ts-ignore
+                        this.#sessionData[lists[i]] = val.data.history;
+                    } else {
+                        this.#sessionData[lists[i]] = val.data
+                    }
+                }
             });
             this.#pubsub.publish(this.#sessionData);  
         } catch (error) {
@@ -561,10 +737,10 @@ export class SessionStore {
                 await this.updateData(["friend_requests_sent"]);
             } else if (action === "remove-friend") {
                 data = await friendAPI.removeFriend(user_id);
-                await this.updateData(["user"]);
+                await this.updateData(["user", 'game_invitations_received', 'game_invitations_sent', 'game_schedule']);
             } else if (action === "block-user") {
                 data = await friendAPI.blockUser(user_id);
-                await this.updateData(["user"]);
+                await this.updateData(["user", 'game_invitations_received', 'game_invitations_sent', 'game_schedule']);
             } else if (action === "unblock-user") {
                 data = await friendAPI.unblockUser(user_id);
                 await this.updateData(["user"]);
@@ -633,10 +809,16 @@ export class SessionStore {
         }
     }
 
+    /** @type {Map<number, APITypes.UserData>} */
+    cachedProfileData = new Map();
+    /** @type {Map<number, APITypes.GameScheduleItem[]>} */
+    cachedProfileGameHistoryData = new Map();
+
+
     /**
      * @param {BaseBase} [host]
      * @param {boolean} [force] 
-     * @returns {PubSubConsumer<APITypes.UserSession>}
+     * @returns {PubSubConsumer<APITypes.UserSession | undefined>}
      */
     subscribe(host, force = false) {
         // // console.log('subscribe to sessionService');
@@ -645,553 +827,11 @@ export class SessionStore {
 
     #pubsub = new PubSub();
 
-    /**
-    //  * @param {"friend-reject" | "friend-accept" | "friend-cancel" | "game-reject" | "game-accept" | "game-cancel"} action
-    //  * @param {number} request_id 
-    //  */
-    // async handleRequestWebsocket(action, request_id) {
-    //     if (!this.#isLoggedIn || !this.#sessionData) return;
-    //     let toUpdate = [];
-    //     if (action === "game-accept") {
-    //         this.pushToNotificationSocket({command: "accept_game_invitation", notification_id: request_id});
-    //         toUpdate = ["game_invitations_received", "game_schedule"];
-        
-    //     } else if (action === "game-reject") {
-    //         this.pushToNotificationSocket({command: "reject_game_invitation", notification_id: request_id});
-    //         toUpdate = ["game_invitations_received"]
-        
-    //     } else if (action === "game-cancel") {
-    //         toUpdate = ["game_invitations_sent"]
-        
-    //     } else if (action === "friend-accept") {
-    //         this.pushToNotificationSocket({command: "accept_friend_request", notification_id: request_id});
-    //         toUpdate = ["friend_requests_received", "user"]
-        
-    //     } else if (action === "friend-reject") {
-    //         this.pushToNotificationSocket({command: "reject_friend_request", notification_id: request_id});
-    //         toUpdate = ["friend_requests_received"]
-        
-    //     } else if (action === "friend-cancel") {
-    //         toUpdate = ["friend_requests_sent"]
-    //     }
-    //     setTimeout(async () => {
-    //         await this.updateData(toUpdate);
-    //     }, 1000);
-    // }
+    get session() {
+        return this.#sessionData;
+    }
 
-    // /**
-    //  * @typedef {"message" | "open" | "close" | "error"} SocketEventType
-    //  */
-    // /**
-    //  * @typedef {((e: Event) => void)} SocketHandler
-    //  */
-
-    // /** @type {Map<SocketEventType, SocketHandler>} */
-    // #socketHandlerMap = new Map();
-    // /**
-    //  * @param {SocketEventType} type 
-    //  * @param {SocketHandler} handler
-    //  */
-    // addNotificationMessageHandler(type, handler) {
-    //     console.log('addNotificationMessageHandler');
-    //     this.#socketHandlerMap.set(type, handler);
-    //     if (type === "open" && this.#openSockerEvent)
-    //         handler(this.#openSockerEvent);
-    // }
-
-    // /** @param {Event | MessageEvent} e */
-    // onSocketEvent = (e) => {
-    //     const jo = e.type;
-    //     // console.log('socket event: ', e);
-    //     if (jo === "close" || jo === "error" || jo === "open" || jo === "message") {
-    //         if (jo === "open")
-    //             this.#openSockerEvent = e;
-    //         const hh = this.#socketHandlerMap.get(jo);
-    //         // console.log(hh);
-    //         if (hh) hh(e);
-    //     }
-    // }
-    // #openSockerEvent;
-
-    // /** @type {WebSocket | null} */
-    // notificationSocket = null;
-    // #initNotificationSocket() {
-    //     this.notificationSocket = new WebSocket(`wss://api.${window.location.host}/`);
-    //     if (this.notificationSocket.readyState == WebSocket.OPEN)
-    //         console.log("Notification Socket OPEN complete.")
-    //     else if (this.notificationSocket.readyState == WebSocket.CONNECTING)
-    //         console.log("Notification Socket connecting..")
-
-    //     this.notificationSocket.addEventListener("open", this.onSocketEvent);
-    //     this.notificationSocket.addEventListener("error", this.onSocketEvent);
-    //     this.notificationSocket.addEventListener("message", this.onSocketEvent);
-    //     this.notificationSocket.addEventListener("close", this.onSocketEvent);
-    // }
-
-    //  /** @param {NotificationTypes.NotificationCommand} command */
-    // pushToNotificationSocket(command) {
-    //     if (this.notificationSocket)
-    //         this.notificationSocket.send(JSON.stringify(command));
-    // }
 }
 
 export const sessionService = new SessionStore();
 
-// export class SessionStore {
-//     static loginStates = {
-//         login_get_error_no_session: "no session",
-//         login_get_ok_active_session: "You have an active session.",
-//         login_post_error_credentials: "Invalid credentials",
-//         login_post_error_account_disabled: "Account is disabled",
-//         login_post_ok: "Login Successful",
-//     }
-
-//     constructor() {}
-//     #isLoggedIn = false;
-
-//     /** @type {APITypes.UserData | undefined} */
-//     #userData;
-//     get isLoggedIn() {
-//         return (this.#isLoggedIn);
-//     }
-//     async fetchActiveSession() {
-// // //         // console.log("initial fetch to check active session");
-//         try {
-//             const loginData = await fetcher.$get("/login");
-//             if (!loginData || !loginData.success) {
-//                 this.#pubsub.publish(this.#userData);
-//                 return false;
-//             } else {
-//                 await this.#fetchSessionUser(loginData.user_id);
-//                 this.#pubsub.publish(this.#userData);
-//             }
-//         }
-//         catch {
-// // //             // console.log(error)
-//             return false;
-//         }
-//         // catch (error) {
-// // //         //     console.log(error)
-//         //     return false;
-//         // }
-
-//     }
-
-//     async login(username, password) {
-//         const loginData = await fetcher.$post("/login", { bodyData: { username, password } } );
-// // //         // console.log("session: login: loginData: ", loginData);
-//         if (loginData.success === true) {
-//             await this.#fetchSessionUser(loginData.user_id);
-// // //             // console.log("login: after fetch user");
-
-//             this.#pubsub.publish(this.#userData);
-//         }
-//         return (loginData);
-
-//     }
-
-//     async logout() {
-//         try {
-//             await fetcher.$post("/logout", {})
-//             this.#isLoggedIn = false;
-//             this.#userData = undefined;
-//             this.#pubsub.publish(this.#userData);
-
-//         } catch (error) {
-// // //             console.log(error)
-//         }
-//     }
-
-//     /** @param {number} user_id @returns {APITypes.FriendUserData | undefined} */
-//     getFriend(user_id) {
-//         if (this.#userData)
-//             return this.#userData.friends.find((friend)=>friend.id === user_id);
-//     }
-//     /** @param {number} user_id @returns {APITypes.FriendUserData | undefined} */
-//     getBlocked(user_id) {
-//         if (this.#userData)
-//             return this.#userData.friends.find((friend)=>friend.id === user_id);
-//     }
-//     /** @param {number} user_id @returns {APITypes.RequestUserData | undefined} */
-//     getSentRequest(user_id) {
-//         if (this.#userData)
-//             return this.#userData.requestsSent.find((friend)=>friend.id === user_id);
-//     }
-//     /** @param {number} user_id @returns {APITypes.RequestUserData | undefined} */
-//     getReceivedRequest(user_id) {
-//         if (this.#userData)
-//             return this.#userData.requestsReceived.find((friend)=>friend.id === user_id);
-//     }
-
-//     getInvited(user_id) {
-//         if (this.#userData) {
-//             const sent = this.#userData.gameInvitationsSent.find((friend)=>friend.id === user_id);
-//             if (sent) return sent;
-//             return this.#userData.gameInvitationsReceived.find((friend)=>friend.id === user_id);
-//         }
-//     }
-
-//     async refetchSessionUserData() {
-//         if (!this.#isLoggedIn) return ;
-//         await this.#fetchSessionUser(this.#userData?.id);
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     #fetchSessionUser(id) {
-//         return Promise.all([
-//             fetcher.$get(`/profile/${id}`),
-//             this.#fetchRequestsReceived(id),
-//             this.#fetchRequestsSent(id),
-//             this.#fetchGameInvitationsReceived(id),
-//             this.#fetchGameInvitationsSent(id),
-//             this.#fetchGameSchedule(id)
-//         ])
-//         .then((data)=> {
-//             if (data[0] && data[0].success === false)
-//                 Promise.reject(data[0]);
-//             if (data[1] && data[1].success === false)
-//                 Promise.reject(data[1].message);
-//             if (data[2] && data[2].success === false)
-//                 Promise.reject(data[2].message);
-//             if (data[3] && data[3].success === false)
-//                 Promise.reject(data[3].message);
-//             if (data[4] && data[4].success === false)
-//                 Promise.reject(data[4].message);
-//             if (data[5] && data[5].success === false)
-//                 Promise.reject(data[5].message);
-// // //             // console.log("fetch session user data:" , data);
-//             this.#isLoggedIn = true;
-//             this.#userData = data[0];
-//             if (this.#userData) {
-//                 this.#userData.requestsReceived = data[1].data;
-//                 this.#userData.requestsSent = data[2].data;
-//                 this.#userData.gameInvitationsReceived = data[3].data;
-//                 this.#userData.gameInvitationsSent = data[4].data;
-//                 this.#userData.gameSchedule = data[5].data;
-//             }
-// // //             // console.log("userData: ", this.#userData);
-//         })
-//     }
-//     #fetchRequestsReceived(id) {
-//         return fetcher.$get(`/friend/requests/${id}`);
-//     }
-//     #fetchRequestsSent(id) {
-//         return fetcher.$get(`/friend/requests-sent/${id}`);
-//     }
-//     #fetchGameInvitationsReceived(id) {
-//         return fetcher.$get(`/game/invites-recieved`);
-//     }
-//     #fetchGameInvitationsSent(id) {
-//         return fetcher.$get(`/game/invites-sent`);
-//     }
-//     #fetchGameSchedule(id) {
-//         return fetcher.$get(`/game/schedule`);
-//     }
-
-//     async blockUser(user_id) {
-//         if (!this.#isLoggedIn) return ;
-//         await fetcher.$get(`/friend/block/${user_id}`);
-//         await this.#fetchSessionUser(this.#userData?.id);
-//         this.#pubsub.publish(this.#userData);
-//     }
-//     async unblockUser(user_id) {
-//         if (!this.#isLoggedIn) return ;
-//         await fetcher.$get(`/friend/unblock/${user_id}`);
-//         await this.#fetchSessionUser(this.#userData?.id);
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     async removeFriend(id) {
-//         if (!this.#isLoggedIn) return ;
-//         await fetcher.$post("/friend/remove", {bodyData: {receiver_id: id}});
-//         await this.#fetchSessionUser(this.#userData?.id);
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     async sendFriendRequest(id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-// // //         console.log("api - await send friend request");
-//         await fetcher.$post("/friend/request", {bodyData: {receiver_id: id}});
-// // //         console.log("api - awaiting done send friend request");
-//         const data = await this.#fetchRequestsSent(this.#userData?.id);
-//         this.#userData.requestsSent = data.data;
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     async cancelFriendRequest(id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-// // //         // console.log("cancel friend request: id: ", id);
-//         await fetcher.$get(`/friend/request/cancel/${id}`);
-//         // await fetcher.$post("/friend/request/cancel", {bodyData: {receiver_id: id}});
-//         const data = await this.#fetchRequestsSent(this.#userData.id);
-//         this.#userData.requestsSent = data.data;
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     async acceptFriendRequest(id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-// // //         // console.log("accept friend request: id: ", id);
-//         await fetcher.$get(`/friend/request/accept/${id}`);
-//         const data = await this.#fetchRequestsReceived(this.#userData.id);
-//         this.#userData.requestsReceived = data.data;
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     async rejectFriendRequest(id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-//         await fetcher.$get(`/friend/request/reject/${id}`);
-//         const data = await this.#fetchRequestsReceived(this.#userData.id);
-//         this.#userData.requestsReceived = data.data;
-//         this.#pubsub.publish(this.#userData);
-//     }
-
-//     async sendGameInvitation(user_id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-//         // await fetcher.$post(`/game/invite/${user_id}`, {});
-//         await fetcher.$post(`/game/invite/${user_id}`, {bodyData: {
-//             game_id: 0,
-//             game_mode: "1vs1",
-//             tournament: null
-//         }});
-//         const data = await this.#fetchGameInvitationsSent();
-//         this.#userData.gameInvitationsSent = data.data;
-//     }
-//     async acceptGameInvitation(invitation_id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-//         await fetcher.$post(`/game/invite/accept/${invitation_id}`, {});
-//         const data = await this.#fetchGameInvitationsReceived();
-//         this.#userData.gameInvitationsReceived = data.data;
-//     }
-//     async rejectGameInvitation(invitation_id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-//         await fetcher.$post(`/game/invite/reject/${invitation_id}`, {});
-//         const data = await this.#fetchGameInvitationsReceived();
-//         this.#userData.gameInvitationsReceived = data.data;
-//     }
-//     async startGameByScheduleId(schedule_id) {
-//         if (!this.#isLoggedIn || !this.#userData) return ;
-//         await fetcher.$post(`/game/play/${schedule_id}`, {});
-//     }
-
-//     subscribe(host, force=false) {
-//         return this.#pubsub.subscribe(host, this.#userData, force);
-//     }
-
-//     #pubsub = new PubSub();
-
-// }
-
-// export const sessionService = new SessionStore();
-
-// // /**
-// //  * @typedef {import('./api_helper.js').JsonObj} LoginData
-// //  * @property {boolean} success
-// //  * @property {string} message
-// //  * @property {number} [user_id]
-// //  */
-
-// // /**
-// //  * @typedef {import('./types.ts').JSONObject} LoginData
-// //  * @property {boolean} success
-// //  * @property {string} message
-// //  * @property {number} [user_id]
-// //  */
-
-// // /**
-// //  * @typedef {Object} UserData
-// //  * @property {string} avatar
-// //  * @property {string} email
-// //  * @property {string} username
-// //  * @property {string} first_name
-// //  * @property {string} last_name
-// //  * @property {string} last_name
-// //  * @property {Array<any>} friends
-// //  * @property {boolean} is_friend
-// //  * @property {boolean} is_self
-// //  * @property {string} last_login
-// //  */
-
-// function getUserData(id) {
-//     return fetcher.$get(`/profile/${id}`);
-// }
-
-// export class SessionStore {
-//     static loginStates = {
-//         login_get_error_no_session: "no session",
-//         login_get_ok_active_session: "You have an active session.",
-//         login_post_error_credentials: "Invalid credentials",
-//         login_post_error_account_disabled: "Account is disabled",
-//         login_post_ok: "Login Successful",
-//     }
-
-//     #handleError(error) {
-// // // //         console.log(error);
-//     }
-
-//     constructor() {}
-//     #isLoggedIn = false;
-//     #userData;
-//     get isLoggedIn() {
-//         return (this.#isLoggedIn);
-//     }
-//     async fetchActiveSession() {
-// // // //         console.log("initial fetch to check active session");
-//         try {
-//             /** @type {import('./types.ts').LoginData} */
-//             const loginData = await fetcher.$get("/login");
-//             if (!loginData || !loginData.success) {
-// // // //                 console.log("NO ACTIVE SESSION")
-//                 this.#pubsub.publish(this.#userData);
-//                 return false;
-//             }
-// // // //             console.log("joooo ACTIVE SESSION")
-//             await this.#setloggedUser(loginData);
-//         } catch (error) {
-// // // //             console.log("error trying to fetch active session: ");
-// // // //             console.log(error)
-//             return false;
-//         }
-
-//         // .then(this.setloggedUser.bind(this))
-//         // .catch(this.#handleError)
-//     }
-
-//     /** @param {import('./types.ts').LoginData} loginData  */
-//     async #setloggedUser(loginData) {
-// // // //         console.log("sessionStore: set logged user, loginData: ", loginData);
-//         /** @type {import('./types.ts').UserData} */
-//         const data = await getUserData(loginData.user_id);
-// // // //         console.log("userData: ", data);
-//         this.#userData = data;
-//         this.#isLoggedIn = true;
-// // // //         console.log("user logged in, user to publish: ", this.#userData);
-//         this.#pubsub.publish(this.#userData);
-//         // // return new Promise((resolve, reject)=> {
-//         // //     if (!loginData.user_id || typeof loginData.user_id !== "number")
-//         // //         reject(new Error("invalid loginData, no user_id"));
-//         // // })
-//         // fetcher.$get(`/profile/${loginData.user_id}`)
-//         // .then((data) => {
-// // // //         //     console.log("my user data: ", data);
-//         //     this.#userData = data;
-//         //     this.#isLoggedIn = true;
-//         //     this.#pubsub.publish(this.#userData);
-
-//         // })
-//         // .catch(this.#handleError)
-//     }
-
-//     async login(username, password) {
-// // // //         console.log("SessionStore: login");
-//         const loginData = await fetcher.$post("/login", { bodyData: { username, password } } );
-// // // //         console.log("LOGIN::!!!!: data: ", loginData);
-//         if (loginData.success === true)
-//             await this.#setloggedUser(loginData);
-//         return (loginData);
-
-//         // return new Promise((reject, resolve) => {
-//         //     fetcher.$post("/login", { bodyData: { username, password } } )
-//         //         .then((data)=> {
-//         //             this.setloggedUser.bind(this);
-//         //             router.go("/")
-//         //         })
-//         //         .catch(this.#handleError);
-
-//         // });
-//     }
-
-//     async logout() {
-// // // //         console.log("SessionStore: logout");
-//         try {
-//             await fetcher.$post("/logout", {})
-//             this.#isLoggedIn = false;
-//             this.#userData = undefined;
-//             this.#pubsub.publish(this.#userData);
-
-//         } catch (error) {
-
-//         }
-//     }
-
-//     // #dataProxy = new Proxy(this.#userData, {set: ()=>false});
-
-//     subscribe(host) {
-//         return this.#pubsub.subscribe(host, this.#userData);
-//     }
-
-//     #pubsub = new PubSub();
-
-// }
-
-// export const sessionService = new SessionStore();
-
-// class SessionStore {
-
-//     #handleError(error) {
-// // // //         console.log(error);
-//     }
-
-//     constructor() {
-
-//     }
-//     #isLoggedIn = false;
-//     #userData;
-//     get isLoggedIn() {
-//         return (this.#isLoggedIn);
-//     }
-//     async fetchActiveSession() {
-// // // //         console.log("initial fetch to check active session");
-//         fetcher.$get("/login")
-//         .then(this.setloggedUser.bind(this))
-//         .catch(this.#handleError)
-//     }
-
-//     /** @param {LoginData} loginData  */
-//     setloggedUser(loginData) {
-// // // //         console.log("sessionStore: set logged user");
-//         if (!loginData.user_id || typeof loginData.user_id !== "number") throw new Error("unable!");
-//         fetcher.$get(`/profile/${loginData.user_id}`)
-//         .then((data) => {
-// // // //             console.log("my user data: ", data);
-//             this.#userData = data;
-//             this.#isLoggedIn = true;
-//             this.#pubsub.publish(this.#userData);
-
-//         })
-//         .catch(this.#handleError)
-//     }
-
-//     login(username, password) {
-// // // //         console.log("SessionStore: login");
-//         fetcher.$post("/login", { bodyData: { username, password } } )
-//             .then((data)=> {
-//                 this.setloggedUser.bind(this);
-//                 router.go("/")
-//             })
-//             .catch(this.#handleError);
-//     }
-
-//     logout() {
-// // // //         console.log("SessionStore: logout");
-//         fetcher.$post("/logout", {})
-//         .then((data) => {
-//             this.#isLoggedIn = false;
-//             // this.#userData = {};
-//             this.#userData = undefined;
-//             this.#pubsub.publish(this.#userData);
-//             router.go("/");
-//         })
-//         .catch(this.#handleError);
-//     }
-
-//     // #dataProxy = new Proxy(this.#userData, {set: ()=>false});
-
-//     subscribe(host) {
-//         return this.#pubsub.subscribe(host);
-//     }
-
-//     #pubsub = new PubSub();
-
-// }
-
-// export const sessionService = new SessionStore();

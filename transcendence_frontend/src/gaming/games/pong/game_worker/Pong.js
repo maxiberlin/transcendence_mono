@@ -89,13 +89,7 @@ export class Pong {
         this.#paused = false;
         this.#started = false;
         this.#isRemote = remote;
-        this.frame = useFrame(() => {
-            // console.log('render once');
-            this.manager.draw()
-        }, (a,b,c,d) => {
-            // console.log('render - bef frame');
-            this.render(a,b,c,d)
-        });
+        this.frame = useFrame(this.manager.draw.bind(this.manager), this.render.bind(this));
     }
     #paused;
     #started;
@@ -174,8 +168,10 @@ export class PongLocal extends Pong {
         this.manager.paddleRight.update(elapsedTimeSec)
         if (this.isRunning()) {
             const score = this.manager.ball.updateBall(elapsedTimeSec, this.manager.paddleLeft, this.manager.paddleRight);
-            if (score !== "none")
-                this.manager.makeAction(score, "local-set-score-check-win-message-main");
+            if (score !== "none") {
+                this.manager.localScored(score);
+                // this.manager.makeAction(score, "local-set-score-check-win-message-main");
+            }
         }
         this.manager.draw();
     }
