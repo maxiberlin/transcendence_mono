@@ -23,6 +23,10 @@ export default class AttributeEventNode extends BaseNode {
             this.destroy();
         } else if (typeof value === 'function' && value !== this.#callback) {
             this.#callback = value;
+        } else if (typeof value === 'object' && value.cb !== this.#callback) {
+            this.#callback = value.cb;
+            if (value.op != undefined) this.#options = value.op;
+
         } else {
             if (value.cb !== this.#callback) this.#callback = value.cb;
             if (value.op !== this.#options || value.cb === undefined) {

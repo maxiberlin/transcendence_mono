@@ -1,5 +1,5 @@
 /* eslint-disable jsdoc/require-returns */
-import { BaseElement, html } from '../../lib_templ/BaseElement.js';
+import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
 import { userStatusMap } from '../../services/api/GlobalSockHandler.js';
 
 /**
@@ -25,6 +25,17 @@ export default class AvatarComponent extends BaseElement {
         this.statustext = false;
         this.props.text_after = '';
         this.props.text_before = '';
+    }
+
+    async init() {
+        await this.updateComplete;
+        this.calcTransform();
+        super.requestUpdate();
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+        this.init();
     }
 
     imgElem = (hasStatus, statusColor) => {
@@ -64,6 +75,23 @@ export default class AvatarComponent extends BaseElement {
         `;
     };
 
+    badgeRef = createRef();
+
+    getSizeAsFloat(value) {
+        const float = value ? parseFloat(value) : NaN;
+        return Number.isNaN(float) ? 0 : float;
+    }
+
+    translationX = 0;
+    translationY = 0;
+    calcTransform() {
+        if (this.badgeRef.value) {
+            const r = this.badgeRef.value.getBoundingClientRect();
+            this.translationX = this.getSizeAsFloat(this.size) - r.width;
+            this.translationY = this.getSizeAsFloat(this.size) - r.height;
+        }
+    }
+
     renderStatus = (hasStatus, statusColor) => {
         if (!hasStatus) return '';
         if (this.statustext)
@@ -73,13 +101,15 @@ export default class AvatarComponent extends BaseElement {
                 ${this.status}
             </span>`;
         if (this.statusborder) return '';
+        
         return html`
-            <span
-                class="text position-absolute rounded-circle bg-${statusColor}"
-                style="padding: 0.4em; transform: translate(${Number(this.size) * 0.66}px, ${Number(this.size) * 0.66}px);"
-            ></span>
-        `;
+            <span ${ref(this.badgeRef)}
+                class="position-absolute rounded-circle bg-${statusColor}"
+                style="padding: 0.4em; transform: translate(${this.translationX}px, ${this.translationY}px);"
+                ></span>
+                `;
     };
+    // style="padding: 0.4em; transform: translate(${Number(this.size) * 0.66}px, ${Number(this.size) * 0.66}px);"
 
     render() {
         const hasStatus = this.status === 'online' || this.status === 'offline';
@@ -94,19 +124,33 @@ export default class AvatarComponent extends BaseElement {
             default:
                 statusColor = '';
         }
+        // return html`
+        //     <span class="d-inline-flex align-items-center">
+        //         ${this.props.text_before}
+        //         <span
+        //             class="position-relative d-flex flex-column"
+        //             style="width:${this.size ?? '0'}px; height:${this.size ?? '0'}px;"
+        //         >
+        //             ${this.src ? this.imgElem(hasStatus, statusColor) : this.svgElem(hasStatus, statusColor)}
+        //             ${this.renderStatus(hasStatus, statusColor)}
+        //         </span>
+        //         ${this.props.text_after}
+        //     </span>
+        // `;
         return html`
-            <span class="d-flex align-items-center">
+            <span class="d-inline-flex align-items-center">
                 ${this.props.text_before}
                 <span
-                    class="position-relative d-flex flex-column"
-                    style="width:${this.size ?? '0'}px; height:${this.size ?? '0'}px;"
+                    class="position-relative d-inline-block"
+                    style="${"width:max-content; height: max-content;"}"
                 >
+                ${this.renderStatus(hasStatus, statusColor)}
                     ${this.src ? this.imgElem(hasStatus, statusColor) : this.svgElem(hasStatus, statusColor)}
-                    ${this.renderStatus(hasStatus, statusColor)}
                 </span>
                 ${this.props.text_after}
             </span>
-        `;
+            `;
+            // ${this.props.text_after}
     }
 }
 customElements.define('avatar-component', AvatarComponent);
@@ -141,31 +185,33 @@ export const avatarLink = (userData, showStatus, linkClasses) => {
         userData.username = userData.inviter
     else if (userData && 'invitee' in userData && typeof userData.invitee === "string")
         userData.username = userData.invitee
-    // status="${showStatus ? userData.online_status ?? 'none' : 'none'}"
+
     
+    // d-inline-flex flex-column ms-2
     return userData == undefined ? '' : html`
-    <a
-        href="/profile/${userData.id ?? 0}"
-        class="${linkClasses ?? ''} link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
-    >
-        <avatar-component
-            size="35"
-            src="${userData.avatar ?? ''}"
-            radius="circle"
-            status=${getUserStatus(userData, showStatus)}
-            .text_after=${Object.hasOwn(userData, 'alias') ? html`
-                <span class="d-inline-flex flex-column m-2 text-truncate">
-                    <small class="text-truncate text-body-secondary">@${userData.username ?? ''}</small>
-                    <span class="text-truncate">${(Object.hasOwn(userData, 'alias')) ? userData.alias : ''}</span>
+        <a
+            href="/profile/${userData.id ?? 0}"
+            class="${linkClasses ?? ''} d-inline-flex align-items-center link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+        >
+            <avatar-component
+                size="40"
+                src="${userData.avatar ?? ''}"
+                radius="circle"
+                status=${getUserStatus(userData, showStatus)}
+            ></avatar-component>
+            ${Object.hasOwn(userData, 'alias') ? html`
+                <span class="d-inline-flex flex-column ms-2 align-items-start">
+                    <small class=" text-body-secondary">@${userData.username ?? ''}</small>
+                    <span >${(Object.hasOwn(userData, 'alias')) ? userData.alias : ''}</span>
                 </span>
             ` : html`
-                <span class="m-2 text-truncate">${userData.username ?? ''}</span>
+                <span class="ms-2">${userData.username ?? ''}</span>
             `}
-        >
-        </avatar-component>
-    </a>
-`};
+        </a>
 
+        `};
+
+//<span class="m-2 text-truncate">${userData.username ?? ''}</span>
 // .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
 
 /**
@@ -181,12 +227,21 @@ export const avatarInfo = (userData, showStatus) => {
         userData.username = userData.invitee
     
     return userData ? html`
-        <avatar-component
-            size="35"
-            src="${userData.avatar ?? ''}"
-            radius="circle"
-            status=${getUserStatus(userData, showStatus)}
-            .text_after=${html`<span class="m-2 text-truncate">${userData.username ?? ''}</span>`}
-        >
-        </avatar-component>
+        <span class="d-inline-flex align-items-center">
+            <avatar-component
+                size="40"
+                src="${userData.avatar ?? ''}"
+                radius="circle"
+                status=${getUserStatus(userData, showStatus)}
+            >
+            </avatar-component>
+            ${Object.hasOwn(userData, 'alias') ? html`
+                <span class="d-inline-flex flex-column ms-2 align-items-start">
+                    <small class=" text-body-secondary">@${userData.username ?? ''}</small>
+                    <span >${(Object.hasOwn(userData, 'alias')) ? userData.alias : ''}</span>
+                </span>
+            ` : html`
+                <span class="ms-2">${userData.username ?? ''}</span>
+            `}
+        </span>
 ` : ''};

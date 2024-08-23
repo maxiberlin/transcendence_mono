@@ -44,10 +44,10 @@
 @import '../node_modules/bootstrap/scss/reboot';
 
 @import '../node_modules/bootstrap/scss/type';
-// @import "bootstrap/scss/images";
+@import "../node_modules/bootstrap/scss/images";
 @import '../node_modules/bootstrap/scss/containers';
 @import '../node_modules/bootstrap/scss/grid';
-@import 'bootstrap/scss/tables';
+@import '../node_modules/bootstrap/scss/tables';
 @import '../node_modules/bootstrap/scss/forms';
 @import '../node_modules/bootstrap/scss/buttons';
 @import '../node_modules/bootstrap/scss/transitions';
@@ -58,8 +58,8 @@
 @import '../node_modules/bootstrap/scss/card';
 // @import "bootstrap/scss/breadcrumb";
 // @import "bootstrap/scss/accordion";
-// @import "bootstrap/scss/pagination";
-// @import "bootstrap/scss/badge";
+@import "../node_modules/bootstrap/scss/pagination";
+@import "../node_modules/bootstrap/scss/badge";
 @import '../node_modules/bootstrap/scss/alert';
 // @import "bootstrap/scss/progress";
 @import '../node_modules/bootstrap/scss/list-group';

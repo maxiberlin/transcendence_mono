@@ -7,16 +7,6 @@ import { SelectedNavLink } from '../src/components/Navs';
 import { SelectedSearchResult } from '../src/routes/social/ProfileSearch';
 
 
-// declare namespace InternalTypes {
-//     interface ToastNotification {
-//         color?: string;
-//         message: string;
-//     }
-
-
-
-// }
-
 export { };
 interface CustomEventMap extends HTMLElementEventMap {
     toast_notification_error: ToastNotificationErrorEvent;

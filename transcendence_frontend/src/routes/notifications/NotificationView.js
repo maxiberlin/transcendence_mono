@@ -49,8 +49,8 @@ export class NotificationView extends BaseElement {
      */
     renderNotificationItem = (notification) =>  {
         return html`
-        <a 
-            href="/profile/${notification.user.id}"
+        <li 
+            
             class="dropdown-item m-0 p-0 d-flex flex-column flex-column align-items-start p-3 w-100">
             <div class="d-flex flex-column align-items-start w-100" >
                 ${avatarLink(notification.user)}
@@ -72,7 +72,7 @@ export class NotificationView extends BaseElement {
             <p class="small m-0 pt-2 timestamp-text">
                 ${notification.natural_timestamp}
             </p>
-        </a>
+        </li>
     `}
 
     renderNoNotification = () => html`
@@ -89,12 +89,15 @@ export class NotificationView extends BaseElement {
         const isMobile = window.innerWidth <= 576;
         // console.log('render notification, update: ', this.notifications);
         
+        console.log('render Notificationsview');
+        
+
         return html`
         <div class="py-2 w-100" >
             <button
                 @shown.bs.dropdown=${ () => {
                     this.DrowdownIsOpen = true;
-                    // console.log('DROPDOWN OPEN');
+                    console.log('DROPDOWN OPEN');
                     
                     sessionService.messageSocket?.setNotificationsAsReadUntil(Math.round(Date.now() / 1000))
                     sessionService.messageSocket?.updateNotificationNaturalTime()
@@ -106,21 +109,22 @@ export class NotificationView extends BaseElement {
                     document.body.classList.remove("overflow-hidden");
                 } }
                 
-                class="btn fs-5 fs-fw d-inline-flex align-items-center"
+                class="btn fs-5 fs-fw d-inline-flex align-items-center justify-content-center position-relative"
                 type="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
+                style="${"width: 3em; height: 2em;"}"
             >
-                <i class="fa-solid fa-bell pe-2"></i>
+                <i class="fa-solid fa-bell"></i>
                 ${this.notifications?.value.unreadCount === 0 ? '' : html`
-                    <span class="badge text-bg-danger rounded-2 px-2  fs-5">
+                    <span style="${"transform: translate(100%, -50%);"}" class="position-absolute top-0 start-0 badge rounded-pill bg-danger text-white">
                         ${this.notifications?.value.unreadCount}
                         <span class="visually-hidden">unread notifications</span>
                     </span>
                     
                 `}
             </button>
-            <div
+            <ul
                 @scroll=${ (e) => { this.onMenuScroll(e) } }
                 style="${"min-width: 350px; max-width: 100vw; max-height: 30em;"}"
                 class="overflow-scroll dropdown-menu scrollable-menu"
@@ -129,7 +133,7 @@ export class NotificationView extends BaseElement {
                 ${this.notifications?.value.messages.length === 0 ? this.renderNoNotification()
                     :  this.notifications?.value.messages.map((n) => this.renderNotificationItem(n))
                 }
-            </div>
+            </ul>
 
         </div>
         `

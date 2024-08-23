@@ -35,7 +35,7 @@ class MetricsCache {
     _childSizeCache = new SizeCache();
     _marginSizeCache = new SizeCache();
     /** @type {Map<number, import('./layout.js').LayoutT.Size & import('./layout.js').LayoutT.Margins>} */
-    _metricsCache = new Map();
+    // _metricsCache = new Map();
 
     /**
      * @param {{ [key: number]: import('./layout.js').LayoutT.Size & import('./layout.js').LayoutT.Margins}} metrics

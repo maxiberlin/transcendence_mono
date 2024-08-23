@@ -6,8 +6,9 @@ $border-radius: 0.4rem;
 // $primary: #7952b3;
 
 $primary-light: #b797e8;
-$primary-dark: #7952b3;
-$primary: $primary-dark;
+$primary: #7952b3;
+$primary-new:rgb(37, 88, 122);
+$primary: $primary-new;
 
 [data-bs-theme='dark'] {
     $primary: $primary-light;

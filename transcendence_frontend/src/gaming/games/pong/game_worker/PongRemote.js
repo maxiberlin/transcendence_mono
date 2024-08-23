@@ -1,256 +1,41 @@
 import { PongObjManager } from './PongObjManager';
-import { getSocketErrorMessage, printCommandResponse, pushMessageToMainThread, ServerMessageMap, useMedian, WebsocketErrorCode } from './utils';
+import { getSocketErrorMessage, parseSnapshot, printCommandResponse, pushMessageToMainThread, ServerMessageMap, useMedian, WebsocketErrorCode } from './utils';
 import { Pong } from './Pong';
 import { GameSocket } from './Socket';
 
-// const useInterval = (intervalHandler) => {
-//     let intervalId;
-//     const onInterval = () => {
-//         intervalHandler();
-//     };
-//     const destroyInterval = () => {
-//         clearInterval(intervalId);
-//     }
-//     const startInterval = (intervalDelay) => {
-//         clearInterval(intervalId);
-//         intervalId = setInterval(onInterval, intervalDelay);
-//     }
-//     return {  startInterval, destroyInterval };
-// }
-// const useTimeout = (timeoutHandler) => {
-//     let timeoutId;
-//     const onTimeout = () => {
-//         timeoutHandler();
-//     };
-//     const destroyTimeout = () => {
-//         clearInterval(timeoutId);
-//     }
-//     const startTimeout = (timeoutDelay) => {
-//         clearTimeout(timeoutId);
-//         timeoutId = setInterval(onTimeout, timeoutDelay);
-//     }
-//     return { startTimeout, destroyTimeout };
-// }
 
-// /**
-//  * 
-//  * 1. packet, get heartbeat interval.
-//  * 2. start ping ->
-//  * 3. get 1. pong ->
-//  * 
-//  * ping
-//  * 500ms
-//  * pong
-//  * 
-//  */
-
-// const useIntervalTimeout = (onInterval, onTimeout) => {
-//     let intervalId;
-//     let timeoutId;
-
-//     const handleTimeout = () => {
-//         onTimeout();
-//     }
-
-//     const startTimeout = (timeoutDelay) => {
-//         clearTimeout(timeoutId);
-//         timeoutId = setTimeout(handleTimeout, timeoutDelay);   
-//     }
-
-//     const handleInterval = (timeoutDelay) => {
-//         onInterval();
-//         startTimeout(timeoutDelay);
-//     }
-
-//     const startInterval = (intervalDelay, timeoutDelay) => {
-//         clearInterval(intervalId);
-//         intervalId = setInterval(handleInterval, intervalDelay, timeoutDelay);
-//     }
-
-    
-
-    
-    
-
-//     const start = (intervalDelay, timeoutDelay) => {
-//         startInterval(intervalDelay)
-//     }
-// }
-
-// class ReconnectFailedError extends Error {}
-// class NetworkError extends Error {}
-
-// const useGameSocket = () => {
-//     let socket;
-
-//     const messageHandlerMap = new ServerMessageMap();
-
-//     let reconnectInterval;
-//     let reconnectTimeout;
-//     let heartBeatInterval;
-//     let heartBeatTimeout;
-//     let heartbeat_ms;
-
-//     let socketReconnectAttempt = false;
-
-//     const cleanUpCloseSocket = () => {
-//         clearInterval(reconnectInterval);
-//         clearTimeout(reconnectTimeout);
-//         clearInterval(heartBeatInterval);
-//         clearTimeout(heartBeatTimeout);
-//         if (socket && socket.readyState === WebSocket.OPEN) {
-//             socket.close();
-//             socket = undefined;
-//         }
-//         // self.close();
-//     }
-
-//     const onSocketMessage = (e) => {
-//         try {
-//             /** @type {PongTypes.GeneralServerMessage} */
-//             const message = JSON.parse(e.data);
-//              /** @type {PongTypes.ServerMessageCallback<any> | undefined} */
-//             let func;
-//             if ('tag' in message) {
-//                 func = messageHandlerMap.getHandler(message.tag);
-//                 if (func) func(message);
-//             } else if ('cmd' in message) {
-//                 func = messageHandlerMap.getHandler(message.cmd);
-//                 if (func) func(message);
-//             }
-//         } catch (error) {
-//             cleanUpCloseSocket();
-//         }
-//     }
-
-
-//     const onSocketOpen = (e) => {
-//         clearInterval(reconnectInterval);
-//         reconnectInterval = undefined;
-//         clearTimeout(reconnectTimeout);
-//         reconnectTimeout = undefined;
-//         socketReconnectAttempt = false;
-//         if (heartbeat_ms != undefined)
-//             startHeartBeat();
-//     }
-
-//     /** @param {Event} e */
-//     const onSocketError = (e) => {
-//         if (socketReconnectAttempt === true) {
-//         } else {
-//             cleanUpCloseSocket();
-//         }
-//     }
-
-//     const onSocketClose = (e) => {
-//         if (socketReconnectAttempt === false) {
-//             socket = undefined;
-//             if (e.code !== WebsocketErrorCode.OK) {
-//                 pushMessageToMainThread({message: "from-worker-error", error: "Server closed the connection", errorCode: e.code});
-//             }
-//             cleanUpCloseSocket();
-//         }
-//     }
-
-
-//     const heartBeatTimeoutHandler = () => {
-//         socket = undefined;
-//         socketReconnectAttempt = true;
-//         clearInterval(heartBeatInterval);
-//         connectSocket();
-//     }
-
-//     const pingInterval = () => {
-//         this.#pushCommandToSocket({cmd: "ping", client_timestamp_ms: this.getGameTimeMs()});
-//         this.heartBeatTimeout = setTimeout(this.heartBeatTimeoutHandler, this.heartbeat_ms + 200);
-//         // console.log('new timeout in interval: ', this.heartBeatTimeout);
-//     }
-
-//     const startHeartBeat = () => {
-//         clearInterval(this.heartBeatInterval);
-//         this.heartBeatInterval = setInterval(this.pingInterval, this.heartbeat_ms);
-//     }
-
-
-
-//     const _socketConnectInterval = () => {
-//         try {
-//             const s = new WebSocket(socketUrl);
-//             s.onopen = onSocketOpen;
-//             s.onerror = onSocketError;
-//             s.onclose = onSocketClose;
-//             s.onmessage = onSocketMessage;
-//             socket = s;
-//         } catch (error) {
-//             console.log('connect failed, try reconnect again: ', error);
-//         }
-//     }
-
-//     const _socketConnectTimeout = () => {
-//         socketReconnectAttempt = false;
-//         cleanUpCloseSocket();
-//     }
-
-//     const connectSocket = () => {
-//         // console.log('connectSocket: init interval for _socketConnectInterval: duration: ', this.reconnectIntervalMs);
-//         socketReconnectAttempt = true;
-//         reconnectInterval = setInterval(this._socketConnectInterval, this.reconnectIntervalMs);
-//         reconnectTimeout = setTimeout(this._socketConnectTimeout, this.reconnectTimeoutMs);
-//     } 
-// }
-
-/**
- * @param {ArrayBuffer} data
- * @returns {PongServerTypes.GameUpdateBinaryItem[]}
- */
-function parseUpdateData(data) {
-    const dataview = new DataView(data);
-    /** @type {PongServerTypes.GameUpdateBinaryItem[]} */
-    const da = [];
-    const size = dataview.getUint32(0, true);
-
-    let i = 0, k = 0;
-    let offs = 4;
-    while (i < size && k < 2) {
-        da.push({
-            tickno: dataview.getUint32(offs, true),
-            timestamp_ms: dataview.getFloat32(offs + 4, true),
-            ball: {
-                x: dataview.getFloat32(offs + 8, true),
-                y: dataview.getFloat32(offs + 12, true),
-            },
-            paddle_left: {
-                x: dataview.getFloat32(offs + 16, true),
-                y: dataview.getFloat32(offs + 20, true),
-            },
-            paddle_right: {
-                x: dataview.getFloat32(offs + 24, true),
-                y: dataview.getFloat32(offs + 28, true),
-            }
-        })
-        offs += 32;
-        ++i;
-        ++k;
-    }
-    // console.log('\n\nNEW UPDATE DECODED:');
-    // da.forEach((i) => {
-    //     console.log('tickno: ', i.tickno);
-    //     console.log('timestamp: ', i.timestamp_ms);
-    //     // console.log('ball x: ', i.ball.x);
-    //     // console.log('ball y: ', i.ball.y);
-    //     // console.log('paddle_left x: ', i.paddle_left.x);
-    //     // console.log('paddle_left y: ', i.paddle_left.y);
-    //     // console.log('paddle_right x: ', i.paddle_right.x);
-    //     // console.log('paddle_right y: ', i.paddle_right.y);
-    // })
-
-    return (da);
-}
 
 export class PongRemote extends Pong {
-    /**@type {GameSocket | undefined} */
-    #socket = undefined;
+    lastSnapshottime = performance.now();
+    maxlastsnap = 0;
+    minlastsnap = 4334565436;
 
+    /** @param {PongServerTypes.GameUpdateBinaryItem[]} snapshots  */
+    insertNewSnapshots(snapshots) {
+        snapshots.forEach((snapshot) => {
+            const last = this.#updateQueueNew.at(-1);
+            if (last == undefined || snapshot.tickno > last.tickno) {
+                this.#updateQueueNew.push(snapshot);
+            } else {
+                const i = this.#updateQueueNew.findIndex(u => u.tickno === snapshot.tickno);
+                if (i !== -1) {
+                    console.log('OLD SNAPSHOT: predicted?: ', this.#updateQueueNew[i].predicted);
+                    this.printSnapshot(this.#updateQueueNew[i])
+                    console.log('NEW SNAPSHOT: ');
+                    this.printSnapshot(snapshot)
+                    
+                    this.#updateQueueNew[i] = snapshot;
+                }
+            }
+        });
+    }
+
+    /** @param {PongServerTypes.GameUpdateBinaryItem} snapshot  */
+    printSnapshot(snapshot) {
+        console.log(`tick: ${snapshot.tickno} time: ${snapshot.timestamp_ms} - paddle left x: ${snapshot.paddle_left.x} y: ${snapshot.paddle_left.y} dx: ${snapshot.paddle_left.dx} dy: ${snapshot.paddle_left.dy}`);
+        console.log(`tick: ${snapshot.tickno} time: ${snapshot.timestamp_ms} - paddle right x: ${snapshot.paddle_right.x} y: ${snapshot.paddle_right.y} dx: ${snapshot.paddle_right.dx} dy: ${snapshot.paddle_right.dy}`);
+        console.log(`tick: ${snapshot.tickno} time: ${snapshot.timestamp_ms} - ball x: ${snapshot.ball.x} y: ${snapshot.ball.y} dx: ${snapshot.ball.dx} dy: ${snapshot.ball.dy}`);
+    }
 
 
     /** @param {ToWorkerGameMessageTypes.Create} d  */
@@ -258,70 +43,84 @@ export class PongRemote extends Pong {
         if (!d.socketUrl) throw new Error('no socket url provided');
         super(d.offscreencanvas, true, d.userId);
         this.socketUrl = d.socketUrl;
-        
-        this.#socket = new GameSocket(d.socketUrl)
-        this.#socket.addHandler("message", (data) => {
-            try {
-                if (data instanceof ArrayBuffer) {
-                    const list = parseUpdateData(data);
-                    let i = 0, size_new = list.length, size_old = this.#updateQueueNew.length;
-                    while (size_new > 0 && size_old > 0 && list[i].tickno < this.#updateQueueNew[0].tickno) {
-                        ++i;
-                    }
-                    while (i < size_new && i < size_old && this.#updateQueueNew[i].tickno === list[i].tickno) {
-                        this.#updateQueueNew[i] = list[i];
-                        ++i;
-                    }
-                    while (i < size_new) {
-                        this.#updateQueueNew.push(list[i]);
-                        ++i;
-                    }
-                    // this.#updateQueueNew.push(list[0]);
-                    return;
-                }
-                /** @type {PongTypes.GeneralServerMessage} */
-                const message = data;
-                /** @type {PongTypes.ServerMessageCallback<any> | undefined} */
-                let func;
-                if ('tag' in message) {
-                    if (message.tag !== "server-game-update")
-                        console.log('server message: ', message.tag);
-                    func = this.#messageHandlerMap.getHandler(message.tag);
-                    if (func) func(message);
-                } else if ('cmd' in message) {
-                    if (message.status_code !== WebsocketErrorCode.OK)
-                        pushMessageToMainThread({message: "from-worker-error", error: message.message, errorCode: message.status_code})
-                    func = this.#messageHandlerMap.getHandler(message.cmd);
-                    if (func) func(message);
-                }
-            } catch (error) {
-                this.#socket?.close();
-                super.quitGame();
-            }
-        });
-        this.#socket.addHandler("disconnected", () => {
-            pushMessageToMainThread({message: "from-worker-client-disconnected", user_id: this.manager.userId ?? -1})
-            super.pauseGame();
-        });
-        this.#socket.addHandler("reconnected", () => {
-            pushMessageToMainThread({message: "from-worker-client-reconnected", user_id: this.manager.userId ?? -1})
-            super.resumeGame();
-        });
-        this.#socket.addHandler("reconnected_failure", () => {
-            super.quitGame();
-            self.close();
-        });
-        
-        this.#socket.addHandler("closed",/** @param {CloseEvent} e */ (e) => {
-            console.log('closed: ', e);
-            if (e.code >= 4000 && e.code !== WebsocketErrorCode.OK)
-                pushMessageToMainThread({message: "from-worker-error", error: e.reason, errorCode: e.code})
+        this.socketworker = new Worker(new URL('./SocketWorker.js', import.meta.url), {
+            type: 'module',
         });
 
+        this.socketworker.onerror = (error) => {
+            console.log('SocketWorker: error: ', error);
+        }
+        this.socketworker.onmessageerror = (error) => {
+            console.log('SocketWorker: onmessageerror: ', error);
+        }
+        this.#pushCommandToSocketWorker({message: 'socket_worker_create', socketUrl: d.socketUrl});
+
+        this.socketworker.onmessage = async (ev) => {
+            /** @type {FromWorkerSocketMessageTypes.FromWorkerMessage} */
+            const msg = ev.data;
+            console.log('onSocketWorkerMessage: ', msg);
+            
+            switch (msg.message) {
+                case 'from-worker-socket-disconnected':
+                    pushMessageToMainThread({message: "from-worker-client-disconnected", user_id: this.manager.userId ?? -1})
+                    super.pauseGame();
+                    break;
+                case 'from-worker-socket-closed':
+                    console.log('closed: ', msg);
+                if (msg.code >= 4000 && msg.code !== WebsocketErrorCode.OK)
+                    pushMessageToMainThread({message: "from-worker-error", error: msg.reason, errorCode: msg.code})
+                    this.socketworker.terminate();
+                    self.close();
+                    break;
+                case 'from-worker-socket-error':
+                    this.socketworker.terminate();
+                    self.close();
+                    break;
+                case 'from-worker-socket-message':
+                    /** @type {PongTypes.ServerMessageCallback<any> | undefined} */
+                    let func;
+                    if (msg.broadcast) {
+                        func = this.#messageHandlerMap.getHandler(msg.broadcast.tag);
+                        if (func) func(msg.broadcast);
+                    } else if (msg.response) {
+                        if (msg.response.status_code !== WebsocketErrorCode.OK)
+                            pushMessageToMainThread({message: "from-worker-error", error: msg.response.message, errorCode: msg.response.status_code})
+                        func = this.#messageHandlerMap.getHandler(msg.response.cmd);
+                        if (func) func(msg.response);
+                    }
+                    break;
+                case 'from-worker-socket-new-snapshots':
+                    this.insertNewSnapshots(msg.snapshots);
+                    break;
+                case 'from-worker-socket-update':
+                    this.#updateQueueNew = msg.snapshots;
+                    break;
+                case 'from-worker-socket-reconnect-failure':
+                    super.quitGame();
+                    this.socketworker.terminate();
+                    self.close();
+                    break;
+                case 'from-worker-socket-reconnected':
+                    pushMessageToMainThread({message: "from-worker-client-reconnected", user_id: this.manager.userId ?? -1})
+                    super.resumeGame();
+                    break;
+                default:
+                    break;
+            }
+        }
+        
+        this.interpolationRatio = 2;
         this.#messageHandlerMap.setHandler("server-game-ready", (b) => {
-            const interpolationRatio = 4;
-            this.#interpolationTimeMs =  (interpolationRatio / b.settings.tick_rate) * 1000;
+            this.#interpolationTimeMs =  (this.interpolationRatio / b.settings.tick_rate) * 1000;
+            // this.#interpolationTimeMs = 200;
             this.#tickDuration = 1000/b.settings.tick_rate
+
+            this.#pushCommandToSocketWorker({message: 'socket_worker_client_start_updates', interval: this.#tickDuration});
+
+            // console.log('tickduration: ', this.#tickDuration);
+            // console.log('this.#interpolationTimeMs: ', this.#interpolationTimeMs);
+            
+            
             this.manager.setSettings(b.settings.max_score, b.settings.point_wait_time_ms, true, b.user_id_left, b.user_id_right);
             this.manager.recreateGameObjects(b.court, b.ball, b.paddle_left, b.paddle_right);
             this.reconnectTimeoutMs = b.reconnect_timeout_sec * 1000;
@@ -330,6 +129,7 @@ export class PongRemote extends Pong {
             pushMessageToMainThread({message: "from-worker-game-ready", startTimeoutSec: b.start_timeout_sec});
             this.frame.renderAtMostOnce();
         });
+      
         this.#messageHandlerMap.setHandler("server-game-start", (b) => {
             // this.#serverGameTime = b.timestamp_ms;
             this.#serverGameTime = 0;
@@ -371,16 +171,24 @@ export class PongRemote extends Pong {
             super.resumeGame();
             pushMessageToMainThread({message: "from-worker-game-resumed"});
         });
+        this.#messageHandlerMap.setHandler('server-game-dismissed', (b) => {
+            pushMessageToMainThread({message: 'from-worker-game-dismissed', user_id: b.user_id});
+        });
         this.#messageHandlerMap.setHandler("client-move", (r) => {
             // console.log('command-response: ', r);
             const prev = this.#commandStack.get(r.id.toString());
             // console.log('command was: ', prev);
         })
         this.#messageHandlerMap.setHandler("server-game-player-scored", (b) => {
-            this.manager.makeAction(b.side, "remote-set-score-message-main")
+            console.log('-----> SCORED');
+            
+            setTimeout(() => {
+                this.manager.remoteScored(b.side);
+            }, this.#interpolationTimeMs);
         })
         this.#messageHandlerMap.setHandler("server-game-end", (b) => {
-            this.manager.makeAction(b.winner_side, "remote-game-end-message-main-winner-side", b.reason, b.game_result)
+            this.manager.remoteEndGame(b.winner_side, b.reason, b.game_result);
+            // this.manager.makeAction(b.winner_side, "remote-game-end-message-main-winner-side", b.reason, b.game_result)
             super.quitGame();
         });
 
@@ -412,151 +220,250 @@ export class PongRemote extends Pong {
 
     #messageHandlerMap = new ServerMessageMap();
     
- 
-    calcTick(elapsedMs) {
-        this.#tickbuffer += elapsedMs;
-        while (this.#tickbuffer > this.#tickDuration) {
-            this.#predictedTick += 1;
-            this.#tickbuffer = this.#tickbuffer - this.#tickDuration
+
+    /**
+     * @param {number} newTickBuffer 
+     * @param {number} predictedTick 
+     * @param {number} tickDuration 
+     * @returns {[number, number]}
+     */
+    getUpdatedTicks(newTickBuffer, predictedTick, tickDuration) {
+        while (newTickBuffer > tickDuration) {
+            predictedTick += 1;
+            newTickBuffer -= tickDuration;
         }
+        return [newTickBuffer, predictedTick];
     }
+ 
 
-
+    elapsmax = 0;
+    elapsmin = 37594225;
+    lastt = performance.now();
     /**
      * @param {number} workerCurrentTimeMs 
      * @param {number} workerLastTimeMs 
      * @param {number} elapsedMs 
      * @param {number} serverCurrentTimeMs 
      */
-    render = (workerCurrentTimeMs, workerLastTimeMs, elapsedMs, serverCurrentTimeMs) => {
-        this.#serverGameTime += elapsedMs;
-        this.calcTick(elapsedMs);
+    render (workerCurrentTimeMs, workerLastTimeMs, elapsedMs, serverCurrentTimeMs) {
+        // this.renderByTimestamp(elapsedMs, workerCurrentTimeMs);
 
-        this.#lastWorkerTimeOnRender = workerCurrentTimeMs;
-        const renderTime = this.#serverGameTime - this.#interpolationTimeMs;
-        const q = this.#updateQueueNew;
-        // console.log('\n\nRENDER -> render time: ', renderTime);
-        // console.log('\nMY QUEUE: ');
-        // q.forEach((i) => {
-        //     console.log('tickno: ', i.tickno);
-        //     console.log('timestamp: ', i.timestamp_ms);
-        // })
-        while (q.length >= 2 && q[1].timestamp_ms < renderTime) {
-            // console.log('\nSHIFT QUEUE: ');
-            // console.log('tickno: ', q[1].tickno);
-            // console.log('timestamp: ', q[1].timestamp_ms);
+        this.elapsmax = Math.max(this.elapsmax, elapsedMs);
+        this.elapsmin = Math.min(this.elapsmin, elapsedMs);
+        if (elapsedMs > 18) {
+            console.log('elapsed: ', elapsedMs, ', max: ',this.elapsmax, ', min: ', this.elapsmin);
+        } 
+        const curr = performance.now();
+        // console.log('DIFF: ', curr-this.lastt);
+        this.lastt = curr;
+        
 
-            q.shift();
-            
-        }
-        const elapsedSec = elapsedMs / 1000;
-        if (q.length >= 2) {
-            // console.log('\nqueuelen: ', q.length);
-            const cU = q[0];
-            const nU = q[1];
-            const elapsed = (renderTime - cU.timestamp_ms) / (nU.timestamp_ms - cU.timestamp_ms);
-            
-            if (this.manager.side === "left") {
-                this.manager.paddleLeft.update(elapsedSec);
-                // this.manager.paddleLeft.interpolate(cU.paddle_left, nU.paddle_left, elapsed)
-                this.manager.paddleRight.interpolate(cU.paddle_right, nU.paddle_right, elapsed);
-            } else {
-                this.manager.paddleRight.update(elapsedSec);
-                // this.manager.paddleRight.interpolate(cU.paddle_right, nU.paddle_right, elapsed);
-                this.manager.paddleLeft.interpolate(cU.paddle_left, nU.paddle_left, elapsed)
-            }
-            this.manager.ball.interpolate(cU.ball, nU.ball, elapsed);
-        } else {
-            // console.log('extrapolate remote');
-            
-            this.manager.paddleRight.update(elapsedSec);
-            this.manager.paddleLeft.update(elapsedSec);
-            this.manager.ball.updateBall(elapsedSec);
-        }
-        this.manager.draw();
+        this.renderByTimestampNew(elapsedMs, workerCurrentTimeMs);
     }
-    // /**
-    //  * @param {number} workerCurrentTimeMs 
-    //  * @param {number} workerLastTimeMs 
-    //  * @param {number} elapsedMs 
-    //  * @param {number} serverCurrentTimeMs 
-    //  */
-    // render = (workerCurrentTimeMs, workerLastTimeMs, elapsedMs, serverCurrentTimeMs) => {
-    //     this.#serverGameTime += elapsedMs;
-    //     this.calcTick(elapsedMs);
-    //     this.#lastWorkerTimeOnRender = workerCurrentTimeMs;
 
-    //     const ticksAhead = 3;
-    //     while (this.#updateQueue.length >= 2 && this.#updateQueue[1].tickno < this.#predictedTick - ticksAhead) {
-    //         this.#updateQueue.shift();
-    //         console.log('SHIFT QUEUE: ');
-    //     }
-    //     const elapsedSec = elapsedMs / 1000;
-    //     if (this.#updateQueue.length >= 2) {
-    //         console.log('queuelen: ', this.#updateQueue.length);
-    //         const cU = this.#updateQueue[0];
-    //         const nU = this.#updateQueue[1];
-    //         // const elapsed = (renderTime - cU.timestamp_ms) / (nU.timestamp_ms - cU.timestamp_ms);
-    //         const elapsed = this.#tickbuffer;
-    //         console.log('tickbuffer:', this.#tickbuffer, ', predicted tick: ', this.#predictedTick, ', stick: ', cU.tickno, ', ntick: ', nU.tickno);
-    //         this.manager.ball.interpolate(cU.ball, nU.ball, elapsed);
-    //         if (this.manager.side === "left") {
-    //             // this.manager.paddleLeft.update(elapsedSec);
-    //             this.manager.paddleRight.interpolate(cU.paddle_right, nU.paddle_right, elapsed);
-    //             this.manager.paddleLeft.interpolate(cU.paddle_left, nU.paddle_left, elapsed)
-    //         } else {
-    //             // this.manager.paddleRight.update(elapsedSec);
-    //             this.manager.paddleLeft.interpolate(cU.paddle_left, nU.paddle_left, elapsed)
-    //             this.manager.paddleRight.interpolate(cU.paddle_right, nU.paddle_right, elapsed);
-    //         }
-    //     } else {
-    //         // console.log('extrapolate remote');
+    /** @param {number} elapsedMs */
+    predictNewSnapshot(elapsedMs) {      
+        
+        this.#serverGameTime += elapsedMs;
+        
+        let oldPredicted = this.#predictedTick;
+        const [tickbuffer, predictedTicks] = this.getUpdatedTicks(this.#tickbuffer + elapsedMs, this.#predictedTick, this.#tickDuration);
+        this.#tickbuffer = tickbuffer;
+        this.#predictedTick = predictedTicks;
+        const tickDurationSec = this.#tickDuration / 1000;
+
+        let lastSnapshot =this.#updateQueueNew.at(-1);
+        if (lastSnapshot == undefined) {
+            let x, y, dx, dy;
+            lastSnapshot = {
+                paddle_left: ({x, y, dx, dy} = this.manager.paddleLeft),
+                paddle_right: ({x, y, dx, dy} = this.manager.paddleRight),
+                ball: {x:this.manager.ball.x, y:this.manager.ball.y, dx:0, dy:0},
+                tickno: 0,
+                timestamp_ms: this.#serverGameTime
+            }
+        }
+        let oldServerTime = this.#serverGameTime;
+        console.log('new queue before prediction, before filter: ', this.#updateQueueNew.map(i => i.tickno));
+        if (lastSnapshot) {
+
+            let lastSnapshotTick = lastSnapshot.tickno;
             
-    //         // this.manager.paddleRight.update(elapsedSec);
-    //         // this.manager.paddleLeft.update(elapsedSec);
-    //         // this.manager.ball.updateBall(elapsedSec);
-    //     }
-    //     this.manager.draw();
-    // }
+            /** @type {PongServerTypes.GameObjPosBinary} */
+            let paddle_left = lastSnapshot.paddle_left,  paddle_right = lastSnapshot.paddle_right, ball = lastSnapshot.ball;
+            while (lastSnapshotTick < predictedTicks + 1) {
+                lastSnapshotTick++;
+                const timeSnap = this.#tickDuration * lastSnapshotTick;
+                paddle_left = this.manager.paddleLeft.getPredictedXY(paddle_left, tickDurationSec),
+                paddle_right = this.manager.paddleRight.getPredictedXY(paddle_right, tickDurationSec),
+                ball = this.manager.ball.getPredictedXY(ball, tickDurationSec, this.manager.paddleLeft, this.manager.paddleRight),
+                this.#updateQueueNew.push({predicted: true, paddle_left, paddle_right, ball, tickno: lastSnapshotTick, timestamp_ms: timeSnap});
+            }
+        }
 
-    // getGameTimeMs = () => this.#serverGameTime + (performance.now() - this.#lastWorkerTimeOnRender);
+
+        
+    }
+
+    /** @param {PongClientTypes.MovementKey | PongClientTypes.MovementMouse} move  */
+    rePredictSnapshot(move) {
+        const tick = this.#predictedTick;
+        const snapshot = this.#updateQueueNew.find(i => i.tickno === tick);
+        const nextSnapshot = this.#updateQueueNew.find(i => i.tickno+1 === tick);
+        if (snapshot && nextSnapshot && nextSnapshot.predicted === true) {
+            if (this.manager.side === 'left') {
+                nextSnapshot.paddle_left = this.manager.paddleLeft.getPredictedXY(snapshot.paddle_left, this.#tickDuration, move);
+            } else {
+                nextSnapshot.paddle_right = this.manager.paddleLeft.getPredictedXY(snapshot.paddle_right, this.#tickDuration, move);
+            }
+        }
+    }
+
+    lastcurr;
+    lastnew;
+    gameTime = 0;
+    /** @param {number} elapsedMs  */
+    renderByTimestampNew(elapsedMs, workerCurrentTimeMs) {
+        this.gameTime += elapsedMs;
+
+    this.#lastWorkerTimeOnRender = workerCurrentTimeMs;
+
+        this.predictNewSnapshot(elapsedMs);
+        console.log('new queue after prediction, before filter: ', this.#updateQueueNew.map(i => i.tickno));
+        const prevRenderTime = (this.#serverGameTime - elapsedMs) - this.#interpolationTimeMs;
+        const renderTime = this.#serverGameTime - this.#interpolationTimeMs;
+
+
+       
+        // let shifted = 0;
+        // while (this.#updateQueueNew[1] && this.#updateQueueNew[1].timestamp_ms < renderTime) {
+        //     this.#updateQueueNew.shift();
+        //     shifted++;
+        // }
+        this.#pushCommandToSocketWorker({message: 'socket_worker_client_clear_snapshots', timestampMs: renderTime});
+ 
+        
+        // this.#updateQueueNew = this.#updateQueueNew.filter(i => i.timestamp_ms > prevRenderTime);
+        // this.lastcurr = this.#updateQueueNew.find(i => i.timestamp_ms > prevRenderTime);
+        // this.lastnew = this.#updateQueueNew.find(i => i.timestamp_ms > renderTime);
+
+
+        // if (this.lastcurr && this.lastnew) {
+        //     const elapsed = (renderTime - this.lastcurr.timestamp_ms) / (this.lastnew.timestamp_ms - this.lastcurr.timestamp_ms);
+           
+        //     this.manager.paddleRight.interpolate(this.lastcurr.paddle_right, this.lastnew.paddle_right, elapsed, false, true);
+        //     this.manager.paddleLeft.interpolate(this.lastcurr.paddle_left, this.lastnew.paddle_left, elapsed, false, true)
+        //     this.manager.ball.interpolate(this.lastcurr.ball, this.lastnew.ball, elapsed, true, true);
+        // }
+        
+
+        // const clientCurr = this.#updateQueueNew.at(-2);
+        // const clientNeww = this.#updateQueueNew.at(-1);
+        // if (clientCurr && clientNeww && this.lastcurr && this.lastnew) {
+        //     const elapsed = (renderTime - this.lastcurr.timestamp_ms) / (this.lastnew.timestamp_ms - this.lastcurr.timestamp_ms);
+        //     const elapsedC = this.#tickbuffer / this.#tickDuration;
+        //     if (this.manager.side === 'left') {
+        //         this.manager.paddleLeft.interpolate(clientCurr.paddle_left, clientNeww.paddle_left, elapsedC, false, false)
+        //         this.manager.paddleRight.interpolate(this.lastcurr.paddle_right, this.lastnew.paddle_right, elapsed, false, true);
+        //     } else {
+        //         this.manager.paddleRight.interpolate(clientCurr.paddle_right, clientNeww.paddle_right, elapsedC, false, false);
+        //         this.manager.paddleLeft.interpolate(this.lastcurr.paddle_left, this.lastnew.paddle_left, elapsed, false, true)
+        //     }
+        //     this.manager.ball.interpolate(this.lastcurr.ball, this.lastnew.ball, elapsed, true, true);
+        // }
+
+        // let shifted = 0;
+        // while (this.#updateQueueNew[1] && this.#updateQueueNew[1].timestamp_ms < renderTime) {
+        //     this.#updateQueueNew.shift();
+        //     shifted++;
+        // }
+        // const curr = this.#updateQueueNew.find(i => i.timestamp_ms > prevRenderTime);
+        // const neww = this.#updateQueueNew.find(i => i.timestamp_ms > renderTime);
+        
+        
+        // const clientCurr = this.#updateQueueNew.find(i => i.timestamp_ms > prevRenderTime + this.#interpolationTimeMs);
+        // const clientNeww = this.#updateQueueNew.find(i => i.timestamp_ms > renderTime + this.#interpolationTimeMs);
+        // if (clientCurr && clientNeww && curr && neww) {
+        //     const elapsed = (renderTime - curr.timestamp_ms) / (neww.timestamp_ms - curr.timestamp_ms);
+        //     const elapsedC = this.#tickbuffer / this.#tickDuration;
+        //     if (this.manager.side === 'left') {
+        //         this.manager.paddleLeft.interpolate(clientCurr.paddle_left, clientNeww.paddle_left, elapsedC, false, false)
+        //         this.manager.paddleRight.interpolate(curr.paddle_right, neww.paddle_right, elapsed, false, true);
+        //     } else {
+        //         this.manager.paddleRight.interpolate(clientCurr.paddle_right, clientNeww.paddle_right, elapsedC, false, false);
+        //         this.manager.paddleLeft.interpolate(curr.paddle_left, neww.paddle_left, elapsed, false, true)
+        //     }
+        //     this.manager.ball.interpolate(curr.ball, neww.ball, elapsed, true, true);
+        // }
+
+
+        let shifted = 0;
+        while (this.#updateQueueNew[1] && this.#updateQueueNew[1].timestamp_ms < renderTime) {
+            this.#updateQueueNew.shift();
+            shifted++;
+        }
+
+        const curr = this.#updateQueueNew[0];
+        const neww = this.#updateQueueNew[1];
+        if (curr && neww) {
+            const elapsed = (renderTime - curr.timestamp_ms) / (neww.timestamp_ms - curr.timestamp_ms);
+           
+            this.manager.paddleRight.interpolate(curr.paddle_right, neww.paddle_right, elapsed, false, true);
+            this.manager.paddleLeft.interpolate(curr.paddle_left, neww.paddle_left, elapsed, false, true)
+            this.manager.ball.interpolate(curr.ball, neww.ball, elapsed, true, true);
+        } else {
+            const el = elapsedMs/1000;
+            this.manager.paddleRight.update(el);
+            this.manager.paddleLeft.update(el);
+            this.manager.ball.updateBall(el, this.manager.paddleLeft, this.manager.paddleRight);
+        }
+
+        this.manager.draw(this.manager.scoreBreak == false, this.#updateQueueNew.length);
+    }
+
     getGameTimeMs = () => this.#serverGameTime + (performance.now() - this.#lastWorkerTimeOnRender);
     getGameTimeSec = () => this.getGameTimeMs()/1000;
 
-    pushMove(action, new_y) {
-        const elapsedMs = performance.now() - this.#lastWorkerTimeOnRender;
-        let tickbuffer = this.#tickbuffer + elapsedMs;
-        let predictedTick = this.#predictedTick;
-        while (tickbuffer > this.#tickDuration) {
-            predictedTick += 1;
-            tickbuffer -= this.#tickDuration
+    /** @type {PongClientTypes.ClientMovement[]} */
+    moveCommandBuffer = [];
+
+    /** @param {PongClientTypes.ClientMoveDirection} [action] @param {number} [new_y]  */
+    async pushMove(action, new_y) {
+        const [tickdiff, tickno] = this.getUpdatedTicks(this.#tickbuffer + (performance.now() - this.#lastWorkerTimeOnRender), this.#predictedTick, this.#tickDuration);
+        /** @type {PongClientTypes.MovementKey | PongClientTypes.MovementMouse | undefined} */
+        let move;
+        if (action != undefined) {
+            move = {tickno, tickdiff, action};
+        } else if (new_y != undefined) {
+            move = {tickno, tickdiff, new_y};
         }
-        
-        this.#pushCommandToSocket({
-            cmd: "client-move",
-            action,
-            new_y,
-            timestamp_sec: this.getGameTimeSec(),
-            tickno: predictedTick,
-            tick_diff: tickbuffer
-        })
+        if(move != undefined) {
+            this.rePredictSnapshot(move);
+            this.#pushCommandToSocketWorker({message: 'socket_worker_client_move', move});
+            // this.moveCommandBuffer.push(move);
+        }
     }
 
+    /** @type {PongClientTypes.ClientMoveDirection | null} */
+    lastKeyAction = null;
     /** @param {ToWorkerGameMessageTypes.KeyEvent} d  */
-    handleKey (d) {
+    async handleKey (d) {
         let action;
         if (this.manager.side === "left") {
-            action = this.manager.paddleLeft.handleKey(true, d, "ArrowUp", "ArrowDown");
+            action = this.manager.paddleLeft.handleKey(false, d, "ArrowUp", "ArrowDown");
         } else {
-            action = this.manager.paddleRight.handleKey(true, d, "ArrowUp", "ArrowDown");
+            action = this.manager.paddleRight.handleKey(false, d, "ArrowUp", "ArrowDown");
         }
         if (typeof action === "string") {
-            this.pushMove(action, undefined);
+            if (this.lastKeyAction != action) {
+                this.pushMove(action, undefined);
+                this.lastKeyAction = action;
+            }
         }
     }
     #lastMoveTime = performance.now();
     /** @param {ToWorkerGameMessageTypes.GameTouchEvent} d  */
-    handleMouseTouch(d) {
+    async handleMouseTouch(d) {
         let new_y;
         const paddle = this.manager.side === "left" ? this.manager.paddleLeft : this.manager.paddleRight;
         new_y = paddle.handleMouseTouch(true, d);
@@ -566,11 +473,6 @@ export class PongRemote extends Pong {
             const c = performance.now();
             const e = c - this.#lastMoveTime;
             this.pushMove(undefined, new_y);
-            console.log('push new y to server: ', new_y);
-            // if (e > 50) {
-            //     console.log('push new y to server: ', new_y);
-            //     this.#lastMoveTime = c;
-            // }
         }
     }
 
@@ -593,9 +495,11 @@ export class PongRemote extends Pong {
         })
     }
     quitGame() {
+        console.log('PONG REMOTE: quitGame');
+        
         this.#pushCommandToSocket({ cmd: 'client-leave-game' });
         super.quitGame();
-        this.#socket?.close();
+        this.socketworker.terminate();
         this.#messageHandlerMap.setHandler("server-user-surrendered", (b) => {
         })
         this.#messageHandlerMap.setHandler("client-leave-game", (r) => {
@@ -604,17 +508,27 @@ export class PongRemote extends Pong {
     }
 
    
+    /** @param {ToWorkerSocketMessageTypes.ToWorkerMessage} msg */
+    #pushCommandToSocketWorker = async (msg) => {
+        try {
+            this.socketworker.postMessage(msg);
+        } catch (error) {
+            console.log('error sent to socket worker: ', error);
+            this.socketworker.terminate();
+            super.quitGame();
+        }
+    }
+   
     /** @param {PongClientTypes.ClientCommand} command */
-    #pushCommandToSocket = (command) => {
+    #pushCommandToSocket = async (command) => {
         try {
             command.id = this.#commandNbr;
-            // this.#commandStack.set(this.#commandNbr.toString(), command);
             this.#commandNbr += 1;
-            this.lastCommand = command
-            this.#socket?.sendMessage(command);
+            this.lastCommand = command;
+            this.#pushCommandToSocketWorker({message: 'socket_worker_client_command', command})
         } catch (error) {
-            // console.log('error sent to socket: ', error);
-            this.#socket?.close();
+            console.log('error sent to socket: ', error);
+            this.socketworker.terminate();
             super.quitGame();
         }
     }

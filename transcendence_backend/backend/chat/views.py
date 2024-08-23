@@ -62,10 +62,10 @@ Debug = True
 
 
 class ChatRoomView(View):
-    def get(self, request: HttpRequest):
+    def get(self, request):
         user = request.user
         rooms = ChatRoom.rooms.filter(users__id=user.pk, is_active=True)
-        return HttpSuccess200(data=[serializer_chat_room_data(room) for room in rooms])
+        return HttpSuccess200(data=[serializer_chat_room_data(room, user) for room in rooms])
 
 
 class ChatMessageView(View):

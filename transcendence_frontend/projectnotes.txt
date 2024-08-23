@@ -1,3 +1,26 @@
 - add alias to tournament display
 - new field alias in Tournament player -> unique per tournament.
 - tournament players: collapse returnes plyers and leaderboard - player xp of tournament extra from TournamentPlayer
+
+
+
+- next to do:
+    - oauth ✅
+    - login page pop up, when logged in, go to login page and then redirected to main ✅
+    - make use of bio field ✅
+    - add message chat button to friendlist ✅
+    - notification bug - sometimes actions visible, but no actions ✅
+    - notification problem with link and buttons -> separate these ✅
+    - make more links between different sites
+        -> see friends, matches with a person, trournaments with person in profile
+        -> link every tournament and invitation?
+    
+    
+- today todo:
+    - ifDefined don't working
+    - settings page should have subpages
+    - mark chat as active, when clicked
+    - refetching or update after refetching not always working? check
+    - update game modals -> little bug + make static
+    - blocked page for other user not visible + -> make notification
+    - NEED TO DELETE CHAT ROOMS AS WELL!!! ❓

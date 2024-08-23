@@ -260,23 +260,39 @@ export class FlowLayout {
     * Updates _first and _last based on items that should be in the given range.
     */
     _getItems() {
+        
         const items = this._newPhysicalItems;
+        console.log('_getItems, items: ', this._newPhysicalItems);
         this._stable = true;
         let lower, upper;
-
+        
         lower = this._scrollPosition - this._overhang; //leadingOverhang;
         upper = this._scrollPosition + this._viewportSize.height + this._overhang; // trailingOverhang;
-
+        console.log('_getItems, this._scrollPosition: ', this._scrollPosition);
+        console.log('_getItems, lower: ', lower);
+        console.log('_getItems, upper: ', upper);
+        
         if (upper < 0 || lower > this._scrollSize) {
+            console.log('upper < 0 || lower > this._scrollSize -> CLEAR ITEMS, return');
             this._clearItems();
             return;
         }
 
+        this._first = this._last = this._anchorIdx;
+        this._physicalMin = this._anchorPos - anchorLeadingMargin;
+        this._physicalMax = this._anchorPos + anchorSize + anchorTrailingMargin;
+        
+        console.log('_getItems, this._physicalMin: ', this._physicalMin);
+        console.log('_getItems, this._physicalMax: ', this._physicalMax);
         while (this._physicalMin > lower && this._first > 0) {
+            console.log('WHILE: LOWER: _getItems: this._physicalMin: ', this._physicalMin, ', lower: ', lower, ', this._first', this._first);
+            
             let size = this._getSize(--this._first);
+            console.log('WHILE: LOWER: _getItems: size of ', this._first, ': ', size);
             if (size === undefined) {
                 this._stable = false;
                 size = this.avgSize();
+                console.log('WHILE: LOWER: _getItems: calc new size ', size);
             }
             let margin = this.margins.map.get(this._first);
             if (margin === undefined) {
@@ -292,10 +308,13 @@ export class FlowLayout {
         }
 
         while (this._physicalMax < upper && this._last < this._items.length - 1) {
+            console.log('WHILE: UPPER: _getItems: this._physicalMax: ', this._physicalMax, ', upper: ', upper, ', this._last', this._last, ', max len: this._items.length - 1: ', this._items.length - 1);
             let size = this._getSize(++this._last);
+            console.log('WHILE: UPPER: _getItems: size of ', this._first, ': ', size);
             if (size === undefined) {
                 this._stable = false;
                 size = this.avgSize();
+                console.log('WHILE: UPPER: _getItems: calc new size ', size);
             }
             let margin = this.margins.map.get(this._last);
             if (margin === undefined) {
@@ -348,14 +367,20 @@ export class FlowLayout {
         if (this._pendingLayoutUpdate) {
             this._pendingLayoutUpdate = false;
         }
-        this._scrollSize = Math.max(
-            1,
-            this._items.length * (this.margins.avg + this.avgSize()) +
-            this.margins.avg
-        );
+        console.log('REFLOW: this.margins.avg', this.margins.avg);
+        console.log('REFLOW: this.avgSize()', this.avgSize());
+        console.log('REFLOW: this._items.length', this._items.length);
+        
+        this._scrollSize = Math.max( 1, this._items.length * (this.margins.avg + this.avgSize()) + this.margins.avg );
+        console.log('REFLOW: Scrollsize: ',this._scrollSize);
+        console.log('REFLOW: this._viewportSize.height: ',this._viewportSize.height);
+        
         if (this._viewportSize.height === 0 || this._items.length === 0) {
+            console.log('REFLOW -> CLEAR ITEMS');
+            
             this._clearItems();
         } else {
+            console.log('REFLOW -> GET ITEMS');
             this._getItems();
         }
         console.log('REFLOW: call: _updateVisibleIndices');
@@ -364,7 +389,7 @@ export class FlowLayout {
 
     
 
-        /** @type {import('./layout').LayoutT.ChildPositions} */
+        /** @type {Map<number, number>} */
         const childPositions = new Map();
         if (this._first !== -1 && this._last !== -1) {
             for (let idx = this._first; idx <= this._last; idx++) {
@@ -397,22 +422,21 @@ export class FlowLayout {
     /**
      * Returns the top and left positioning of the item at idx.
      * @param {number} idx
-     * @returns {import('./layout.js').LayoutT.Positions}
+     * @returns {number}
      */
     _getItemPositionY(idx) {
-        let posTop = 0;
         const item = this._getPhysicalItem(idx);
-        if (idx === 0) posTop = this.margins.map.get(0) ?? this.margins.avg;
-        if (item) posTop = item.pos;
+        if (idx === 0) return this.margins.map.get(0) ?? this.margins.avg;
+        if (item) return item.pos;
 
         if (this._first === -1 || this._last === -1)
-            posTop = ( this.margins.avg + idx * (this.margins.avg + this.avgSize()) );
+            return ( this.margins.avg + idx * (this.margins.avg + this.avgSize()) );
         
         if (idx < this._first) {
             const delta = this._first - idx;
             const refItem = this._getPhysicalItem(this._first);
             if (refItem == undefined) throw new Error("!")
-            posTop = (
+            return (
                 refItem.pos - (this.margins.map.get(this._first - 1) || this.margins.avg) -
                 (delta * this.heights.avg + (delta - 1) * this.margins.avg)
             );
@@ -420,16 +444,64 @@ export class FlowLayout {
         const delta = idx - this._last;
         const refItem = this._getPhysicalItem(this._last);
         if (refItem == undefined) throw new Error("!")
-        posTop = (
+        return (
             refItem.pos + (this.heights.map.get(this._last)
                 || this.heights.avg) + (this.margins.map.get(this._last)
                 || this.margins.avg) + delta * (this.heights.avg + this.margins.avg)
         );
 
-        return {
-            top: posTop,
-            left: 0,
-            yOffset: -( this.cache.get(idx)?.marginTop ?? this.margins.avg ),
-        };
+        // return {
+        //     top: posTop,
+        //     left: 0,
+        //     yOffset: -( this.cache.get(idx)?.marginTop ?? this.margins.avg ),
+        // };
+        // return {
+        //     top: posTop,
+        //     left: 0,
+        //     yOffset: -( this.cache.get(idx)?.marginTop ?? this.margins.avg ),
+        // };
     }
+    // /**
+    //  * Returns the top and left positioning of the item at idx.
+    //  * @param {number} idx
+    //  * @returns {import('./layout.js').LayoutT.Positions}
+    //  */
+    // _getItemPositionY(idx) {
+    //     let posTop = 0;
+    //     const item = this._getPhysicalItem(idx);
+    //     if (idx === 0) posTop = this.margins.map.get(0) ?? this.margins.avg;
+    //     if (item) posTop = item.pos;
+
+    //     if (this._first === -1 || this._last === -1)
+    //         posTop = ( this.margins.avg + idx * (this.margins.avg + this.avgSize()) );
+        
+    //     if (idx < this._first) {
+    //         const delta = this._first - idx;
+    //         const refItem = this._getPhysicalItem(this._first);
+    //         if (refItem == undefined) throw new Error("!")
+    //         posTop = (
+    //             refItem.pos - (this.margins.map.get(this._first - 1) || this.margins.avg) -
+    //             (delta * this.heights.avg + (delta - 1) * this.margins.avg)
+    //         );
+    //     }
+    //     const delta = idx - this._last;
+    //     const refItem = this._getPhysicalItem(this._last);
+    //     if (refItem == undefined) throw new Error("!")
+    //     posTop = (
+    //         refItem.pos + (this.heights.map.get(this._last)
+    //             || this.heights.avg) + (this.margins.map.get(this._last)
+    //             || this.margins.avg) + delta * (this.heights.avg + this.margins.avg)
+    //     );
+
+    //     return {
+    //         top: posTop,
+    //         left: 0,
+    //         yOffset: -( this.cache.get(idx)?.marginTop ?? this.margins.avg ),
+    //     };
+    //     // return {
+    //     //     top: posTop,
+    //     //     left: 0,
+    //     //     yOffset: -( this.cache.get(idx)?.marginTop ?? this.margins.avg ),
+    //     // };
+    // }
 }

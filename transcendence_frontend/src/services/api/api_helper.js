@@ -44,19 +44,25 @@ export class Fetcher {
      * @param {string} [baseUrl]
      * @param {RequestInit} [baseRequest]
      * @param {number} [timeoutMs]
-     * @param {{cookieName: string, headerName: string}} [csrfCookieHeaderName]
      */
-    constructor(baseUrl, baseRequest, timeoutMs, csrfCookieHeaderName) {
+    constructor(baseUrl, baseRequest, timeoutMs) {
         this.#baseUrl = new URL(baseUrl ?? '');
         // // console.log('base url: ', this.#baseUrl);
         this.#timeoutMs = timeoutMs ?? 10000;
         if (baseRequest) {
             this.#requestInit = { ...baseRequest };
+            console.log('this.#requestInit: ', this.#requestInit);
+            
         } else {
             this.#requestInit = {};
         }
-        if (csrfCookieHeaderName) this.#csrf = csrfCookieHeaderName;
         this.#requestInit.headers = new Headers(this.#requestInit.headers);
+        console.log('this.#requestInit.headers: ', this.#requestInit.headers);
+        
+    }
+
+    setCsfr() {
+
     }
 
     /**

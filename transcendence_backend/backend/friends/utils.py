@@ -4,6 +4,7 @@ from datetime import datetime
 from .models import BlockList, FriendList
 from django.db.models.query import QuerySet
 
+
 class UserFriendRequestData(BasicUserData):
 	request_id: int
 
@@ -66,5 +67,4 @@ def get_user_friend_list(logged_in_user: UserAccount, user_to_check :UserAccount
     if not friend_list.friends.contains(logged_in_user):
         return False, []
     return True, get_user_list(logged_in_user, friend_list.friends.all())
-
 

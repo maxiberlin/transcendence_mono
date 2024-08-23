@@ -9,10 +9,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django_asgi_app = get_asgi_application()
 
 # from chat import routing as ch_routing
-from pong_server.pong_new.consumer_player import PlayerConsumer
+from pong_server.consumer_player import PlayerConsumer
 # from notification.consumers import NotificationConsumer, TestConnectionConsumer
 from websocket_server.consumers import NotificationConsumer, TestConnectionConsumer
-from pong_server.pong_new.consumer_game import GameConsumer
+# from pong_server.game_engine.consumer_game import GameConsumer
+from pong_server.game_engine_curr.consumer_game import GameConsumer
+# from pong_server.game_engine_new.consumer_game import GameConsumer
 from django.urls import re_path
 
 application = ProtocolTypeRouter({

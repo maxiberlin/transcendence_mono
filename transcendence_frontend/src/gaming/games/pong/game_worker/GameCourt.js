@@ -17,8 +17,42 @@ export default class GameCourt extends DrawObj {
         this.borderColor = borderColor;
     }
 
+    // /** @param {OffscreenCanvasRenderingContext2D} ctx */
+    // draw(ctx, qlen) {
+    //     // const x = this.x * this.canvasWidth;
+    //     // const y = this.y * this.canvasHeight;
+    //     // const w = this.w * this.canvasWidth;
+    //     // const h = this.h * this.canvasHeight;
+    //     // const bH = this.y * this.canvasHeight;
+    //     // const bW = bH;
+    //     // const x_center = this.sx + this.sw / 2.0;
+    //     // const textHeight = 70;
+
+    //     // ctx.fillStyle = this.borderColor;
+    //     ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    //     super.draw(ctx)
+    //     // ctx.strokeStyle = this.borderColor;
+    //     // ctx.lineWidth = this.sy;
+    //     // ctx.beginPath();
+    //     // ctx.setLineDash([this.sy, this.sy]);
+    //     // ctx.moveTo(x_center, this.sy + this.sy / 2.0);
+    //     // ctx.lineTo(x_center, this.sy + this.sh - this.sy / 2.0);
+    //     // ctx.stroke();
+
+    //     // ctx.fillStyle = this.borderColor;
+    //     // ctx.font = `${textHeight}px sans-serif`;
+    //     // ctx.textAlign = 'right';
+    //     // ctx.fillText(this.scoreL.toString(), x_center - bH, bH + textHeight);
+    //     // ctx.textAlign = 'left';
+    //     // if (qlen) {
+    //     //     ctx.fillText(qlen.toString(), x_center + bH, bH + textHeight);
+    //     // } else {
+    //     //     ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
+    //     // }
+    // }
     /** @param {OffscreenCanvasRenderingContext2D} ctx */
-    draw(ctx) {
+    draw(ctx, qlen) {
         const x = this.x * this.canvasWidth;
         const y = this.y * this.canvasHeight;
         const w = this.w * this.canvasWidth;
@@ -45,7 +79,11 @@ export default class GameCourt extends DrawObj {
         ctx.textAlign = 'right';
         ctx.fillText(this.scoreL.toString(), x_center - bH, bH + textHeight);
         ctx.textAlign = 'left';
-        ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
+        if (qlen) {
+            ctx.fillText(qlen.toString(), x_center + bH, bH + textHeight);
+        } else {
+            ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
+        }
     }
 }
 

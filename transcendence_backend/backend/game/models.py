@@ -10,7 +10,9 @@ from chat.models import ChatRoom
 from typing import Literal, LiteralString
 from django.shortcuts import get_object_or_404
 from notification.utils import create_notification, update_notification
-
+from websocket_server.utils import sync_send_consumer_internal_command, sync_send_consumer_internal_command_list
+from websocket_server.constants import *
+from django.db.models.query import QuerySet
 
 def query_players_with_status(tournament: "Tournament"):
     players = tournament.players.prefetch_related('user').all().order_by('-xp')  # Holt alle Spieler des Turniers
@@ -188,7 +190,7 @@ class Tournament(models.Model):
     def single_elimination(self, players):
         if len(players) % 2 == 1:
             t_players = TournamentPlayer.objects.filter(tournament=self, round=self.rounds - 1)
-            bye_player = t_players.order_by('-xp').first()
+            bye_player = t_players.order_by('xp').first()
             if bye_player:
                 bye_player.round += 1
                 bye_player.save()
@@ -304,7 +306,8 @@ class GameSchedule(models.Model):
     def __str__(self):
         return f'{self.pk} - {self.player_one} vs {self.player_two}'
    
-        
+
+            
     
     def finish_game_and_update(self, score_one: int, score_two: int): #TODO send user xp gained ot lost + winner to consumer
         try:
@@ -319,6 +322,9 @@ class GameSchedule(models.Model):
                 winner=winner.user,
                 loser=loser.user,
             )
+            if self.tournament is not None:
+                send_tournament_refresh(self.tournament)
+            
         except Exception as e:
             print(f"Error: GameSchedule: finish_game_create_result: {e}")
             raise RuntimeError("!!!!")
@@ -333,11 +339,13 @@ class GameSchedule(models.Model):
             loser.update_game(xp=loser_xp, margin=-margin, winner=False)
             return result
 
+        winner.update_game(xp=None, margin=margin, winner=True)
+        loser.update_game(xp=None, margin=-margin, winner=False)
         t_player = TournamentPlayer.objects.get(player=winner, tournament=self.tournament)
         t_player.xp += winner_xp
         t_player.save()
 
-        scheduled_tournament_games = self.objects.filter(tournament=self.tournament, is_active=True)
+        scheduled_tournament_games = GameSchedule.objects.filter(tournament=self.tournament, is_active=True)
         # check final game and set winner
         if self.tournament.mode == 'round robin' and len(scheduled_tournament_games) == 0:
             tournament_player_winner = TournamentPlayer.objects.filter(tournament=self.tournament).order_by('-xp').first()
@@ -353,16 +361,38 @@ class GameSchedule(models.Model):
             tournament_player_winner.save()
             if len(scheduled_tournament_games) == 0:
                 self.tournament.update_tournament()
-            
+        
+        
+        create_next_game_notification(self.tournament)
+        
         Leaderboard.objects.all().delete()
         players = Player.objects.all().order_by('-xp')
         for rank, player in enumerate(players, start=1):
             Leaderboard.objects.create(player=player, rank=rank)
         return result
 
+def create_next_game_notification(tournament: Tournament):
+    schedules = GameSchedule.objects.filter(tournament=tournament)
+    if len(schedules) > 0:
+        next_game = schedules.earliest('id')
+        sync_send_consumer_internal_command(
+            next_game.player_one.user.get_private_user_room(),
+            {'type': 'game.message', 'id': tournament.pk, 'msg_type': MSG_TYPE_TOURNAMENT_GAME_NEXT}
+        )
+       
+        
+        
 
 
-
+def send_tournament_refresh(tournament: Tournament):
+    if tournament is not None:
+        pl: QuerySet[Player] = tournament.players.all()
+        
+        sync_send_consumer_internal_command_list([
+                (p.user.get_private_user_room(),
+                {'type': 'game.message', 'id': tournament.pk, 'msg_type': MSG_TYPE_TOURNAMENT_REFRESH})
+                for p in pl 
+            ])
 
 class GameResults(models.Model):
     game_schedule = models.ForeignKey(GameSchedule, related_name='schedule_id', on_delete=models.CASCADE)
@@ -401,10 +431,14 @@ class GameRequest(models.Model):
     def clear_tournament_invitation(self):
         if self.tournament is None:
             return
-        self.tournament.players.remove(get_object_or_404(Player, self.invitee))
+        self.tournament.players.remove(get_object_or_404(Player, user=self.invitee))
         ChatRoom.rooms.remove_user_from_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
+        # if TournamentPlayer.objects.filter(tournament=self.tournament).count() == self.tournament.players.all().count():
         if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
             self.tournament.update(True, False)
+        if len(self.tournament.players.all()) < 3:
+            self.tournament.delete()
+        send_tournament_refresh(self.tournament)
 
     def accept_tournament_invitation(self):
         if self.tournament is None:
@@ -419,8 +453,12 @@ class GameRequest(models.Model):
             except Exception as e:
                 raise ValueError(e)
         # TournamentPlayer.players.update_or_create_tournament_player(tournament=self.tournament, user=self.invitee, alias=alias)
+        # if TournamentPlayer.objects.filter(tournament=self.tournament).count() == self.tournament.players.all().count():
         if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
             self.tournament.update(True, False)
+        if len(self.tournament.players.all()) < 3:
+            self.tournament.delete()
+        send_tournament_refresh(self.tournament)
  
 
     def _update_status(self, state: Literal["accepted", "rejected", "cancelled"]):

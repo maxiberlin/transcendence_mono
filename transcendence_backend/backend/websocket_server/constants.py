@@ -12,8 +12,8 @@ from chat.types import ChatMessageData, ChatRoomData
 DEFAULT_NOTIFICATION_PAGE_SIZE = 5
 DEFAULT_ROOM_CHAT_MESSAGE_PAGE_SIZE = 10
 
-HEARTBEAT_INTERVAL_MS = 3000
-HEARTBEAT_TIMEOUT_MS = 6000
+HEARTBEAT_INTERVAL_MS = 1000
+HEARTBEAT_TIMEOUT_MS = 5000
 
 MSG_TYPE_NOTIFICATION_PAGE = 0
 MSG_TYPE_NOTIFICATION_PAGINATION_EXHAUSTED = 1
@@ -34,12 +34,23 @@ MSG_TYPE_CHAT_MESSAGE_PAGE = 108
 
 MSG_TYPE_FRIEND_STATUS_CHANGED = 201
 
+MSG_TYPE_TOURNAMENT_GAME_NEXT = 301
+MSG_TYPE_GAME_START_REQUESTED = 302
+MSG_TYPE_TOURNAMENT_REFRESH = 303
+
 
 
 class InternalCommandFriendStatusChanged(TypedDict):
     type: Literal['friend.status.changed']
     status: Literal['online', 'offline']
     user_id: int
+
+class InternalCommandGameMessage(TypedDict):
+    type: Literal['game.message']
+    msg_type: int
+    id: int
+
+
 
 class InternalCommandChatRoom(TypedDict):
     type: Literal['chat.room.add', 'chat.room.remove', 'chat.room.update']
@@ -56,6 +67,7 @@ class InternalCommandNotificationNewUpdate(TypedDict):
     data: NotificationData
     
 InternalCommand = Union[
+    InternalCommandGameMessage,
     InternalCommandFriendStatusChanged,
     InternalCommandChatRoom,
     InternalCommandChatMessageNew,
@@ -71,6 +83,7 @@ class PayloadRoomId(TypedDict):
     
 class PayloadChatMessage(PayloadRoomId):
     chat_message: ChatMessageData
+    count: int
 
 class PayloadChatMessageList(PayloadRoomId):
     chat_messages: list[ChatMessageData]
@@ -81,6 +94,8 @@ class PayloadChatMessagePageList(PayloadChatMessageList):
 class PayloadChatMessagesUnreadCount(PayloadRoomId):
     count: int
     
+class PayloadGameMessage(TypedDict):
+    game_id: int
 
 class PayloadChatRoom(TypedDict):
     chat_room: ChatRoomData
@@ -111,6 +126,7 @@ MessagePayload = Union[
     PayloadNotificationsList,
     PayloadNotificationsPageList,
     PayloadNotificationsUnreadCount,
+    PayloadGameMessage,
 ]
 
 class CommandChatBase(TypedDict):
@@ -141,6 +157,7 @@ class CommandMarkAllChatMessagesAsRead(CommandChatBase):
 
 class CommandGetUnreadChatMessagesCount(CommandChatBase):
     command: Literal['get_unread_chatmessages_count']
+    room_id: int
 
 
 class CommandNotificationBase(TypedDict):
@@ -162,6 +179,10 @@ class MarkAllNotificationsAsRead(CommandNotificationBase):
 class GetUnreadNotificationCount(CommandNotificationBase):
     command: Literal['get_unread_general_notifications_count']
 
+class GameDismissCommand(TypedDict):
+    module: Literal['game']
+    command: Literal['game_dismissed']
+    schedule_id: int
 
 ClientCommand = Union[
     CommandSendChatMessage,
@@ -172,7 +193,8 @@ ClientCommand = Union[
     GetGeneralNotifications,
     RefreshGeneralNotifications,
     MarkAllNotificationsAsRead,
-    GetUnreadNotificationCount
+    GetUnreadNotificationCount,
+    GameDismissCommand
 ]
 
 

@@ -141,6 +141,7 @@ declare namespace MessageSocketTypes {
         payload: {
             room_id: number;
             chat_message: APITypes.ChatMessageData;
+            count: number;
         };
     }
     export interface EventChatRoomAdd extends ModuleChat {
@@ -202,11 +203,32 @@ declare namespace MessageSocketTypes {
 
     export type ChatEventMsgType = ChatEvents['msg_type'];
 
-    export enum ActionTypes {
-        MSG_TYPE_FRIEND_STATUS_CHANGED = 201
+    export interface GameCommand {
+        module: 'game';
+        command: 'game_dismissed';
+        schedule_id: number;
     }
 
+    export type ActionCommands =
+            | GameCommand
+
+    export enum ActionTypes {
+        MSG_TYPE_FRIEND_STATUS_CHANGED = 201,
+        MSG_TYPE_TOURNAMENT_GAME_NEXT = 301,
+        MSG_TYPE_GAME_START_REQUESTED = 302,
+        MSG_TYPE_TOURNAMENT_REFRESH = 303,
+    }
+
+    
+    export interface GameMessage {
+        module: 'game';
+        msg_type: ActionTypes.MSG_TYPE_GAME_START_REQUESTED | ActionTypes.MSG_TYPE_TOURNAMENT_GAME_NEXT | ActionTypes.MSG_TYPE_TOURNAMENT_REFRESH;
+        payload: {
+            game_id: number;
+        }
+    }
     export interface FriendStatusChanged {
+        module: 'friend';
         msg_type: ActionTypes.MSG_TYPE_FRIEND_STATUS_CHANGED;
         payload: {
             user_id: number;
@@ -215,7 +237,8 @@ declare namespace MessageSocketTypes {
     }
 
     export type ActionEvents =
-        | FriendStatusChanged;
+        | FriendStatusChanged
+        | GameMessage
 
     export type MessageSocketEvents = ChatEvents | NotificationEvents | ActionEvents;
 }

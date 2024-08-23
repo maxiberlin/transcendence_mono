@@ -4,6 +4,7 @@
 import { actions, actionButtonDropdowns, actionButtonGroups } from '../../../components/ActionButtons.js';
 import {
     renderListItem,
+    renderListItem2,
     renderCard,
     renderCardInfo,
     renderListCard,
@@ -13,18 +14,50 @@ import { BaseElement, html } from '../../../lib_templ/BaseElement.js';
 import { fetcher, gameAPI, sessionService, userAPI } from '../../../services/api/API_new.js';
 import router from '../../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../../components/bootstrap/BsToasts.js';
+import { getMatchLink } from '../utils.js';
+import { getMatchIcon, getTournamentIcon } from '../../../components/gameUtils.js';
 
 export class TournamentDetailsView extends BaseElement {
     constructor() {
         super(false, false);
         this.sessionUser = sessionService.subscribe(this, true);
         this.tournamentData = undefined;
+        this.refresher = sessionService.messageSocket?.subscribeTournament((v) => {
+            console.log('i should refresh!: ', v);
+            this.fetchTournamentData(this.tournamentData?.id ?? v);
+        });
     }
     /** @type {APITypes.ApiResponse<APITypes.TournamentData> | undefined} */
     tournamentResponse;
     /** @type {APITypes.TournamentData | undefined} */
     tournamentData;
     routerParams = {};
+
+
+    /**
+     * @param {number} tournamentId 
+     */
+    fetchTournamentData(tournamentId) {
+        console.log('fetch tournament data: ', tournamentId);
+        this.tournamentDataPromise =  gameAPI.getTournamentDetails(tournamentId).then((res) => {
+            this.tournamentResponse = res;
+            console.log('response: ', this.tournamentResponse);
+            if (!this.tournamentResponse.success) {
+                document.dispatchEvent( new ToastNotificationErrorEvent(this.tournamentResponse.message) );
+                Promise.reject();
+            } else {
+                this.tournamentData = this.tournamentResponse.data;
+                console.log('tournament data: ', this.tournamentData);
+                
+                this.myTournamentGames = this.sessionUser.value?.game_schedule?.filter(i => i.tournament === this.tournamentData?.id) ?? []
+                this.tournamentInvitation = this.sessionUser.value?.game_invitations_received?.find(i => i.tournament === this.tournamentData?.id);
+                super.requestUpdate();
+            }
+
+        }).catch((error) => {
+            sessionService.handleFetchError(error);
+        })
+    }
 
     /**
      * @param {string} route
@@ -60,37 +93,15 @@ export class TournamentDetailsView extends BaseElement {
         }
     }
 
+
     connectedCallback() {
         super.connectedCallback();
         this.myTournamentGames = this.sessionUser.value?.game_schedule?.filter(i => i.tournament === this.tournamentData?.id) ?? []
-        this.tournamentInvitation = this.sessionUser.value.game_invitations_received?.find(i => i.tournament === this.tournamentData?.id);
+        this.tournamentInvitation = this.sessionUser.value?.game_invitations_received?.find(i => i.tournament === this.tournamentData?.id);
     }
 
-    /**
-     * @param {number} tournamentId 
-     */
-    fetchTournamentData(tournamentId) {
-        console.log('fetch tournament data: ', tournamentId);
-        this.tournamentDataPromise =  gameAPI.getTournamentDetails(tournamentId).then((res) => {
-            this.tournamentResponse = res;
-            console.log('response: ', this.tournamentResponse);
-            if (!this.tournamentResponse.success) {
-                document.dispatchEvent( new ToastNotificationErrorEvent(this.tournamentResponse.message) );
-                Promise.reject();
-            } else {
-                this.tournamentData = this.tournamentResponse.data;
-                console.log('tournament data: ', this.tournamentData);
-                
-                this.myTournamentGames = this.sessionUser.value?.game_schedule?.filter(i => i.tournament === this.tournamentData?.id) ?? []
-                this.tournamentInvitation = this.sessionUser.value.game_invitations_received?.find(i => i.tournament === this.tournamentData?.id);
-                super.requestUpdate();
-            }
-
-        }).catch((error) => {
-            sessionService.handleFetchError(error);
-        })
-    }
-
+    // <div class="col-auto">${renderCardInfo('Game', 'pong')}</div>
+    // <div class="col-auto">${renderCardInfo('Mode', data.game_mode)}</div>
     /**
      * 
      * @param {string} title 
@@ -98,6 +109,7 @@ export class TournamentDetailsView extends BaseElement {
      * @param {APITypes.GameScheduleItem[]} [list] 
      * @returns 
      */
+    // col-5  col-sm-2  col-md-2
     renderGameScheduleList = (title, titleIcon, list) => html`
         <div class="col-12">
             ${renderListCard(
@@ -106,36 +118,37 @@ export class TournamentDetailsView extends BaseElement {
                 !list || list.length === 0 ?
                     renderListItem(html`<p class="text-center m-0">No data</p>`)
                 :   list.map((data) =>
-                        renderListItem(html`
-                            <div class="col-5 col-sm-2 pe-0 col-md-2">
-                                ${avatarInfo(data.player_one)}
-                            </div>
-                            <div class="col-2 col-sm-1">
-                                ${renderCardInfo('VS', '')}
-                            </div>
-                            <div class="col-5  col-sm-2  ps-0 col-md-2">
-                                ${avatarInfo(data.player_two)}
+                        renderListItem2(html`
+                            <div class="row align-items-center">
+                                <div class="col-5 col-sm-4 py-2">
+                                    ${avatarInfo(data.player_one)}
+                                </div>
+                                <div class="col-2 col-sm-1 py-2">
+                                    ${renderCardInfo('VS', '')}
+                                </div>
+                                <div class="col-5 col-sm-4 py-2">
+                                    ${avatarInfo(data.player_two)}
+                                </div>
+                                <div class="col-12 col-sm-auto py-2">
+                                    <a href="${getMatchLink(data, {rand: true, tournament: this.tournamentData?.id})}" role="button" class="w-100 btn btn-outline-primary">
+                                        <i class="fa-solid fa-gamepad"></i>
+                                        start
+                                    </a>
+                                </div>
                             </div>
                            
-                            <div class="col-auto">${renderCardInfo('Game', 'pong')}</div>
-                            <div class="col-auto">${renderCardInfo('Mode', data.game_mode)}</div>
-                            <div class="col-auto">
-                                <a href="/games/pong/play/${data.schedule_id}" role="button" class="btn btn-outline-primary">
-                                                <i class="fa-solid fa-gamepad"></i>
-                                                start Match
-                                            </a>
-                            </div>
+                           
                         `),
                     ),
             )}
         </div>
     `
     /** @param {APITypes.PlayerData} player */
-    playerIsSelf = (player) => player.id === this.sessionUser.value.user?.id;
+    playerIsSelf = (player) => player.id === this.sessionUser.value?.user?.id;
 
     isValidInvitation = () => this.tournamentInvitation != undefined && this.tournamentInvitation?.tournament === this.tournamentData?.id;
     
-    getInvitationId = () => this.isValidInvitation() ? this.tournamentInvitation?.id ?? null : null;
+    getInvitationId = () => this.isValidInvitation() ? this.tournamentInvitation?.invite_id ?? null : null;
 
     /**
      * @param {APITypes.PlayerData} player
@@ -143,6 +156,7 @@ export class TournamentDetailsView extends BaseElement {
      * @param {boolean} pending
      */
     renderPlayersListItem = (player, index, pending) => {
+        
         // console.log('player: ', player.username);
         // console.log('pending: ', pending);
         // console.log('this.playerIsSelf(player): ', this.playerIsSelf(player));
@@ -154,6 +168,7 @@ export class TournamentDetailsView extends BaseElement {
                 ${pending ? html`<span class="me-2"><i class="fs-4 fa-solid fa-fw fa-${player.status === 'pending' ? 'user-clock' : 'user-check'}"></i></span>`
                     : ''
                 }
+                
                 ${avatarLink(player)}
                 ${(!pending && index === 0) ? html`<i class="text-warning fa-solid fa-crown"></i>` : ''}
                 ${this.playerIsSelf(player) ? html`<i class="text-success fa-solid fa-diamond"></i>` : ''}
@@ -199,18 +214,22 @@ export class TournamentDetailsView extends BaseElement {
     renderMatchBracket = (data) => {
         let badgeStyleOne = '', badgeStyleTwo = '';
         if (data.result != undefined) {
-            badgeStyleOne = this.playerIsWinner(data, data.player_one) ? 'badge text-bg-success px-2 py-1 rounded-2' : 'badge text-bg-danger px-2 py-1 rounded-2';
-            badgeStyleTwo = this.playerIsWinner(data, data.player_two) ? 'badge text-bg-success px-2 py-1 rounded-2' : 'badge text-bg-danger px-2 py-1 rounded-2';
+            // badgeStyleOne = this.playerIsWinner(data, data.player_one) ? 'badge text-bg-success px-2 py-1 rounded-2' : 'badge text-bg-danger px-2 py-1 rounded-2';
+            // badgeStyleTwo = this.playerIsWinner(data, data.player_two) ? '   badge text-bg-success px-2 py-1 rounded-2' : 'badge text-bg-danger px-2 py-1 rounded-2';
+            badgeStyleOne = this.playerIsWinner(data, data.player_one) ? 'badge text-bg-success rounded-2 d-inline' : 'badge text-bg-danger rounded-2 d-inline';
+            badgeStyleTwo = this.playerIsWinner(data, data.player_two) ? 'badge text-bg-success rounded-2 d-inline' : 'badge text-bg-danger rounded-2 d-inline';
         }
+        
         return html`
-            <div class="card my-4 w-100">
+        
+            <div class="card my-1 w-100 tournament-bracket">
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex align-items-center justify-content-between">
-                        ${avatarInfo(data.player_one)}
+                    <li class="list-group-item d-inline-flex align-items-center justify-content-between">
+                        ${avatarInfo(data.player_one, true)}
                         <span class="${ data.result ? badgeStyleOne : '' }">${data.result ? data.result.player_one_score : ''}</span>
                     </li>
-                    <li class="list-group-item d-flex align-items-center justify-content-between">
-                        ${avatarInfo(data.player_two)}
+                    <li class="list-group-item d-inline-flex align-items-center justify-content-between">
+                        ${avatarInfo(data.player_two, true)}
                         <span class="${ data.result ? badgeStyleTwo : '' }">${data.result ? data.result.player_two_score : ''}</span>
                     </li>
                 </ul>
@@ -220,25 +239,26 @@ export class TournamentDetailsView extends BaseElement {
 
     renderMatches = () => {
         const rounds = this.getNumberOfRounds();
+        console.log('schedules: ', this.tournamentData?.schedules);
+        
         const isMobile = window.innerWidth <= 500;
-        return renderCard('Games', '', html`
+        return renderCard(`Games: ${this.tournamentData?.mode} | ${this.tournamentData?.stage}`, '', html`
             <div class="container-fluid ">
                 <div class="w-100 tournament-bracket-container">
-                    <div class="tournament-grid-item-e">
-                        <h2>${this.tournamentData?.mode} | ${this.tournamentData?.stage}</h2>
-                    </div>
-                    ${this.tournamentData?.mode === 'single elimination' ? Array.from({ length: rounds }, (_, index) => html`
-                        <div class="flex-grow-1 d-flex flex-column justify-content-stretch align-items-center me-4">
-                            <h6>Round ${index + 1}</h6>
+                   
+                        ${this.tournamentData?.mode === 'single elimination' ? Array.from({ length: rounds }, (_, index) => html`
+                            <div class="flex-grow-1 d-flex flex-column justify-content-stretch align-items-center me-4">
+                                <h6>Round ${index + 1}</h6>
+                                <div class="flex-grow-1 w-100 d-flex flex-column justify-content-evenly align-items-center">
+                                    ${this.tournamentData?.schedules?.filter(g => g.round === index + 1).map((data, i) => this.renderMatchBracket(data)) }
+                                </div>
+                            </div>
+                        `) : html`
                             <div class="flex-grow-1 w-100 d-flex flex-column justify-content-evenly align-items-center">
-                                ${this.tournamentData?.schedules?.filter(g => g.round === index + 1).map((data, i) => this.renderMatchBracket(data)) }
-                            </div>
-                        </div>
-                    `) : html`
-                        <div class="flex-grow-1 w-100 d-flex flex-column justify-content-evenly align-items-center">
-                                ${this.tournamentData?.schedules?.map((data, i) => this.renderMatchBracket(data))}
-                            </div>
-                    `}
+                                    ${this.tournamentData?.schedules?.map((data, i) => this.renderMatchBracket(data))}
+                                </div>
+                        `}
+                    
                 </div>
             </div>
         `)
@@ -264,23 +284,31 @@ export class TournamentDetailsView extends BaseElement {
         //         <div class="spinner-grow" style="width: 3rem; height: 3rem;" role="status">
         //             <span class="visually-hidden">Loading...</span>
         //         </div>` : html`
+
         return html`
+        
                 <div class="container-fluid opacity-transition ${this.tournamentData ? 'content-loaded' : ''}">
-                    <h3 class="display-3">${this.tournamentData?.name}</h3>
+                    <h3 class="display-6">${ getTournamentIcon(this.tournamentData?.mode)}  ${this.tournamentData?.name} ${this.tournamentData?.status === 'waiting' ? ` | ${this.tournamentData?.mode}` : ''}</h3>
+                    <div class="m-2">
+                        <single-chat-view icon="paper-plane" text="tournament chat" .offcanvas=${true} .user_or_tournament=${this.tournamentData} ></single-chat-view>
+                    </div>
                     <div class="tournament-grid">
                         <div class="tournament-grid-item-a">
                             ${this.renderPlayersList()}
                         </div>
                         ${this.tournamentData?.status === 'waiting' ? '' : html`
-                            <div class="tournament-grid-item-b">
-                                ${this.renderGameScheduleList("Your Games", "", this.myTournamentGames)}
-                            </div>
+                            ${(this.tournamentData?.status === 'finished' || this.myTournamentGames?.length === 0) ? '' : html`
+                                <div class="tournament-grid-item-b">
+                                    ${this.renderGameScheduleList("Your Games", "", this.myTournamentGames)}
+                                </div>
+                            `}
                             <div class="tournament-grid-item-c">
                                 <div class="d-flex flex-column">
                                     ${this.renderMatches()}
                                 </div>
                             </div>
-                            ${renderCard('Tournament Chat', '', html`<single-chat-view icon="paper-plane" text="tournament chat" .offcanvas=${true} .user_or_tournament=${this.tournamentData} ></single-chat-view>`)}
+                            
+                            
                         `}
                     </div>
                 </div>

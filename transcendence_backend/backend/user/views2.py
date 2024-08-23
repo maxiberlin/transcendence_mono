@@ -8,7 +8,7 @@ from .serializers import serializer_full_profile_details
 from .models import UserAccount, Player, Leaderboard
 from friends.utils import get_my_block_list, get_user_friend_list
 # from friends.views import friend_list, block_list_view
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
@@ -17,9 +17,14 @@ from django.core.files.storage import default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
 import requests
+from django.http import HttpResponseRedirect
+from django.http.request import HttpRequest
+from django.contrib.auth.hashers import check_password
 
-@csrf_exempt
+
+
 @require_POST
 def register_view(request):
     user: UserAccount = request.user
@@ -41,7 +46,14 @@ def register_view(request):
     except Exception as e:
         return HttpBadRequest400(str(e))
 
-@csrf_exempt
+
+# @require_GET
+
+
+def csrf(request):
+    return HttpSuccess200(data={'csrfToken': get_token(request)})
+
+# 
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     if request.method == "GET":
@@ -66,7 +78,7 @@ def login_view(request):
         
 
 
-@csrf_exempt
+
 @login_required
 @require_POST
 def logout_view(request):
@@ -80,7 +92,7 @@ def logout_view(request):
         return HttpInternalError500(str(e))
 
 
-@csrf_exempt
+
 @login_required
 @require_GET
 def profile_view(request, *args, **kwargs):
@@ -108,7 +120,7 @@ def profile_view(request, *args, **kwargs):
     return HttpSuccess200(data=data)
 
 
-@csrf_exempt
+
 @login_required
 @require_POST
 def profile_edit_view(request, *args, **kwargs):
@@ -125,31 +137,70 @@ def profile_edit_view(request, *args, **kwargs):
     first_name = request.POST.get('first_name')
     last_name = request.POST.get('last_name')
     alias = request.POST.get('alias')
+    bio = request.POST.get('bio')
     avatar = request.FILES.get('avatar')
-    if first_name:
-        account.first_name = first_name
-    if last_name:
-        account.last_name = last_name
-    if alias:
-        player.alias = alias
-    if avatar:
-        account.avatar = avatar
-    player.save()
-    account.save()
+    try:
+        if first_name is not None:
+            account.first_name = first_name
+        if last_name is not None:
+            account.last_name = last_name
+        if bio is not None:
+            account.bio = bio
+        if avatar:
+            account.avatar = avatar
+        account.save()
+        if alias:
+            player.alias = alias
+        player.save()
+        # UNIQUE constraint failed: user_player.alias
+
+    except Exception as e:
+        if 'UNIQUE' in str(e):
+            if 'player.alias' in str(e):
+                return HttpBadRequest400('Player alias is already used')
+        return HttpBadRequest400(str(e))
     return HttpSuccess200("Profile edited sucessfull")
 
 
-@csrf_exempt
+
 @login_required
 @require_POST
-def profile_delete(request, *args, **kwargs):
+def profile_delete(request: HttpRequest, *args, **kwargs):
     user = request.user
+    try:
+        data = json.loads(request.body)
+        current_password = data['current_password']
+    except Exception as e:
+        return HttpBadRequest400(message='Invalid password')
+    
+    
     user_id = kwargs.get('user_id')
     try:
         account: UserAccount = UserAccount.objects.get(pk=user_id)
     except (UserAccount.DoesNotExist, Player.DoesNotExist):
         HttpNotFound404("This profile does not exist")
+
+
+    if not isinstance(user, UserAccount):
+        return HttpForbidden403(message='forbidden')
+        
+    if account.oauth is None and check_password(current_password, user.password) == False:
+        return HttpBadRequest400(message='Old password is incorrect')
+        
     if user == account:
+        from chat.models import ChatRoom, notify_consumer_chat_room, notify_chat_room_members_update
+        rooms = ChatRoom.objects.filter(users__id=user.pk)
+        for room in rooms:
+            if room.type == 'private':
+                us = room.users.all()
+                for u in us:
+                    notify_consumer_chat_room(room, u, 'remove')
+                room.delete()
+            if room.type == 'tournament':
+                notify_chat_room_members_update(room, room.users.all())
+                room.users.remove(user)
+            
+        logout(request)
         account.delete()
         return HttpSuccess200(message='Your account and data has been deleted')
     else:
@@ -157,7 +208,7 @@ def profile_delete(request, *args, **kwargs):
 
 
 
-@csrf_exempt
+
 @login_required
 @require_GET
 def search(request, *args, **kwargs):
@@ -179,8 +230,40 @@ def search(request, *args, **kwargs):
             }
             user_friend_list = FriendList.objects.get(user=user)
             item['is_mutual_friend'] = user_friend_list.is_mutual_friend(account)
-            data.append((item)) 
+            
+            if not BlockList.is_either_blocked(user, account):
+                data.append((item)) 
     return HttpSuccess200(data=data)
+
+
+@login_required
+@require_POST
+def password_change(request: HttpRequest, *args, **kwargs):
+    user = request.user
+
+    try:
+        data = json.loads(request.body)
+        old_password = data['old_password']
+        new_password = data['new_password']
+    except Exception as e:
+        return HttpBadRequest400(message='Invalid input')
+    if not isinstance(user, UserAccount):
+        return HttpForbidden403(message='forbidden')
+    if not isinstance(old_password, str) or not isinstance(new_password, str):
+        return HttpBadRequest400(message='Invalid input')
+    if check_password(old_password, user.password) == False:
+        return HttpBadRequest400(message='Old password is incorrect')
+
+    if old_password == new_password:
+        return HttpBadRequest400(message='passwords are the same')
+    
+    
+    
+    
+    user.set_password(new_password)
+    user.save()
+    update_session_auth_hash(request, user)
+    return HttpSuccess200(message='Password change was successful.')
 
 
 def login_auth(request):
@@ -208,23 +291,43 @@ def callback(request):
         'client_secret': client_secret,
     })
     token_data = response.json()
-    access_token = token_data['access_token']
+    # print(f"token data: {token_data}")
+    access_token = token_data.get('access_token')
+    if access_token is None:
+        return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/no-access-token')
+        return HttpUnauthorized401(message='Invalid credentials')
     # Use the access token to get user info
     user_info_response = requests.get('https://api.intra.42.fr/v2/me', headers={
         'Authorization': f'Bearer {access_token}'
     })
     user_info = user_info_response.json()
+    print(f"user_info: {user_info}")
+
+    user = UserAccount.objects.filter(username=user_info['login']).first()
+    if user is not None and user.oauth is None:
+        return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/username-in-use')
+
+    user = UserAccount.objects.filter(email=user_info['email']).first()
+    if user is not None and user.oauth is None:
+        return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/email-in-use')
+    
+    
+
+
     user, created = UserAccount.objects.get_or_create(username=user_info['login'], defaults={
         'first_name': user_info['first_name'],
         'last_name': user_info['last_name'],
         'email': user_info['email'],
+        'oauth': '42api',
     })
     if user is not None and user.is_active:
         login(request, user)
         user.status = 'online'
         user.save()
+        return HttpResponseRedirect('https://pong42.com/')
         return HttpSuccess200(message='Login successful!')
     else:
+        return HttpResponseRedirect('https://pong42.com/login')
         return HttpUnauthorized401(message='Invalid credentials')
 
 
@@ -250,7 +353,7 @@ def callback(request):
 # from django.core.files.uploadedfile import UploadedFile
 
 
-# @csrf_exempt
+# 
 # def register_view(request):
 # 	user: UserAccount = request.user
 # 	if request.method != 'POST':
@@ -275,7 +378,7 @@ def callback(request):
 # 	except Exception as e:
 # 		return md.BadRequest400(str(e))
 
-# @csrf_exempt
+# 
 # def login_view(request):
 # 	if request.method == "GET":
 # 		if not request.user.is_authenticated:
@@ -299,7 +402,7 @@ def callback(request):
 # 	else:
 # 		return HttpResponseNotAllowed(["GET", "POST"])
 
-# @csrf_exempt
+# 
 # @login_required
 # def logout_view(request):
 # 	if request.method != 'POST':
@@ -313,7 +416,7 @@ def callback(request):
 # 	return md.Success200("Logout successful")
 
 
-# @csrf_exempt
+# 
 # @login_required
 # def profile_view(request, user_id: int):
 # 	if request.method != 'GET':
@@ -349,7 +452,7 @@ def callback(request):
 
 
 
-# @csrf_exempt
+# 
 # @login_required
 # def profile_edit_view(request, user_id: int):
 # 	if request.method != 'POST':
@@ -381,7 +484,7 @@ def callback(request):
     
 
 
-# @csrf_exempt
+# 
 # @login_required
 # def search(request, *args, **kwargs):
 # 	if request.method != 'GET':

@@ -1,5 +1,132 @@
 import DrawObj from './DrawObj.js';
 
+const CMD_RATE = 66;
+const UPDATE_RATE = 66;
+const INTERP = 66;
+const INTERP_RATIO = 66;
+
+
+export const getGameRates = (tickrate) => {
+
+};
+
+
+export class Tick {
+
+    /**
+     * @param {number} tickrate
+     * @param {number} [gameStartTime]
+     */
+    constructor(tickrate, gameStartTime) {
+        this.#tickDurationMs = 1000/tickrate;
+        this.#tickDurationSec = 1000/this.#tickDurationMs;
+        this.#gameTime = gameStartTime ?? 0;
+    }
+    #tickDurationMs;
+    #tickDurationSec;
+    #tickBuffer = 0;
+    #tick = 0;
+    #gameTime;
+
+    get gameTimeMs() {
+        return this.#gameTime + this.#tick * this.#tickDurationMs;
+    }
+
+    get tickDurationSec() {
+        return this.#tickDurationSec;
+    }
+    get tickDurationMs() {
+        return this.#tickDurationMs;
+    }
+
+    get runningTick() {
+        return this.#tick;
+    }
+    get tick() {
+        return this.#tick;
+    }
+
+    get tickBuffer() {
+        return this.#tickBuffer;
+    }
+
+    /** @param {number} elapsedMs  */
+    calcTempTick(elapsedMs) {
+        let tickBuffer = this.#tickBuffer;
+        let tick = this.#tick;
+        tickBuffer += elapsedMs;
+        while (tickBuffer >= this.#tickDurationMs) {
+            tick += 1;
+            tickBuffer -= this.#tickDurationMs;
+        }
+        return [tickBuffer, tick];
+    }
+
+    /** @param {number} elapsedMs  */
+    update(elapsedMs) {
+        this.#tickBuffer += elapsedMs;
+        while (this.#tickBuffer >= this.#tickDurationMs) {
+            this.#tick += 1;
+            this.#tickBuffer -= this.#tickDurationMs;
+        }
+    }
+}
+
+
+/**
+ * @param {ArrayBuffer} data
+ * @returns {PongServerTypes.GameUpdateBinaryItem[]}
+ */
+export function parseSnapshot(data) {
+    const dataview = new DataView(data);
+    /** @type {PongServerTypes.GameUpdateBinaryItem[]} */
+    const da = [];
+    const size = dataview.getUint32(0, true);
+
+    let i = 0, k = 0;
+    let offs = 4;
+    while (i < size && k < 2) {
+        da.push({
+            tickno: dataview.getUint32(offs, true),
+            timestamp_ms: dataview.getFloat32(offs + 4, true),
+            ball: {
+                x: dataview.getFloat32(offs + 8, true),
+                y: dataview.getFloat32(offs + 12, true),
+                dx: dataview.getFloat32(offs + 16, true),
+                dy: dataview.getFloat32(offs + 20, true),
+            },
+            paddle_left: {
+                x: dataview.getFloat32(offs + 24, true),
+                y: dataview.getFloat32(offs + 28, true),
+                dx: dataview.getFloat32(offs + 32, true),
+                dy: dataview.getFloat32(offs + 36, true),
+            },
+            paddle_right: {
+                x: dataview.getFloat32(offs + 40, true),
+                y: dataview.getFloat32(offs + 44, true),
+                dx: dataview.getFloat32(offs + 48, true),
+                dy: dataview.getFloat32(offs + 52, true),
+            }
+        })
+        offs += 56;
+        ++i;
+        ++k;
+    }
+    // console.log('\n\nNEW UPDATE DECODED:');
+    // da.forEach((i) => {
+    //     console.log('tickno: ', i.tickno);
+    // })
+    // console.log('timestamp: ', i.timestamp_ms);
+    // console.log('ball x: ', i.ball.x);
+    // console.log('ball y: ', i.ball.y);
+    // console.log('paddle_left x: ', i.paddle_left.x);
+    // console.log('paddle_left y: ', i.paddle_left.y);
+    // console.log('paddle_right x: ', i.paddle_right.x);
+    // console.log('paddle_right y: ', i.paddle_right.y);
+
+    return (da);
+}
+
 
 /** @param {FromWorkerGameMessageTypes.FromWorkerMessage} message */
 export const pushMessageToMainThread = (message) => {

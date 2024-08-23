@@ -182,8 +182,11 @@ export default class Template {
      */
     static createLiveAppendElement(elementToAppend, data, animArr) {
         const live = Template.getInstance(data.strings);
-        if (!(elementToAppend instanceof HTMLElement))
+        if (!(elementToAppend instanceof Node)) {
+            console.log('INVALID');
+            
             throw new Error("OuterNode: createLiveAppendElement: Element to append the LiveTemplate Data needs to be an HTML Element")
+        }
         live.mountMe( elementToAppend, null, data.values, animArr );
         return live;
     }

@@ -156,10 +156,8 @@ function walkingTheTemplate(maxNodes, staleNodes) {
     while (node !== null) {
         // console.log('get stale: index: ', nodeCount, ' | node: ', node);
         if (node.nodeType === Node.ELEMENT_NODE && node instanceof Element) {
-            if (
-                /^(?:script|style|textarea|title)$/i.test(node.tagName) &&
-                node.textContent
-            ) {
+            // if ( /^(?:script|style|textarea|title)$/i.test(node.tagName) && node.textContent ) {
+            if ( /^(?:script|style|title)$/i.test(node.tagName) && node.textContent ) {
                 handleUnwanted(staleNodes, node.textContent);
             } else {
                 handleDynamicAttribute(staleNodes, node, nodeCount);

@@ -23,6 +23,7 @@ from django.http.request import HttpRequest
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.humanize.templatetags.humanize import naturaltime
 from user.serializers import *
+from django.core.paginator import Paginator
 
 # Create your views here.
 
@@ -35,8 +36,17 @@ def game_results(request, *args, **kwargs):
     schedule_id = data.get('schedule_id')
     score_one = data.get('score_one')
     score_two = data.get('score_two')
-    message, status = parse_results(schedule_id, score_one, score_two)
-    return JsonResponse(message, status=status)
+    schedule = GameSchedule.objects.filter(pk=schedule_id).first()
+    print(f"schedule: {schedule}")
+    print(f"schedule_id: {schedule_id}")
+    print(f"score_one: {score_one}")
+    print(f"score_two: {score_two}")
+    if schedule and isinstance(score_one, int) and isinstance(score_two, int):
+        schedule.finish_game_and_update(score_one, score_two)
+        return JsonResponse({'message': 'OK'}, status=200)
+    return JsonResponse({'message': 'NO'}, status=404)
+    # message, status = parse_results(schedule_id, score_one, score_two)
+    # return JsonResponse(message, status=status)
 
 
 # @csrf_exempt
@@ -268,33 +278,31 @@ def game_schedule(request, *args, **kwargs):
 def match_history(request: HttpRequest, *args, **kwargs):
     history = []
     user: AbstractBaseUser | AnonymousUser = request.user
-    query = request.GET.get('user')
-    print(f"get game history for: {query}")
-    if query is not None:
-        user = get_object_or_404(UserAccount, username=query)
-    games_played = GameResults.objects.filter(Q(game_schedule__player_one__user=user) | Q(game_schedule__player_two__user=user)).order_by('-timestamp')
-    for game in games_played:
+    username = request.GET.get('user')
+    pageno = request.GET.get('page')
+    print(f"get game history for: {username}")
+    if not isinstance(pageno, str) or not pageno.isdigit():
+        return HttpBadRequest400("invalid page")
+    
+    if username == '':
+        games_played = GameResults.objects.all().order_by('-timestamp')
+    else:
+        if username is not None:
+            user = get_object_or_404(UserAccount, username=username)
+        games_played = GameResults.objects.filter(Q(game_schedule__player_one__user=user) | Q(game_schedule__player_two__user=user)).order_by('-timestamp')
+    pageno = int(pageno)
+    paginator = Paginator(games_played, 3)
+    games_played_page = paginator.get_page(pageno)
+    for game in games_played_page:
         if game.game_schedule.player_one is None or game.game_schedule.player_two is None:
             return HttpInternalError500("game result players are none")
-        
-        # # p1 = get_object_or_404(Player, user=game.game_schedule.player_one)
-        # # p2 = get_object_or_404(Player, user=game.game_schedule.player_two)
-        # item = {
-        #     'match_id': game.pk,
-        #     'game_id': game.game_schedule.game_id,
-        #     'game_mode': game.game_schedule.game_mode,
-        #     'tournament': game.game_schedule.tournament.pk if game.game_schedule.tournament else None,
-        #     'player_one': .get_player_data('finished'),
-        #     'player_two': game.game_schedule.player_two.get_player_data('finished'),
-        #     'player_one_score': game.player_one_score,
-        #     'player_two_score': game.player_two_score,
-        #     'date': game.timestamp,
-        #     'winner': Player.objects.get(user=game.winner).alias
-        #     # 'winner': game.winner.username
-        # }
+
         item = serializer_game_result(game)
         history.append(item)
-    return HttpSuccess200("game results", history)
+    return HttpSuccess200("game results", {
+        'history': history,
+        'max_pages': paginator.num_pages
+    })
 
 
 @csrf_exempt
@@ -380,11 +388,11 @@ def tournament_list_view(request, *args, **kwargs):
     try:
         query = request.GET.get('user')
         if query is None:
-            tournaments = Tournament.objects.filter(players__user=user)
+            tournaments: QuerySet[Tournament] = Tournament.objects.filter(players__user=user)
         elif query == '':
-            tournaments = Tournament.objects.all()
+            tournaments: QuerySet[Tournament] = Tournament.objects.filter(Q(status='in progress') | Q(status='finished'))
         else:
-            tournaments = Tournament.objects.filter(players__user_username=query)
+            tournaments: QuerySet[Tournament] = Tournament.objects.filter(players__user_username=query)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
     for tournament in tournaments:
@@ -392,7 +400,8 @@ def tournament_list_view(request, *args, **kwargs):
             'id': tournament.pk,
             'name': tournament.name,
             'game_id': tournament.get_game_id_display(), # type: ignore
-            'status': tournament.status
+            'status': tournament.status,
+            'mode': tournament.mode
         }
         tournament_list.append(item)
     return JsonResponse({'success': True, 'message': '', 'data': tournament_list}, status=200)

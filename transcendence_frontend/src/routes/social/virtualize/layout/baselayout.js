@@ -1,8 +1,8 @@
 
-// /** @param {import('./layout').LayoutT.ScrollDirection} direction @returns {import('./layout').LayoutT.dimension} */
-// export function dim1(direction) {
-//     return direction === 'horizontal' ? 'width' : 'height';
-// }
+/** @param {import('./layout').LayoutT.ScrollDirection} direction @returns {import('./layout').LayoutT.dimension} */
+export function dim1(direction) {
+    return direction === 'horizontal' ? 'width' : 'height';
+}
 
 // /** @param {import('./layout').LayoutT.ScrollDirection} direction @returns {import('./layout').LayoutT.dimension} */
 // export function dim2(direction) {
@@ -290,10 +290,9 @@ export class BaseLayout {
 
     /** @param {number} val  */
     _clampScrollPosition(val) {
-        return Math.max(
-            -this.offsetWithinScroller[this._positionDim],
-            Math.min(val, this.totalScrollSize['height'] - this._viewDim1)
-        );
+        const min = -this.offsetWithinScroller[this._positionDim];
+        const max = this.totalScrollSize['height'] - this._viewDim1
+        return Math.max(min, Math.min(val, max));
     }
 
     unpin() {

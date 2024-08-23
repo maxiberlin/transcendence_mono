@@ -6,6 +6,7 @@ class ChatRoomData(TypedDict):
     type: Literal['tournament', 'private', 'UNKNOWN']
     title: str
     users: list[BasicUserData]
+    unread_count: int | None
 
 class ChatMessageData(TypedDict):
     user_id: int

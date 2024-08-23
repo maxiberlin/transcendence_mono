@@ -172,61 +172,89 @@ export class PongObjManager {
         player_one_score: this.court.scoreL, player_two_score: this.court.scoreR, reason,
         game_result: game_result ?? null
     })
-    /**
-     * @param {PongGameplayTypes.PongGameSides | number} actionSide
-     * @param {"local-set-score-check-win-message-main" | "remote-set-score-message-main" | "remote-game-end-message-main-winner-side"} mode
-     * @param {PongGameplayTypes.GameEndReason} [data]
-     * @param {APITypes.GameScheduleItem} [game_result]
-     * @returns 
-     */
-    makeAction(actionSide, mode, data, game_result) {
-        let end = false;
-        /** @type {PongGameplayTypes.PongGameSides | "none"} */
-        let side;
-        if (typeof actionSide === "number") side = this.playerOneId === actionSide ? "left" : this.playerTwoId === actionSide ? "right" : "none";
-        else side = actionSide;
-        if (mode !== "remote-game-end-message-main-winner-side") {
-            if (side === "left") {
-                this.court.scoreL++;
-                if (this.court.scoreL === this.maxScore) end = true
-            } else if (side === "right") {
-                this.court.scoreR++;
-                if (this.court.scoreR === this.maxScore) end = true
-            } else {
-                throw new Error("PongObjsManager: makeAction: invalid side");
-            }
-            pushMessageToMainThread(this.#getScoredMessage(side))
-            
-            // console.log('timeout for: ', data);
-            if (!end) {
-                this.scoreBreak = true;
-                setTimeout(() => {
-                    // console.log('timeout done old ball: ', this.ball);
-                    this.ball = new PongBall(this.ballData, !this.remote);
-                    if (this.objectColor) this.ball.setColor(this.objectColor);
-                    // console.log('new ball created: ', this.ball);
-                    this.ball.setCanvasSizes(this.width, this.height);
-                    // console.log(`this.width: ${this.width} this.height: ${this.height}`);
-                    this.scoreBreak = false;
-                    // console.log('reset scorebreak now noot');
-                }, this.ballTimeout);
-            }
-        }
-        if (side === "none")
-            throw new Error("PongObjsManager: makeAction: invalid side");
-        if (typeof data === "string" && mode === "remote-game-end-message-main-winner-side")
-            pushMessageToMainThread(this.#getGameDoneMessage(side, data, game_result))
-        else if (end && mode === "local-set-score-check-win-message-main") 
-            pushMessageToMainThread(this.#getGameDoneMessage(side, "reguar"))
 
-        
+    /** @param {number} id @returns {PongGameplayTypes.PongGameSides | 'none'} */
+    getSideById(id) {
+        return this.playerOneId === id ? "left" : this.playerTwoId === id ? "right" : "none";
     }
 
-    draw() {
-        this.court.draw(this.ctx);
+    resetBall() {
+        this.scoreBreak = true;
+        setTimeout(() => {
+            // console.log('timeout done old ball: ', this.ball);
+            this.ball = new PongBall(this.ballData, !this.remote);
+            if (this.objectColor) this.ball.setColor(this.objectColor);
+            // console.log('new ball created: ', this.ball);
+            this.ball.setCanvasSizes(this.width, this.height);
+            // console.log(`this.width: ${this.width} this.height: ${this.height}`);
+            this.scoreBreak = false;
+            // console.log('reset scorebreak now noot');
+        }, this.ballTimeout);
+    }
+
+    /** @param {number | PongGameplayTypes.PongGameSides | 'none'} side  */
+    localScored(side) {
+        if (typeof side === 'number') {
+            side = this.getSideById(side);
+        }
+        let end = false;
+        if (side === "left") {
+            this.court.scoreL++;
+            if (this.court.scoreL === this.maxScore) {
+                end = true;
+            }
+        } else if (side === "right") {
+            this.court.scoreR++;
+            if (this.court.scoreR === this.maxScore) {
+                end = true;
+            }
+        } else {
+            throw new Error("PongObjsManager: invalid side");
+        }
+        pushMessageToMainThread(this.#getScoredMessage(side));
+        if (end === true) {
+            return pushMessageToMainThread(this.#getGameDoneMessage(side, 'reguar'));
+        }
+        this.resetBall();
+    }
+
+    /**
+     * @param {PongGameplayTypes.PongGameSides} winnerSide 
+     * @param {PongGameplayTypes.GameEndReason} reason 
+     * @param {APITypes.GameScheduleItem} gameResult 
+     */
+    remoteEndGame(winnerSide, reason, gameResult) {
+        pushMessageToMainThread(this.#getGameDoneMessage(winnerSide, reason, gameResult))
+    }
+
+    /** @param {number | PongGameplayTypes.PongGameSides | 'none'} side  */
+    remoteScored(side) {
+        if (typeof side === 'number') {
+            side = this.getSideById(side);
+        }
+        if (side === "left") {
+            this.court.scoreL++;
+        } else if (side === "right") {
+            this.court.scoreR++;
+        } else {
+            throw new Error("PongObjsManager: invalid side");
+        }
+        pushMessageToMainThread(this.#getScoredMessage(side));
+        this.resetBall();
+    }
+
+
+
+    /**
+     * @param {boolean} drawball 
+     */
+    draw(drawball, qlen) {
+        this.court.draw(this.ctx, qlen);
         this.paddleLeft.draw(this.ctx);
         this.paddleRight.draw(this.ctx);
-        this.ball.draw(this.ctx);
+        if (drawball) {
+            this.ball.draw(this.ctx);
+        }
     }
 }
 
