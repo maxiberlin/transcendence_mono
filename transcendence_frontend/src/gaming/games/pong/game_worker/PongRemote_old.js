@@ -350,87 +350,87 @@ export class PongRemote extends Pong {
         this.renderByTimestampNew(elapsedMs, workerCurrentTimeMs);
     }
 
-    /** @param {number} elapsedMs */
-    predictNewSnapshot(elapsedMs) {      
+    // /** @param {number} elapsedMs */
+    // predictNewSnapshot(elapsedMs) {      
         
-        this.#serverGameTime += elapsedMs;
+    //     this.#serverGameTime += elapsedMs;
         
-        let oldPredicted = this.#predictedTick;
-        const [tickbuffer, predictedTicks] = this.getUpdatedTicks(this.#tickbuffer + elapsedMs, this.#predictedTick, this.#tickDuration);
-        this.#tickbuffer = tickbuffer;
-        this.#predictedTick = predictedTicks;
-        const tickDurationSec = this.#tickDuration / 1000;
+    //     let oldPredicted = this.#predictedTick;
+    //     const [tickbuffer, predictedTicks] = this.getUpdatedTicks(this.#tickbuffer + elapsedMs, this.#predictedTick, this.#tickDuration);
+    //     this.#tickbuffer = tickbuffer;
+    //     this.#predictedTick = predictedTicks;
+    //     const tickDurationSec = this.#tickDuration / 1000;
 
-        // console.log('oldPredictedTickno: ', oldPredicted);
-        // console.log('newPredictedTickno: ', predictedTicks);
+    //     // console.log('oldPredictedTickno: ', oldPredicted);
+    //     // console.log('newPredictedTickno: ', predictedTicks);
         
 
-        let lastSnapshot =this.#updateQueueNew.at(-1);
-        if (lastSnapshot == undefined) {
-            // console.log('CREATE LAST SNAPSHOT');
+    //     let lastSnapshot =this.#updateQueueNew.at(-1);
+    //     if (lastSnapshot == undefined) {
+    //         // console.log('CREATE LAST SNAPSHOT');
             
-            let x, y, dx, dy;
-            lastSnapshot = {
-                paddle_left: ({x, y, dx, dy} = this.manager.paddleLeft),
-                paddle_right: ({x, y, dx, dy} = this.manager.paddleRight),
-                ball: {x:this.manager.ball.x, y:this.manager.ball.y, dx:0, dy:0},
-                tickno: 0,
-                timestamp_ms: this.#serverGameTime
-            }
-        }
-        // console.log('lastSnapshot: ', lastSnapshot);
+    //         let x, y, dx, dy;
+    //         lastSnapshot = {
+    //             paddle_left: ({x, y, dx, dy} = this.manager.paddleLeft),
+    //             paddle_right: ({x, y, dx, dy} = this.manager.paddleRight),
+    //             ball: {x:this.manager.ball.x, y:this.manager.ball.y, dx:0, dy:0},
+    //             tickno: 0,
+    //             timestamp_ms: this.#serverGameTime
+    //         }
+    //     }
+    //     // console.log('lastSnapshot: ', lastSnapshot);
 
-        let oldServerTime = this.#serverGameTime;
-        // if (lastSnapshot) {
+    //     let oldServerTime = this.#serverGameTime;
+    //     // if (lastSnapshot) {
 
-        //     let lastSnapshotTick = lastSnapshot.tickno;
+    //     //     let lastSnapshotTick = lastSnapshot.tickno;
             
-        //     /** @type {PongServerTypes.GameObjPosBinary} */
-        //     let paddle_left = lastSnapshot.paddle_left,  paddle_right = lastSnapshot.paddle_right, ball = lastSnapshot.ball;
+    //     //     /** @type {PongServerTypes.GameObjPosBinary} */
+    //     //     let paddle_left = lastSnapshot.paddle_left,  paddle_right = lastSnapshot.paddle_right, ball = lastSnapshot.ball;
             
-        //     // console.log('queue before prediction: ', this.#updateQueueNew.map(i => i.tickno));
+    //     //     // console.log('queue before prediction: ', this.#updateQueueNew.map(i => i.tickno));
             
-        //     while (lastSnapshotTick < predictedTicks + 1) {
-        //         // oldServerTime += this.#tickDuration;
-        //         lastSnapshotTick++;
-        //         const timeSnap = this.#tickDuration * lastSnapshotTick;
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - FROM: paddle left x: ${paddle_left.x} y: ${paddle_left.y} dx: ${paddle_left.dx} dy: ${paddle_left.dy}`);
-        //         paddle_left = this.manager.paddleLeft.getPredictedXY(paddle_left, tickDurationSec),
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - TO: paddle left x: ${paddle_left.x} y: ${paddle_left.y} dx: ${paddle_left.dx} dy: ${paddle_left.dy}`);
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - FROM: paddle right x: ${paddle_right.x} y: ${paddle_right.y} dx: ${paddle_right.dx} dy: ${paddle_right.dy}`);
-        //         paddle_right = this.manager.paddleRight.getPredictedXY(paddle_right, tickDurationSec),
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - TO: paddle right x: ${paddle_right.x} y: ${paddle_right.y} dx: ${paddle_right.dx} dy: ${paddle_right.dy}`);
-        //         // ball = this.manager.scoreBreak ? ball : this.manager.ball.getPredictedXY(ball, tickDurationSec, this.manager.paddleLeft, this.manager.paddleRight),
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - FROM: ball x: ${ball.x} y: ${ball.y} dx: ${ball.dx} dy: ${ball.dy}`);
-        //         ball = this.manager.ball.getPredictedXY(ball, tickDurationSec, this.manager.paddleLeft, this.manager.paddleRight),
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - TO: ball x: ${ball.x} y: ${ball.y} dx: ${ball.dx} dy: ${ball.dy}`);
-        //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - STATE OF BALL: ball x: ${this.manager.ball.x} y: ${this.manager.ball.y} dx: ${this.manager.ball.dx} dy: ${this.manager.ball.dy}`);
-        //         this.#updateQueueNew.push({predicted: true, paddle_left, paddle_right, ball, tickno: lastSnapshotTick, timestamp_ms: timeSnap});
-        //     }
-        // }
+    //     //     while (lastSnapshotTick < predictedTicks + 1) {
+    //     //         // oldServerTime += this.#tickDuration;
+    //     //         lastSnapshotTick++;
+    //     //         const timeSnap = this.#tickDuration * lastSnapshotTick;
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - FROM: paddle left x: ${paddle_left.x} y: ${paddle_left.y} dx: ${paddle_left.dx} dy: ${paddle_left.dy}`);
+    //     //         paddle_left = this.manager.paddleLeft.getPredictedXY(paddle_left, tickDurationSec),
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - TO: paddle left x: ${paddle_left.x} y: ${paddle_left.y} dx: ${paddle_left.dx} dy: ${paddle_left.dy}`);
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - FROM: paddle right x: ${paddle_right.x} y: ${paddle_right.y} dx: ${paddle_right.dx} dy: ${paddle_right.dy}`);
+    //     //         paddle_right = this.manager.paddleRight.getPredictedXY(paddle_right, tickDurationSec),
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - TO: paddle right x: ${paddle_right.x} y: ${paddle_right.y} dx: ${paddle_right.dx} dy: ${paddle_right.dy}`);
+    //     //         // ball = this.manager.scoreBreak ? ball : this.manager.ball.getPredictedXY(ball, tickDurationSec, this.manager.paddleLeft, this.manager.paddleRight),
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - FROM: ball x: ${ball.x} y: ${ball.y} dx: ${ball.dx} dy: ${ball.dy}`);
+    //     //         ball = this.manager.ball.getPredictedXY(ball, tickDurationSec, this.manager.paddleLeft, this.manager.paddleRight),
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - TO: ball x: ${ball.x} y: ${ball.y} dx: ${ball.dx} dy: ${ball.dy}`);
+    //     //         // console.log(`predict tick: ${lastSnapshotTick} time: ${timeSnap} - STATE OF BALL: ball x: ${this.manager.ball.x} y: ${this.manager.ball.y} dx: ${this.manager.ball.dx} dy: ${this.manager.ball.dy}`);
+    //     //         this.#updateQueueNew.push({predicted: true, paddle_left, paddle_right, ball, tickno: lastSnapshotTick, timestamp_ms: timeSnap});
+    //     //     }
+    //     // }
 
 
         
-    }
+    // }
 
-    /** @param {PongClientTypes.MovementKey | PongClientTypes.MovementMouse} move  */
-    rePredictSnapshot(move) {
-        const tick = this.#predictedTick;
-        // console.log('REPREDICT SNAPSHOT:tick: ', tick,' move: ', move);
-        // console.log('REPREDICT my queue: ', this.#updateQueueNew.map(i => i.tickno));
+    // /** @param {PongClientTypes.MovementKey | PongClientTypes.MovementMouse} move  */
+    // rePredictSnapshot(move) {
+    //     const tick = this.#predictedTick;
+    //     // console.log('REPREDICT SNAPSHOT:tick: ', tick,' move: ', move);
+    //     // console.log('REPREDICT my queue: ', this.#updateQueueNew.map(i => i.tickno));
         
-        const snapshot = this.#updateQueueNew.find(i => i.tickno === tick);
-        const nextSnapshot = this.#updateQueueNew.find(i => i.tickno+1 === tick);
-        if (snapshot && nextSnapshot && nextSnapshot.predicted === true) {
-            if (this.manager.side === 'left') {
-                // console.log('REPREDICT PADDLE: ', this.manager.paddleLeft);
+    //     const snapshot = this.#updateQueueNew.find(i => i.tickno === tick);
+    //     const nextSnapshot = this.#updateQueueNew.find(i => i.tickno+1 === tick);
+    //     if (snapshot && nextSnapshot && nextSnapshot.predicted === true) {
+    //         if (this.manager.side === 'left') {
+    //             // console.log('REPREDICT PADDLE: ', this.manager.paddleLeft);
                 
-                nextSnapshot.paddle_left = this.manager.paddleLeft.getPredictedXY(snapshot.paddle_left, this.#tickDuration, move);
-            } else {
-                nextSnapshot.paddle_right = this.manager.paddleLeft.getPredictedXY(snapshot.paddle_right, this.#tickDuration, move);
-            }
-        }
-    }
+    //             nextSnapshot.paddle_left = this.manager.paddleLeft.getPredictedXY(snapshot.paddle_left, this.#tickDuration, move);
+    //         } else {
+    //             nextSnapshot.paddle_right = this.manager.paddleLeft.getPredictedXY(snapshot.paddle_right, this.#tickDuration, move);
+    //         }
+    //     }
+    // }
 
     gameTime = 0;
     /** @param {number} elapsedMs  */

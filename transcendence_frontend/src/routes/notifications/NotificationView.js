@@ -110,10 +110,12 @@ export class NotificationView extends BaseElement {
                 } }
                 
                 class="btn fs-5 fs-fw d-inline-flex align-items-center justify-content-center position-relative"
+                style="${"width: 3em; height: 2em;"}"
                 type="button"
                 data-bs-toggle="dropdown"
+                aria-label="Toggle Notifications"
                 aria-expanded="false"
-                style="${"width: 3em; height: 2em;"}"
+                aria-controls="notificationsList"
             >
                 <i class="fa-solid fa-bell"></i>
                 ${this.notifications?.value.unreadCount === 0 ? '' : html`
@@ -128,7 +130,7 @@ export class NotificationView extends BaseElement {
                 @scroll=${ (e) => { this.onMenuScroll(e) } }
                 style="${"min-width: 350px; max-width: 100vw; max-height: 30em;"}"
                 class="overflow-scroll dropdown-menu scrollable-menu"
-                aria-labelledby="id_notification_dropdown_toggle"
+                id="notificationsList"
             >
                 ${this.notifications?.value.messages.length === 0 ? this.renderNoNotification()
                     :  this.notifications?.value.messages.map((n) => this.renderNotificationItem(n))

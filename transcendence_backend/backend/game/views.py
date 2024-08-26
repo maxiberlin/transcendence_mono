@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
 from django.http import HttpResponse, JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
-from django.views.decorators.http import require_GET, require_POST, require_safe
+from django.views.decorators.http import require_GET, require_POST, require_safe, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.http.request import HttpRequest
 from django.contrib.auth.models import AnonymousUser
@@ -36,15 +36,18 @@ def game_results(request, *args, **kwargs):
     schedule_id = data.get('schedule_id')
     score_one = data.get('score_one')
     score_two = data.get('score_two')
-    schedule = GameSchedule.objects.filter(pk=schedule_id).first()
+    
+    schedule = GameSchedule.objects.filter(pk=schedule_id, is_active=True).first()
+    if schedule is None:
+        return HttpNotFound404('Match not found')
     print(f"schedule: {schedule}")
     print(f"schedule_id: {schedule_id}")
     print(f"score_one: {score_one}")
     print(f"score_two: {score_two}")
-    if schedule and isinstance(score_one, int) and isinstance(score_two, int):
-        schedule.finish_game_and_update(score_one, score_two)
-        return JsonResponse({'message': 'OK'}, status=200)
-    return JsonResponse({'message': 'NO'}, status=404)
+    if isinstance(score_one, int) and isinstance(score_two, int):
+        result = schedule.finish_game_and_update(score_one, score_two)
+        return HttpSuccess200('', serializer_game_result(result))
+    return HttpBadRequest400('invalid scores')
     # message, status = parse_results(schedule_id, score_one, score_two)
     # return JsonResponse(message, status=status)
 
@@ -68,10 +71,13 @@ def game_results(request, *args, **kwargs):
 def send_game_invite(request, *args, **kwargs):
     user = request.user
     user_id = kwargs.get('user_id')
-    data = json.loads(request.body)	
-    game_id = data.get('game_id')
-    game_mode = data.get('game_mode')
-    tournament = data.get('tournament')
+    try:
+        data = json.loads(request.body)	
+        game_id = data.get('game_id')
+        game_mode = data.get('game_mode')
+        tournament = data.get('tournament')
+    except Exception as e:
+        HttpBadRequest400('invalid input')
     try:
         invitee = UserAccount.objects.get(pk=user_id)
     except Exception as e:
@@ -199,44 +205,37 @@ def game_invite_cancel(request, *args, **kwargs):
 
 
 @csrf_exempt
-@require_POST
+@require_http_methods(["GET", "POST"])
 @login_required
-def game_schedule(request, *args, **kwargs):
-    user = request.user
-    schedules = []
-    player = Player.objects.get(user=user)
-    if player:
-        try:
-            game_list = GameSchedule.objects.filter(Q(player_one=player) | Q(player_two=player), is_active=True)
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
-    else:
-        return JsonResponse({'success': False, 'message': 'Player does not exist'}, status=400)
+def game_schedule(request: HttpRequest, *args, **kwargs):
+    
+    if request.method == 'GET':
+        player = get_object_or_404(Player, user=request.user)
+        game_list = GameSchedule.objects.filter(Q(player_one=player) | Q(player_two=player), is_active=True)
+        schedules = [serializer_game_schedule(game, None) for game in game_list]
+        return HttpSuccess200("game schedules", schedules)
 
-    for game in game_list:
-        # ply_one_user_acc = UserAccount.objects.get(username=game.player_one)
-        # ply_two_user_acc = UserAccount.objects.get(username=game.player_two)
-        # item = {
-        #     'schedule_id': game.pk,
-        #     'game_id': game.game_id,
-        #     'game_mode': game.game_mode,
-        #     'tournament': game.tournament.pk if game.tournament else None,
-        #     'player_one': {
-        #         'id': ply_one_user_acc.pk,
-        #         'username': ply_one_user_acc.username,
-        #         'avatar': ply_one_user_acc.avatar.url,
-        #         'alias': Player.objects.get(user=ply_one_user_acc).alias,
-        #     },
-        #     'player_two': {
-        #         'id': ply_two_user_acc.pk,
-        #         'username': ply_two_user_acc.username,
-        #         'avatar': ply_two_user_acc.avatar.url,
-        #         'alias': Player.objects.get(user=ply_two_user_acc).alias,
-        #     }
-        # }
-        item = serializer_game_schedule(game, None)
-        schedules.append(item)
-    return HttpSuccess200("game schedules", schedules)
+    try:
+        data = json.loads(request.body)	
+        user_id = data.get('user_id')
+        game_id = data.get('game_id')
+        game_mode = data.get('game_mode')
+        tournament = data.get('tournament')
+    except Exception as e:
+        HttpBadRequest400('invalid input')
+    p1 = get_object_or_404(Player, user=request.user)
+    p2 = get_object_or_404(Player, user=get_object_or_404(UserAccount, pk=user_id))
+    s = schedules=GameSchedule.objects.filter(( ( Q(player_one=p1) & Q(player_two=p2) ) | ( Q(player_one=p2) & Q(player_two=p1) ) ), game_mode='1vs1', is_active=True)
+    if len(s) > 0:
+        return HttpConflict409('you have a running 1vs1 match')
+    schedule = GameSchedule.objects.create(
+        player_one=p1,
+        player_two=p2,
+        game_id=game_id,
+        game_mode='1vs1',
+        tournament=None
+    )
+    return HttpSuccess200('match created', serializer_game_schedule(schedule, None))
 
 
 # @csrf_exempt
@@ -378,24 +377,75 @@ def create_tournament(request, *args, **kwargs):
             return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
 
+def filter_tournament_by_query(status_query: str | list[str] | None = None, user: str | int | None = None, creator: str | int | None = None, mode_query: str | None = None):
+    q_objects = Q()
+    
+    if mode_query and isinstance(mode_query, str):
+        valid_modes = ["single elimination", "round robin"]
+        modes = mode_query.split(',')
+        modes = [m for m in modes if m]
+        if len(modes) > 3:
+            raise ValueError('to many state options to query, ony 2 are valid')
+        qob = Q()
+        for mode in modes:
+            if mode not in valid_modes:
+                raise ValueError("invalid state, state can be: 'round robin' or 'single elimination'")
+            qob |= Q(mode=mode.strip())
+        q_objects &= qob
+    
+    if status_query:
+        if isinstance(status_query, str):
+            statuses = status_query.split(',')
+        else:
+            statuses = status_query
+        valid_states: list[Literal['waiting', 'in progress', 'finished']] = ['waiting', 'in progress', 'finished']
+        statuses = [s for s in statuses if s]
+        if len(statuses) > 3:
+            raise ValueError('to many state options to query, ony 3 are valid')
+        qob = Q()
+        for status in statuses:
+            if status not in valid_states:
+                raise ValueError("invalid state, state can be: 'waiting', 'in progress' or 'finished'")
+            qob |= Q(status=status.strip())
+        q_objects &= qob
+
+    if user:
+        user_id = int(user) if isinstance(user, str) and user.isdigit() else user
+        q_objects &= Q(players__user_id=user_id)
+
+    if creator:
+        creator_id = int(creator) if isinstance(creator, str) and creator.isdigit() else creator
+        q_objects &= Q(creator_id=creator_id)
+
+    print(f"q objects4: {q_objects}")
+    return q_objects
+    
+# def filter_tournament_by_status_query(status_query: str | None):
+
 @csrf_exempt
 @require_GET
 @login_required
-def tournament_list_view(request, *args, **kwargs):
+def tournament_list_view(request: HttpRequest, *args, **kwargs):
     user = request.user
     tournament_list = []
     #  tournaments = Tournament.objects.filter(players__user=user).distinct().values_list('pk', flat=True)
     try:
-        query = request.GET.get('user')
-        if query is None:
-            tournaments: QuerySet[Tournament] = Tournament.objects.filter(players__user=user)
-        elif query == '':
-            tournaments: QuerySet[Tournament] = Tournament.objects.filter(Q(status='in progress') | Q(status='finished'))
+        qobj = filter_tournament_by_query(request.GET.get('status'), request.GET.get('user'), request.GET.get('creator'), request.GET.get('mode'))
+        pageno = request.GET.get('page')
+        max_pages = 1
+        if pageno is None or pageno == '':
+            tournaments_page = Tournament.objects.filter(qobj)
+        elif not pageno.isdigit():
+            return HttpBadRequest400("invalid page")
         else:
-            tournaments: QuerySet[Tournament] = Tournament.objects.filter(players__user_username=query)
+            tournaments: QuerySet[Tournament] = Tournament.objects.filter(qobj)
+            pageno = int(pageno)
+            paginator = Paginator(tournaments, 5)
+            tournaments_page = paginator.get_page(pageno)
+            max_pages = paginator.num_pages
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
-    for tournament in tournaments:
+    for tournament in tournaments_page:
         item = {
             'id': tournament.pk,
             'name': tournament.name,
@@ -404,7 +454,10 @@ def tournament_list_view(request, *args, **kwargs):
             'mode': tournament.mode
         }
         tournament_list.append(item)
-    return JsonResponse({'success': True, 'message': '', 'data': tournament_list}, status=200)
+    return JsonResponse({'success': True, 'message': '', 'data': {
+        'tournaments': tournament_list,
+        'max_pages': max_pages
+    }}, status=200)
 
 
 @csrf_exempt
@@ -536,3 +589,10 @@ def player_stats(request, *args, **kwargs):
 
     else:
         return JsonResponse({'success': False}, status=403)
+    
+    
+@require_GET
+@login_required
+def leaderboard(request: HttpRequest):
+    players = Player.objects.all().order_by('-xp')
+    return HttpSuccess200('leaderboard', [serializer_player_details(p, None) for p in players])

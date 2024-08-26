@@ -1,7 +1,6 @@
 import { actions } from '../../components/ActionButtons.js';
 import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { renderCard, renderListCard } from '../../components/bootstrap/BsCard.js';
-import { getTournamentAvatarLink } from '../../components/gameUtils.js';
 import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
@@ -95,11 +94,6 @@ export class SingleChatView extends BaseElement {
         this.boundSendMessage = this.sendMsg.bind(this);
     }
 
-    connectedCallback() {
-        super.connectedCallback();
-        this.style.height = '100%';
-    }
-
     /**
      * @template {SINGLECHATKEYS} T
      * @param {T} key
@@ -189,7 +183,6 @@ export class SingleChatView extends BaseElement {
                     placeholder="type to chat"
                     name="chat-message"
                     aria-label="chat input"
-                    autocomplete="off"
                 >
                 <button
                     class="btn btn-primary px-3"
@@ -289,72 +282,21 @@ export class SingleChatView extends BaseElement {
     selsectedMessageElements = [];
 
     renderChatHeader = () => {
+        
         const room = this.chats?.value.room;
-        let content;
-        if (room?.type === 'private') {
-            const user = room?.users.find(u => u.id !== this.session.value?.user?.id);
-            const canSendInvitation = user && sessionService.canSend1vs1GameInvitation(user.id);
-            content = html`
+        const user = room?.users.find(u => u.id !== this.session.value?.user?.id);
+        const canSendInvitation = room?.type !== 'tournament' && user && sessionService.canSend1vs1GameInvitation(user.id);
+        return room?.type === 'tournament' ? '' : html`
+            <div class="card">
                 <div class="d-flex m-2">
                     <div class="me-2">
                         ${avatarLink(user, true)}
                     </div>
                     ${!canSendInvitation ? '' : actions.sendGameInvitation(user.id, { host: this, showText: false })}
                 </div>
-            `
-        } else if ( room?.type === 'tournament') {
-            const tdata = this.session.value?.tournaments?.find(t => t.name === room.title);
-            // console.log('tdata: ', tdata);
-            // console.log('tdata: ', getTournamentAvatarLink(tdata));
-            
-            content = !tdata ? '' : html`
-                <div class="d-flex m-2">
-                    <div class="me-2">
-                        ${getTournamentAvatarLink(tdata)}
-                    </div>
-                </div>
-            `
-        }
-        return html`
-            <div class="card">
-                ${content}
             </div>
         `
     }
-//     <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
-//     class="flex-grow-1 overflow-scroll" >
-//     ${this.chats?.value.messages.map(m => this.renderMessage(m))}
-// </div>
-
-    getContent = () => html`
-        <div class="chat-window" >
-            ${this.isValidChat === false ? html`
-                <div>
-                    There is no chat :o
-                </div>
-            ` : html`
-                    <div class="d-flex flex-column h-100">
-                        <div>
-                            ${this.renderChatHeader()}
-                        </div>
-                        <div
-                             ${ref(this.chatContainerRef)}
-                             @scroll=${ {cb: (e)=>{this.onChatScroll(e)}, op: this.eventlistenerscrolloption} }
-                            class="chat-messages-container"
-                        >   
-                            <list-group
-                                animatelist
-                                unstyled
-                                .items=${this.chats?.value.messages}
-                                .rendercb=${m => this.renderMessage(m)}
-                            ></list-group>
-                        </div>
-                            ${this.renderMessageInput()}
-                    </div>
-            `}
-        </div>
-    `
-
     render() {
         // console.log('SingleChatView: render: current Chats: ', this.chats?.value);
 
@@ -369,8 +311,30 @@ export class SingleChatView extends BaseElement {
         // console.log('OFFCANVAS?: ', this.props.offcanvas);
         
         console.log('render single chat view: form: ', this.querySelector('form'));
+        
 
-        return this.props.offcanvas ? this.renderOffcanvas() : this.getContent();
+        return html`
+            ${this.isValidChat === false ? html`
+                <div>
+                    There is no chat :o
+                </div>
+                ` : html`
+                ${this.props.offcanvas ? this.renderOffcanvas() : html`
+                    <div class="">
+                         <div class="d-flex flex-column chat-window" >
+                                ${this.renderChatHeader()}
+                                 <div ${ref(this.chatContainerRef)}  @scroll=${(e)=>{this.onChatScroll(e)}}
+                                     class="flex-grow-1 overflow-scroll" >
+                                     ${this.chats?.value.messages.map(m => this.renderMessage(m))}
+                                 </div>
+                             <div class="px-2" >${this.renderMessageInput()}</div>
+                         </div>
+                     </div>
+                `}
+            `}
+            
+        `
+       
     }
     
 }

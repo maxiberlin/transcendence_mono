@@ -66,9 +66,11 @@ class PlayerConsumer(AsyncWebsocketConsumer):
         self.closed = False
         self.last_update = time.perf_counter()
         self.started_unix_ms = time.time() * 1000
-        self.started_perf = time.perf_counter()
+        self.started_perf = time.perf_counter() * 1000
         self.schedule_info: ScheduleInfo | None = await get_game_schedule_channels(int(self.schedule_id))
         
+        # 1724603796126
+        # 1724610366378
 
         if not self.channel_layer:
             logger.error("Channel layer not found")
@@ -101,13 +103,13 @@ class PlayerConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         print("closeeeed...disconnected?!?")
         if not self.self_closed:
-            await self.messenger.push_to_game_engine(self.messenger.user_disconnected(self.user.pk))
+            # await self.messenger.push_to_game_engine(self.messenger.user_disconnected(self.user.pk))
             await self.close()
         if self.channel_layer:
             await self.channel_layer.group_discard(self.game_group_name, self.channel_name)
 
     async def send_pong(self, client_timestamp_ms: float):
-        curr = time.time() * 1000
+        curr = time.perf_counter() * 1000
         # print(f"ping fro user: user {self.user}")
         servertime = self.started_unix_ms + (curr - self.started_perf) * 1000
         res: msg_server.ServerPongCommand = {

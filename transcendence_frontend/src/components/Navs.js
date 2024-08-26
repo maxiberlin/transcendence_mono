@@ -75,7 +75,7 @@ export class VerticalNav extends BaseElement {
         await this.updateComplete;
         if (this.offcanvasRef.value) {
             this.offcanvasToggle = new Offcanvas(this.offcanvasRef.value);
-            console.log('OFFCANVAS: ', this.offcanvasToggle);
+            // console.log('OFFCANVAS: ', this.offcanvasToggle);
         }
         
     }
@@ -85,27 +85,31 @@ export class VerticalNav extends BaseElement {
         this.init();
     }
 
-    activeLink = 0;
+    // activeLink = 0;
+    activeLink;
 
     /** @param {NavItemConf} conf @param {number} index */
     renderNavLink = (conf, index) => {
         // const isActive = conf.firstActive ?? this.activeLink === index;
-        const isActive = this.activeLink === index;
+        let isActive = this.activeLink === index;
+        if (this.activeLink == undefined) {
+            isActive = conf.firstActive ?? false;
+        }
         // const classes = `position-relative nav-link ps-3 w-100 ${this.linebreak ? 'd-flex flex-column align-items-center p-3' : '' } ${isActive ? 'active link-light' : ''}`;
         const classes = `position-relative nav-link ps-3  ${this.linebreak ? 'd-flex flex-column align-items-center p-3' : '' } ${isActive ? 'active link-light' : ''}`;
-        console.log('render nav link: active: ', this.activeLink, ', index: ', index, ' route: ', conf.href);
+        // console.log('render nav link: active: ', this.activeLink, ', index: ', index, ' route: ', conf.href);
         
         return html`
         <a
             @click=${ (e) => {
                 if (this.stoppropagation) {
-                    console.log('STOP PROPAGATION');
+                    // console.log('STOP PROPAGATION');
                     
                     e.stopPropagation();
                     e.preventDefault();
                 }
-                this.offcanvasToggle?.hide();
                 this.activeLink = index;
+                this.offcanvasToggle?.hide();
                 super.requestUpdate();
                 parent.dispatchEvent(new SelectedNavLink(conf));
                 this.firstRender = false;
@@ -179,7 +183,7 @@ export class VerticalNav extends BaseElement {
     `
 
     render() {
-        console.log('rendernav, confs: ', this.props.navconfigs);
+        // console.log('rendernav, confs: ', this.props.navconfigs);
         
         // flex-grow-1 nav navbar py-2
         return html`

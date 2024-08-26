@@ -4,8 +4,42 @@
 
 
 
-- next to do:
+- modules:
+    - web - 2 Modules
+        - M - django
+        - m - bootstrap
+        - m - postres
+    - user managerment - 2 Modules
+        - M - user managerment
+        - M - remote authentication
+    - gameplay - 2 Modules
+        - M - remote players
+        - M - live chat
+    - accessibility - 1 Module
+        - m - support on all devices
+        - m - extended browser compatibility
+    - Server Side Pong - 
+        - M - server side
+
+
+- todo gameserver:
+    - check output of game snapshots
+
+    
+- todo:
+    - ifDefined don't working
+    - mark chat as active, when clicked (the current one as well)
+    - refetching or update after refetching not always working? check
+    - update game modals -> little bug + make static
+    - blocked page for other user not visible + -> make notification
+    
+
+
+
+- done:
     - oauth ✅
+    - settings page should have subpages ✅
+    - NEED TO DELETE CHAT ROOMS AS WELL ✅
     - login page pop up, when logged in, go to login page and then redirected to main ✅
     - make use of bio field ✅
     - add message chat button to friendlist ✅
@@ -15,12 +49,3 @@
         -> see friends, matches with a person, trournaments with person in profile
         -> link every tournament and invitation?
     
-    
-- today todo:
-    - ifDefined don't working
-    - settings page should have subpages
-    - mark chat as active, when clicked
-    - refetching or update after refetching not always working? check
-    - update game modals -> little bug + make static
-    - blocked page for other user not visible + -> make notification
-    - NEED TO DELETE CHAT ROOMS AS WELL!!! ❓

@@ -1,4 +1,5 @@
 import { html, ifDefined } from '../lib_templ/BaseElement.js';
+import { getTournamentLink } from '../routes/home/utils.js';
 import { sessionService } from '../services/api/API_new.js';
 import { avatarLink } from './bootstrap/AvatarComponent';
 import { renderCardInfo } from './bootstrap/BsCard';
@@ -84,32 +85,32 @@ export const get1vs1MatchImg = () => html`
     <img
         class="rounded-4 object-fit-cover border border-white border-3"
         alt="avatar"
-        src="/public/images/match_1_2.webp"
+        src="/images/match_1_2.webp"
         width="50"
         height="50"
     />
 `
 
-export const getRRMatchImg = () => html`
+export const getRRMatchImg = (size) => html`
    
     <img
         
         class="rounded-5 object-fit-cover border border-white border-3"
         alt="avatar"
-        src="/public/images/match_rr_2.webp"
-        width="50"
-        height="50"
+        src="/images/match_rr_2.webp"
+        width="${size ?? 50}"
+        height="${size ?? 50}"
     />
 `
 
-export const getSEMatchImg = () => html`
+export const getSEMatchImg = (size) => html`
     <img
         
         class="rounded-3 object-fit-cover border border-white border-2"
         alt="avatar"
-        src="/public/images/match_se_3.webp"
-        width="50"
-        height="50"
+        src="/images/match_se_3.webp"
+        width="${size ?? 50}"
+        height="${size ?? 50}"
     />
 `
 
@@ -119,7 +120,7 @@ export const getRRMatchImgTooltip = () => html`
         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Round Robin Tournament"
         class="rounded-5 object-fit-cover border border-white border-3"
         alt="avatar"
-        src="/public/images/match_rr_2.webp"
+        src="/images/match_rr_2.webp"
         width="50"
         height="50"
     />
@@ -130,7 +131,7 @@ export const getSEMatchImgTooltip = () => html`
         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Single Elimination Tournament"
         class="rounded-3 object-fit-cover border border-white border-2"
         alt="avatar"
-        src="/public/images/match_se_3.webp"
+        src="/images/match_se_3.webp"
         width="50"
         height="50"
     />
@@ -178,6 +179,38 @@ export const getMatchIcon = (schedule) => {
     //         ${img}
     //     </a>
     // `
+}
+
+/** @param {APITypes.TournamentItem | APITypes.TournamentData | string} [d] */
+export const getTournamentAvatarLink = (d) => {
+    if (typeof d === 'string') {
+        d = sessionService.session?.tournaments?.find(t => t.name === d);
+    }
+    return !d ? '' : html`
+        <a
+            href="${getTournamentLink(d.game_id.toLowerCase() ?? 'pong', d.id)}"
+            class="d-inline-flex align-items-center link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+        >
+            ${d.mode === 'round robin' ? getRRMatchImg(40) : getSEMatchImg(40)}
+            <span class="ms-2">${d.name ?? ''}</span>
+        </a>
+
+`
+}
+/** @param {APITypes.TournamentItem | APITypes.TournamentData | string} [d] */
+export const getTournamentAvatarInfo = (d) => {
+    if (typeof d === 'string') {
+        d = sessionService.session?.tournaments?.find(t => t.name === d);
+    }
+    return !d ? undefined : html`
+        <span
+            class="d-inline-flex align-items-center link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+        >
+            ${d.mode === 'round robin' ? getRRMatchImg(40) : getSEMatchImg(40)}
+            <span class="ms-2">${d.name ?? ''}</span>
+        </span>
+
+`
 }
 
 /** @param {APITypes.TournamentStatus} [status] */

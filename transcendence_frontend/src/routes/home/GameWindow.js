@@ -17,6 +17,16 @@ export default class GameWindow extends BaseElement {
         this.sessionUser = sessionService.subscribe(this);
     }
 
+    async init() {
+        await sessionService.updateData(['game_invitations_received', 'game_invitations_sent', 'game_schedule', 'tournaments']);
+        super.requestUpdate();
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+        this.init();
+    }
+
     // /** @param {APITypes.GameInvitationItem} data @param {boolean} received */
     // renderInvitationItem = (data, received) => renderListItem(html`
     //         <div class="col-6 col-sm-4 text-center">
@@ -124,8 +134,8 @@ export default class GameWindow extends BaseElement {
                     <a class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
                         href="${getTournamentLink(undefined, v.id)}"
                     >
-                    ${v.name}
-                </a>
+                        ${v.name}
+                    </a>
                 `
             },
             {
@@ -223,7 +233,7 @@ export default class GameWindow extends BaseElement {
 
     render() {
         return html`
-            <div class="mt-3 container-fluid text-center">
+            <div class="p-3">
                 <a class="btn btn-primary mb-4 w-100" href="/games/pong/tournament/create" role="button">
                     <i class="fa-solid fa-gamepad"></i>
                     Create a Tournament

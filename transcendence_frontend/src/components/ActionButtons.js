@@ -21,6 +21,7 @@ import BsButton from './bootstrap/BsButton.js';
  * @property {BsBtnColor} [color]
  * @property {FaIconList} [icon]
  * @property {string} [text]
+ * @property {string} [label]
  * @property {string} [radius]
  * @property {boolean} [dropdownitem]
  * @property {boolean} [stretch]
@@ -50,9 +51,6 @@ export const getBtn = (handler, defConf, conf) => {
         if (conf.host && !conf.cb && conf.host instanceof BaseElement)
             conf.host.requestUpdate();
     };
-    // if (conf.showText || (conf.showText === undefined && defConf.showText))
-    // console.log('conf: ', conf);
-    // console.log('defConf: ', defConf);
     const show = conf.showText ?? defConf.showText;
     const text = show ? conf.text ?? defConf.text ?? '' : '';
     
@@ -62,6 +60,9 @@ export const getBtn = (handler, defConf, conf) => {
     const outline = conf.outline ?? defConf.outline ?? true;
     const dropdownitem = conf.dropdownitem ?? false;
     const stretch = conf.stretch ?? false;
+    const label = conf.label ?? defConf.label ?? 'click Button';
+    console.log('LABEL: ', label);
+    
 
     return html`
     <bs-button
@@ -74,6 +75,7 @@ export const getBtn = (handler, defConf, conf) => {
       text="${text}"
       ?dropdownitem="${dropdownitem}"
       ?stretch="${stretch}"
+      label="${label}"
     >
     </bs-button>
   `;
@@ -105,16 +107,16 @@ const defaultConf = {
 
 /** @type {DefaultConfigs} */
 export const configs = {
-    block: {...defaultConf, text: "block", color: "danger", icon: "lock" },
-    unblock: {...defaultConf, text: "unblock", color: "success", icon: "unlock" },
-    addFriend: {...defaultConf, text: "add", color: "dark", icon: "user-plus" },
-    removeFriend: {...defaultConf, text: "remove", color: "danger", icon: "user-xmark" },
-    acceptReq: {...defaultConf, text: "accept", color: "success", icon: "check" },
-    rejectReq: {...defaultConf, text: "reject", color: "danger", icon: "xmark" },
-    cancelReq: {...defaultConf, text: "cancel", color: "danger", icon: "xmark" },
+    block: {...defaultConf, label: 'Block User', text: "block", color: "danger", icon: "lock" },
+    unblock: {...defaultConf, label: 'Unblock User', text: "unblock", color: "success", icon: "unlock" },
+    addFriend: {...defaultConf, label: 'Add User as a Friend', text: "add", color: "dark", icon: "user-plus" },
+    removeFriend: {...defaultConf, label: 'Remove Friend', text: "remove", color: "danger", icon: "user-xmark" },
+    acceptReq: {...defaultConf, label: 'Accept Request', text: "accept", color: "success", icon: "check" },
+    rejectReq: {...defaultConf, label: 'Reject Request', text: "reject", color: "danger", icon: "xmark" },
+    cancelReq: {...defaultConf, label: 'Cancel Request', text: "cancel", color: "danger", icon: "xmark" },
 
-    sendGameInvite: {...defaultConf, text: "invite to a match", color: "primary", icon: "gamepad", showText: true },
-    pushRes: {...defaultConf, text: "push random results", color: "success", icon: "check", showText: true },
+    sendGameInvite: {...defaultConf, label: 'send 1vs1 game invitation', text: "invite to a match", color: "primary", icon: "gamepad", showText: true },
+    pushRes: {...defaultConf, label: 'push random results', text: "push random results", color: "success", icon: "check", showText: true },
 }
 
 /**
@@ -144,19 +146,19 @@ export const actions = {
     removeFriend: (userId, conf) =>
         getBtn(sessionService.handleUser.bind(sessionService, "remove-friend", userId), configs.removeFriend, conf),
     cancelFriendRequest: (requestId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "friend-cancel", requestId), configs.cancelReq, conf),
+        getBtn(sessionService.handleRequest.bind(sessionService, "friend-cancel", requestId),  {...configs.cancelReq, label: 'cancel friend request'}, conf),
     acceptFriendRequest: (requestId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "friend-accept", requestId),configs.acceptReq, conf),
+        getBtn(sessionService.handleRequest.bind(sessionService, "friend-accept", requestId), {...configs.acceptReq, label: 'accept friend request'}, conf),
     rejectFriendRequest: (requestId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "friend-reject", requestId),configs.rejectReq, conf),
+        getBtn(sessionService.handleRequest.bind(sessionService, "friend-reject", requestId), {...configs.rejectReq, label: 'reject friend request'}, conf),
     sendGameInvitation: (userId, conf) =>
         getBtn(sessionService.sendGameInvitation.bind(sessionService, userId),configs.sendGameInvite, conf),
     cancelGameInvitation: (invitationId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "game-cancel", invitationId), configs.cancelReq, conf),
+        getBtn(sessionService.handleRequest.bind(sessionService, "game-cancel", invitationId), {...configs.cancelReq, label: 'cancel game invitation'}, conf),
     acceptGameInvitation: (invitationId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "game-accept", invitationId), configs.acceptReq, conf),
+        getBtn(sessionService.handleRequest.bind(sessionService, "game-accept", invitationId), {...configs.acceptReq, label: 'accept game invitation'}, conf),
     rejectGameInvitation: (invitationId, conf) =>
-        getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), configs.rejectReq, conf),
+        getBtn(sessionService.handleRequest.bind(sessionService, "game-reject", invitationId), {...configs.rejectReq, label: 'reject game invitation'}, conf),
     pushRandomGameResult: (scheduleId, conf) =>
         getBtn(sessionService.finishGameUpdateData.bind(sessionService, scheduleId), configs.pushRes, conf),
 };
@@ -186,20 +188,21 @@ export const actionButtonGroups = {
 
 
 /**
+ * @param {string} label
  * @param {ActionBtnData} conf
  * @param {Array<TplLit>} actions
  * @returns {TplLit}
  */
-export const renderDropdown = (conf, actions) => {
+export const renderDropdown = (label, conf, actions) => {
     const color = `btn-${conf.outline ? 'outline-' : ''}${conf.color ?? 'primary'}`;
     return html`
     <div class="dropdown">
         <button
             class="btn ${color} mx-1"
-            ?outline=${conf.outline}
             type="button"
             data-bs-toggle="dropdown"
             aria-expanded="false"
+            aria-label="${label}"
         >
             ${conf.icon ? html`<i class="fa-solid fa-fw fa-${conf.icon}"></i>` : ''}
             ${conf.text ?? ''}
@@ -228,14 +231,14 @@ export const renderDropdown = (conf, actions) => {
 /** @type {ActionButtonDropdowns} */
 export const actionButtonDropdowns = {
     friendActions: (userId, cb) =>
-        renderDropdown({...defaultConf, icon: "ellipsis-vertical"},
+        renderDropdown('Toggle Friend Actions', {...defaultConf, icon: "ellipsis-vertical"},
             [
                 actions.removeFriend( userId, { dropdownitem: true, cb} ),
                 actions.blockUser( userId, { dropdownitem: true, cb }),
             ]
         ),
     userActions: (userId, cb) =>
-        renderDropdown({...defaultConf, icon: "ellipsis-vertical"},
+        renderDropdown('Toggle Non Friend Actions', {...defaultConf, icon: "ellipsis-vertical"},
             [
                 actions.blockUser( userId, { dropdownitem: true, cb }),
             ]

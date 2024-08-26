@@ -47,13 +47,16 @@ import { BaseElement, createRef, html, ref, TemplateAsLiteral } from '../lib_tem
  * @prop rendercb
  * @attr flush
  * @attr animatelist
+ * @attr scrollheight
+ * @attr unstyled
+ * @attr light
  * 
  * @template K
  * @template {ListGroupProps<K>} T
  * @extends { BaseElement<T> }
  */
 export class ListGroup extends BaseElement {
-    static observedAttributes = ['margin', 'flush', 'animatelist']
+    static observedAttributes = ['margin', 'flush', 'animatelist', 'scrollheight', 'unstyled', 'light']
     constructor() {
         super(false, false);
 
@@ -68,6 +71,9 @@ export class ListGroup extends BaseElement {
         this.duration = 200;
         this.flush = false;
         this.animatelist = false;
+        this.scrollheight = '';
+        this.unstyled = false;
+        this.light = false;
     }
 
     
@@ -382,10 +388,11 @@ export class ListGroup extends BaseElement {
         if (this.animatelist) {
             this.checkItems();
         }
-        return html`
-        <ul ${ref(this.listRef)} class="list-group ${this.flush ? 'list-group-flush' : ''} ">
+        // this.scrollheight.length > 0 ? 'this.scrollheight' : 
+        return !this.unstyled ? html`
+            <ul ${ref(this.listRef)} class="list-group ${ this.flush ? 'list-group-flush' : ''}">
                     ${this._props.items?.map((data, i) => html`
-                        <li class="${this.animatelist ? 'list-container' : ''} bg-light-subtle list-group-item p-0">
+                        <li class="${this.animatelist ? 'list-container' : ''}  list-group-item ${this.light ? 'bg-light-subtle' : ''} p-0">
                             ${this.animatelist ? html`
                                 <div class="list-item">
                                     ${this.props.rendercb ? this.props.rendercb(data, i) : ''}
@@ -395,7 +402,22 @@ export class ListGroup extends BaseElement {
                             `}
                         </li>
                     `)}
-                </ul>
+            </ul>
+        ` : html`
+            <div ${ref(this.listRef)} >
+                    ${this._props.items?.map((data, i) => html`
+                        <div class="${this.animatelist ? 'list-container' : ''} ${this.light ? 'bg-light-subtle' : ''} p-0">
+                            ${this.animatelist ? html`
+                                <div class="list-item">
+                                    ${this.props.rendercb ? this.props.rendercb(data, i) : ''}
+                                </div>
+                            ` : html`
+                                ${this.props.rendercb ? this.props.rendercb(data, i) : ''}
+                            `}
+                        </div>
+                    `)}
+            </div>
+        
         `
 
         return html`

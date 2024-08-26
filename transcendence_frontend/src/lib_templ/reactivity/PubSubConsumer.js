@@ -55,8 +55,8 @@ export default class PubSubConsumer extends BaseReactive {
     }
 
     onDisconnected() {
-        // // // console.log("on Disconnected pubSubConsumer, add eventListener!");
         if (!this.#connected) return;
+        console.log("on Disconnected pubSubConsumer, remove eventListener!");
         this.#pubSubInst.removeEventListener(
             this.#pubSubInst.eventType,
             this.#handler,

@@ -63,6 +63,7 @@ export class PongObjManager {
      */
     constructor(offscreencanvas, userId) {
         this.canvas = offscreencanvas;
+        // const c = this.canvas.getContext('2d', { alpha: false });
         const c = this.canvas.getContext('2d');
         if (c === null) throw new Error('could not get canvas context');
         this.ctx = c;
@@ -213,9 +214,10 @@ export class PongObjManager {
         }
         pushMessageToMainThread(this.#getScoredMessage(side));
         if (end === true) {
-            return pushMessageToMainThread(this.#getGameDoneMessage(side, 'reguar'));
+            pushMessageToMainThread(this.#getGameDoneMessage(side, 'reguar'));
         }
         this.resetBall();
+        return end;
     }
 
     /**
@@ -247,9 +249,12 @@ export class PongObjManager {
 
     /**
      * @param {boolean} drawball 
+     * @param {number} [qlen]
+     * @param {number} [fps]
      */
-    draw(drawball, qlen) {
-        this.court.draw(this.ctx, qlen);
+    draw(drawball=true, qlen=undefined, fps=undefined) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.court.draw(this.ctx, qlen, fps);
         this.paddleLeft.draw(this.ctx);
         this.paddleRight.draw(this.ctx);
         if (drawball) {

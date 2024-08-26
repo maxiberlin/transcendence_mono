@@ -135,7 +135,9 @@ class GameObjDataClass:
             "speed_y": self.speed_y,
             "w": self.w,
             "x": self.x,
-            "y": self.y
+            "y": self.y,
+            "dx": self.dx,
+            "dy": self.dy,
         }
 
     def getPositionalDataAsDict(self) -> GameObjPositionData:

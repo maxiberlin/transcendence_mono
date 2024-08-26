@@ -87,7 +87,9 @@ export class FileButton extends BaseElement {
                 this.#lookup.delete(n);
             });
         }
-        console.log('disposed, new lookup: ', this.#lookup);
+        console.log('\ndisposed, new lookup: ', this.#lookup.forEach((k,v) => {console.log(k, ': ', v);
+        }));
+        console.log('disposed, new revlookup: ', this.#revlookup);
         // if (this.#lookup.size === 0) {
 
         // }
@@ -141,8 +143,10 @@ export class FileButton extends BaseElement {
     }
 
     disconnectedCallback() {
-        super.disconnectedCallback();
+        console.log('disconnectedcallback');
+        
         FileButton.closeInstance(this);
+        super.disconnectedCallback();
     }
 
     /** @param {string} error  */

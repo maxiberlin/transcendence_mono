@@ -33,6 +33,10 @@ export default class AvatarComponent extends BaseElement {
         super.requestUpdate();
     }
 
+    willUpdate() {
+        this.calcTransform();
+    }
+
     connectedCallback() {
         super.connectedCallback();
         this.init();
@@ -227,7 +231,7 @@ export const avatarInfo = (userData, showStatus) => {
         userData.username = userData.invitee
     
     return userData ? html`
-        <span class="d-inline-flex align-items-center">
+        <span class="d-inline-flex align-items-center  link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">
             <avatar-component
                 size="40"
                 src="${userData.avatar ?? ''}"

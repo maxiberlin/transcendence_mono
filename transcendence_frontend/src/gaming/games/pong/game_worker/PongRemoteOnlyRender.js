@@ -235,7 +235,7 @@ export class PongRemote extends Pong {
         // console.log('new queue after prediction, before filter: ', this.#updateQueue.map(i => i.tickno));
         const prevRenderTime = (this.#gameTime - elapsedMs) - this.#interpolationTimeMs;
         const renderTime = this.#gameTime - this.#interpolationTimeMs;
-
+        
 
        
         // let shifted = 0;
@@ -305,15 +305,27 @@ export class PongRemote extends Pong {
             this.#updateQueue.shift();
             shifted++;
         }
-
         const curr = this.#updateQueue[0];
-        const neww = this.#updateQueue[1];
-        if (curr && neww) {
-            const elapsed = (renderTime - curr.timestamp_ms) / (neww.timestamp_ms - curr.timestamp_ms);
+        const next = this.#updateQueue[1];
+
+        // const curr = this.#updateQueue.find(u => u.timestamp_ms > prevRenderTime);
+        // const next = this.#updateQueue.find(u => u.timestamp_ms > renderTime);
+        // this.#updateQueue = this.#updateQueue.filter(u => u.tickno >= (curr ? curr.tickno : 0));
+
+        if (curr && next) {
+            const elapsed = (renderTime - curr.timestamp_ms) / (next.timestamp_ms - curr.timestamp_ms);
            
-            this.manager.paddleRight.interpolate(curr.paddle_right, neww.paddle_right, elapsed, false, true);
-            this.manager.paddleLeft.interpolate(curr.paddle_left, neww.paddle_left, elapsed, false, true)
-            this.manager.ball.interpolate(curr.ball, neww.ball, elapsed, true, true);
+            // if (this.manager.side === 'left') {
+            //     this.manager.paddleLeft.update(elapsedMs/1000);
+            //     this.manager.paddleRight.interpolate(curr.paddle_right, next.paddle_right, elapsed, false, true);
+            // } else {
+            //     this.manager.paddleRight.update(elapsedMs/1000);
+            //     this.manager.paddleLeft.interpolate(curr.paddle_left, next.paddle_left, elapsed, false, true)
+            // }
+
+            this.manager.paddleRight.interpolate(curr.paddle_right, next.paddle_right, elapsed, false, true);
+            this.manager.paddleLeft.interpolate(curr.paddle_left, next.paddle_left, elapsed, false, true)
+            this.manager.ball.interpolate(curr.ball, next.ball, elapsed, true, true);
         } else {
             const el = elapsedMs/1000;
             this.manager.paddleRight.update(el);
@@ -351,9 +363,9 @@ export class PongRemote extends Pong {
     handleKey (d) {
         let action;
         if (this.manager.side === "left") {
-            action = this.manager.paddleLeft.handleKey(false, d, "ArrowUp", "ArrowDown");
+            action = this.manager.paddleLeft.handleKey(true, d, "ArrowUp", "ArrowDown");
         } else {
-            action = this.manager.paddleRight.handleKey(false, d, "ArrowUp", "ArrowDown");
+            action = this.manager.paddleRight.handleKey(true, d, "ArrowUp", "ArrowDown");
         }
         if (typeof action === "string") {
             if (this.lastKeyAction != action) {

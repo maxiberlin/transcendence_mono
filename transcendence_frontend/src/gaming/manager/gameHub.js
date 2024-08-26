@@ -141,7 +141,7 @@ class GameWorkerManager {
      * @param {Transferable[]} [transfer]
      */
     postMessage(message, transfer = []) {
-        console.log('POST MESSAGE FROM HUB: transfer: ', transfer);
+        // console.log('POST MESSAGE FROM HUB: transfer: ', transfer);
         
         this.worker.postMessage(message, transfer);
     }
@@ -173,30 +173,37 @@ export default class GameHub {
         if (!(canvas instanceof HTMLCanvasElement))
             throw new Error('No Canvas Element or no Worker Files');
 
-        this.gameData = gameData;
         this.canvas = canvas;
 
+        /** @param {FromWorkerGameMessageTypes.FromWorkerMessage} msg  */
+        const onWorkerMessage = (msg) => {
+            console.log('worker message: ', msg);
+            const handler = this.#workerMessageEventMap.get(msg.message);
+            if (handler && typeof handler === "function") handler(msg);
+        }
+        const onWorkerError = (ev) => {
+            console.log(ev);
+            this.quitGame();
+            throw new Error('WORKER ERROR');
+        }
+        const onWorkerMessageError = (ev) => {
+            this.quitGame();
+            throw new Error('WORKER MESSAGE ERROR');
+        }
         this.worker = new GameWorkerManager(
-            this.onWorkerMessage.bind(this),
-            this.onWorkerMessageError.bind(this),
-            this.onWorkerError.bind(this),
+            onWorkerMessage,
+            onWorkerMessageError,
+            onWorkerError,
         );
-
-        this.gameData.player_one.score = 0;
-        this.gameData.player_two.score = 0;
-        this.gameData.player_one.won = false;
-        this.gameData.player_two.won = false;
 
         
         window.addEventListener('keydown', (e) => { this.handleKey(e); });
         window.addEventListener('keyup', (e) => { this.handleKey(e); });
 
         this.touchHandler = useMouseTouchEvents(canvas, this.worker);
-        
-
         try {
             const url = new URL(window.location.origin);
-            const socketUrl = `wss://api.${url.host}/ws/game/${this.gameData.schedule_id}/`;
+            const socketUrl = `wss://api.${url.host}/ws/game/${gameData.schedule_id}/`;
             const offscreencanvas = canvas.transferControlToOffscreen();
             
             console.log('create msg to worker: userid: ', GameHub.currentUser.value?.user?.id);
@@ -205,7 +212,7 @@ export default class GameHub {
                     message: isRemote ? 'game_worker_create_remote' : 'game_worker_create_local',
                     offscreencanvas,
                     socketUrl,
-                    data: this.gameData,
+                    data: gameData,
                     userId: GameHub.currentUser.value?.user?.id ?? -1,
                 },
                 [offscreencanvas],
@@ -235,17 +242,6 @@ export default class GameHub {
         });
     }
 
-    onWorkerError(ev) {
-        console.log(ev);
-        this.quitGame();
-        throw new Error('WORKER ERROR');
-    }
-
-    onWorkerMessageError(ev) {
-        this.quitGame();
-        throw new Error('WORKER MESSAGE ERROR');
-    }
-
     /**
      * @template T
      * @typedef {(br: Extract<FromWorkerGameMessageTypes.FromWorkerMessage, { message: T; }>) => void} FromWorkerMessageCallback
@@ -259,30 +255,13 @@ export default class GameHub {
      * @param {K} tag
      * @param { FromWorkerMessageCallback<K> } handler
      */
-    setWorkerMessageHandler(tag, handler) {
+    on(tag, handler) {
         if (!this.#workerMessageEventMap.has(tag))
             this.#workerMessageEventMap.set(tag, handler);
     }
    
 
-    /** @param {FromWorkerGameMessageTypes.FromWorkerMessage} msg  */
-    onWorkerMessage(msg) {
-        console.log('worker message: ', msg);
-        if (msg.message === "from-worker-game-touch-valid") {
-            if (!msg.valid) this.touchHandler.removeTouchByIdent(msg.ident);
-        } else if (msg.message === "from-worker-client-connected") {
-        } else if (msg.message === "from-worker-client-disconnected") {
-        } else if (msg.message === "from-worker-error") {
-        } else if (msg.message === "from-worker-game-done") {
-        } else if (msg.message === "from-worker-game-paused") {
-        } else if (msg.message === "from-worker-game-ready") {
-        } else if (msg.message === "from-worker-game-resumed") {
-        } else if (msg.message === "from-worker-player-scored") {
-
-        }
-        const handler = this.#workerMessageEventMap.get(msg.message);
-        if (handler && typeof handler === "function") handler(msg);
-    }
+    
 
     /** @param {KeyboardEvent} e */
     handleKey = (e) => {
@@ -306,10 +285,6 @@ export default class GameHub {
         console.log('QUIT GAME');
         window.removeEventListener('keydown', (e) => { this.handleKey(e); });
         window.removeEventListener('keyup', (e) => { this.handleKey(e); });
-        // this.canvas.removeEventListener('touchstart', this.handleTouchStart);
-        // this.canvas.removeEventListener('touchmove', this.handleTouchMove);
-        // this.canvas.removeEventListener('touchend', this.handleTouchEnd);
-        // this.canvas.removeEventListener('touchcancel', this.handleTouchCancel);
         this.touchHandler.removeHandlers();
         this.worker.postMessage({ message: 'worker_game_quit' });
     }
@@ -320,22 +295,6 @@ export default class GameHub {
 
     continueGame() {
         this.worker.postMessage({ message: 'worker_game_resume' });
-    }
-
-    get scorePlayerOne() {
-        return this.gameData.player_one.score;
-    }
-
-    get scorePlayerTwo() {
-        return this.gameData.player_two.score;
-    }
-
-    get playerOneWon() {
-        return this.gameData.player_one.won;
-    }
-
-    get playerTwoWon() {
-        return this.gameData.player_two.won;
     }
 }
 

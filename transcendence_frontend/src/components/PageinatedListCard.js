@@ -1,4 +1,4 @@
-import { BaseElement, html, ifDefined } from '../lib_templ/BaseElement';
+import { BaseElement, html, ifDefined, TemplateAsLiteral } from '../lib_templ/BaseElement';
 import { ListCard } from './ListCard';
 
 
@@ -6,7 +6,8 @@ import { ListCard } from './ListCard';
  * @template T
  * @typedef {import('./ListCard').ListCardProps<T> & {
  *      page: number,
- *      fetchdatacb: (page: number) => Promise<[number, T[]]>,
+ *      filters: {name: string, color: string}[],
+ *      fetchdatacb: (page: number, filter?: Set<string>) => Promise<[number, T[]]>,
  * }} PageinatedListCardProps
  */
 
@@ -21,6 +22,7 @@ import { ListCard } from './ListCard';
  * @prop onnewpagerequest
  * @prop fetchdatacb
  * @prop page
+ * @prop filters
  * 
  * 
  * @template T
@@ -43,6 +45,18 @@ export class PageinatedListCard extends ListCard {
         this.header = false;
         this.onlyarrows = false;
         this.usebutton = false;
+        this._props.filters = [];
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+        // this.init();
+    }
+
+    async init() {
+        await this.updateComplete;
+        this.allPropsSet = true;
+        super.requestUpdate();
     }
 
   
@@ -62,21 +76,42 @@ export class PageinatedListCard extends ListCard {
         return Math.floor(page);
     }
 
+    fetchInit = false;
+    renderInit = false;
     onPropChange(key, value) {
         console.log('onPropChange');
         
         console.log('key: ', key);
         console.log('value: ', value);
-        if (key === 'fetchdatacb') {
-            if (this.usebutton) {
-                this.fetchData();
+        if (key === 'filters' && Array.isArray(value)) {
+            this._props.filters = value;
+        } else if (key === 'fetchdatacb') {
+            if (typeof value === 'function') {
+                this.fetchInit = true;
+                this._props.fetchdatacb = value;
+                if (this.usebutton) {
+                    this.fetchData();
+                }
+
             }
-        }
-        if (key === 'page' && !this.usebutton) {
+        } else if (key === 'rendercb' ) {
+            if (typeof value === 'function') {
+                this.renderInit = true;
+                this._props.rendercb = value;
+            }
+            
+        } else if (key === 'page') {
             console.log('set new page: ', value);
             // this.tempPage = Number(value);
+            // const page = this.parsePage(value);
+            // this.activePaginationPage = this.clampPage(page);
+            console.log('this.propsInitialized?: ', this.propsInitialized);
+            
             const page = this.parsePage(value);
-            this.fetchData();
+            // if (this.last_page == undefined || this.last_page !== page) {
+                this.fetchData();
+            // }
+            // this.last_page = page;
             if (!this.propsInitialized) {
                 this.propsInitialized = true;
                 this.activePaginationPage = page;
@@ -86,6 +121,11 @@ export class PageinatedListCard extends ListCard {
             }
         }
         return true;
+        // return false;
+    }
+
+    async fetchInitial() {
+
     }
 
     async fetchData() {
@@ -96,7 +136,7 @@ export class PageinatedListCard extends ListCard {
         if (typeof this.props.fetchdatacb === 'function') {
             console.log('fetch page: ', this.activePaginationPage);
             
-            const data = await this._props.fetchdatacb(this.activePaginationPage);
+            const data = await this._props.fetchdatacb(this.activePaginationPage, this.selectedFilters);
             console.log('fetchedData: ', data);
             
             if (Array.isArray(data) && data.length === 2) {
@@ -116,6 +156,8 @@ export class PageinatedListCard extends ListCard {
                     this.props.items = newData;
                 }
                 super.requestUpdate();
+            } else {
+                // throw new Error('the fetch callback need to return an Array of type [maxPages, newData[]]!')
             }
         }
     }
@@ -183,6 +225,7 @@ export class PageinatedListCard extends ListCard {
         return [this.clampPage(page), this.clampPage(page + this.pageWindow)];
     }
 
+
     renderPagination = () => {
 
         const prev = this.getVisibleWindow(this.firstVisible - this.pageWindow - 1);
@@ -249,7 +292,7 @@ export class PageinatedListCard extends ListCard {
         const showTrailingEllipsis = next[1] - next[0] > 0;
 
         return html`
-           <nav aria-label="Page navigation example">
+           <nav aria-label="Pageination ${this.title}">
                <ul class="pagination m-0">
                     ${this.onlyarrows ? html`
                         ${this.activePaginationPage <= this.minPage ? this.renderPlaceHolder()
@@ -294,23 +337,91 @@ export class PageinatedListCard extends ListCard {
             </nav>   
         `
     }
+
+
+    // selectedFilters = new Set();
+    // renderHeader = () => html`
+    //     <div class="d-flex overflow-x-scroll gap-3 pb-3">
+    //         ${this.props.filters.map(f => html`
+    //             <button
+    //                 @click=${() => {
+    //                     if (this.selectedFilters.has(f.name)) {
+    //                         this.selectedFilters.delete(f.name)
+    //                     } else {
+    //                         this.selectedFilters.add(f.name);
+    //                     }
+    //                     this.fetchData(f.name);
+    //                     super.requestUpdate();
+    //                 }}
+    //                 type="button"
+    //                 data-bs-toggle="button"
+    //                 class="btn ${this.selectedFilters.has(f.name) ? 'active' : ''}"
+    //             >
+    //                 <span class="badge text-bg-${f.color}">${f.name}</span>    
+    //             </button>
+    //         `)}
+    //     </div>
+    // `
+    
+
+    selectedFilters = new Set();
+    renderFilters = () => html`
+        <div class="ms-4 flex-grow-1 d-flex overflow-x-scroll gap-1 pb-3">
+            ${this.props.filters.map(f => html`
+                <input
+                    @click=${() => {
+                        if (this.selectedFilters.has(f.name)) {
+                            this.selectedFilters.delete(f.name)
+                        } else {
+                            this.selectedFilters.add(f.name);
+                        }
+                        this.activePaginationPage = 1;
+                        this.fetchData();
+                        super.requestUpdate();
+                    }}
+                    type="checkbox"
+                    class="btn-check"
+                    id="btn-check-filter-${f.name}"
+                    autocomplete="off"
+                    ?checked=${this.selectedFilters.has(f.name)}
+                >
+                <label class="btn p-1" for="btn-check-filter-${f.name}">
+                    <span class="badge text-bg-${f.color}">${f.name}</span>
+                </label>
+            `)}
+        </div>
+    `
+
+    renderNav = () => {
+        console.log('filter: ', this.props.filters);
+        
+        return html`
+        <div class="d-flex align-items-center">
+            ${this.usebutton ? this.renderPaginationButtons() : this.renderPagination()}
+            ${this.onlyarrows ? html`
+                <span class="ms-4">${this.activePaginationPage}/${this.maxPage}</span>    
+            ` : ''}
+            ${this.renderFilters()}
+        </div>
+    `
+    }
+    
+
     
 
     render() {
-        console.log('render Pageinated: initialized?: ', this.initialized);
-        // if (!this.initialized) return null;
-        if (this.usebutton) {
-            if (this.header) {
-                this._props.header = this.renderPaginationButtons();
-            } else {
-                this._props.footer = this.renderPaginationButtons();
-            }
+
+        // if (!this.allPropsSet) {
+        //     return html``;
+        // }
+
+        console.log('render page: ', this._props.items);
+        
+
+        if (this.header) {
+            this._props.header = this.renderNav();
         } else {
-            if (this.header) {
-                this._props.header = this.renderPagination();
-            } else {
-                this._props.footer = this.renderPagination();
-            }
+            this._props.footer = this.renderNav();
         }
         return super.render();
     }

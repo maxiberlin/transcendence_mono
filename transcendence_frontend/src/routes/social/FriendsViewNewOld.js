@@ -5,8 +5,6 @@ import router from '../../services/router.js';
 import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
 import { Offcanvas } from 'bootstrap';
-import { getTournamentAvatarInfo } from '../../components/gameUtils.js';
-import Router from '../../lib_templ/router/Router.js';
 
 /**
  * @typedef {"fv$chats" | "fv$friends" | "fv$rec" | "fv$sent" | "fv$blocked"} ListType
@@ -72,28 +70,41 @@ export default class FriendsView extends BaseElement {
     connectedCallback() {
         super.connectedCallback();
         this.init();
-        this.style.height = '100%';
-        // document.body.classList.add("bg-scrolling-element-when-modal-active");
-        // document.body.classList.add("overflow-hidden");
-        // window.addEventListener('resize', this.onResizeHandler);
+        document.body.classList.add("overflow-hidden");
+        window.addEventListener('resize', this.onResizeHandler);
     }
-
-
-    disconnectedCallback() {
-        this.offcanvasToggle?.hide();
-        super.disconnectedCallback();
-        // document.body.classList.remove("bg-scrolling-element-when-modal-active");
-        // document.body.classList.remove("overflow-hidden");
-        // window.removeEventListener('resize', this.onResizeHandler);
-    }
-
 
     async closeAll() {
         
     }
 
+    disconnectedCallback() {
+        this.offcanvasToggle?.hide();
+        super.disconnectedCallback();
+        document.body.classList.remove("overflow-hidden");
+        window.removeEventListener('resize', this.onResizeHandler);
+    }
+
     isMobile = () => window.innerWidth < 577;
     
+
+    // mountChat(params) {
+    //     console.log('mount Chat Params: ', params);
+        
+    //     if (params === undefined || !Object.hasOwn(params, 'chatroom_name') || params.chatroom_name === '') return true;
+    //     if (typeof params === 'object' && Object.hasOwn(params, 'chatroom_name') && typeof params.chatroom_name === 'string') {
+    //         const currentChatName = decodeURI(params.chatroom_name);
+    //         this.roomId = sessionService.messageSocket?.getRoomId(currentChatName);
+    //         if (this.roomId != undefined) {
+    //             console.log('OK ROOM: ', this.roomId);
+    //             return true;
+    //         }
+    //     }
+        
+    //     document.dispatchEvent(new ToastNotificationErrorEvent("unknown chat room"))
+    //     return false;
+    // }
+
 
     /**
      * @param {string} route 
@@ -133,12 +144,12 @@ export default class FriendsView extends BaseElement {
      */
     onBeforeMount(route, params) {
         if (!sessionService.isLoggedIn) {
-            return router.redirect('/auth/login');
+            return router.redirect('/');
         }
         if (!this.selectRoute(route, params)) {
             console.log('this.selectRoute: false');
             
-            return Router.show404;
+            return router.redirect("/");
         }
     }
 
@@ -150,6 +161,14 @@ export default class FriendsView extends BaseElement {
             return router.redirect("/");
         }
         super.requestUpdate();
+    }
+
+    /**
+     * @param {APITypes.FriendRequestItem} data 
+     * @returns 
+     */
+    getFriendRequestAction = (data) => {
+        
     }
 
 
@@ -256,7 +275,7 @@ export default class FriendsView extends BaseElement {
                 <div class="">
                     ${chatroom.type === 'private' ? html`
                         ${avatarInfo(chatroom.users.find(u => u.id !== this.sessionUser.value?.user?.id), true)}
-                    ` : getTournamentAvatarInfo(chatroom?.title) ?? html`
+                    ` : html`
                         T: ${chatroom.title ?? ''}
                     `}
                 </div>
@@ -267,30 +286,40 @@ export default class FriendsView extends BaseElement {
         </a>
     `}
 
-    handleChatClick(e) {
-        if (e instanceof MouseEvent && e.target instanceof HTMLElement && e.currentTarget instanceof HTMLElement) {
-            const allChats = e.currentTarget.querySelectorAll('div[data-selected-chat]');
-            const selected = e.target.closest('div[data-selected-chat]');
-            const currActive = e.currentTarget.querySelector('div[data-selected-chat].active');
-            console.log('allChats: ', allChats);
-            console.log('selected: ', selected);
-            console.log('currActive: ', currActive);
-            if (selected) selected.classList.add('active');
-            if (currActive) currActive.classList.remove('active');
-            if (allChats && selected && currActive) {
-                
-                
-            }
-        }
-    }
-
     renderChatsList = () => {
+        
+        // return html`
+        //     <list-group
+        //     animatelist
+        //         .rendercb=${(data, i) => {
+        //             console.log('data: ', data);
+                    
+        //             return this.renderChatsListEntry(data.messages.room, i)
+        //         }}
+        //         .items=${this.chatsMap?.value}
+        //     >
+        //     </list-group>
+        // `
+
         return !this.chatsMap ? '' : html`
-            <div class="card chat-user-list-container">
-                <div
-                    @click=${(e) => {this.handleChatClick(e)}}
-                    class="list-group list-group-flush chat-user-list"
-                >
+            <div class="card">
+
+                <div @click=${(e) => {
+                    if (e instanceof MouseEvent && e.target instanceof HTMLElement && e.currentTarget instanceof HTMLElement) {
+                        const allChats = e.currentTarget.querySelectorAll('div[data-selected-chat]');
+                        const selected = e.target.closest('div[data-selected-chat]');
+                        const currActive = e.currentTarget.querySelector('div[data-selected-chat].active');
+                        console.log('allChats: ', allChats);
+                        console.log('selected: ', selected);
+                        console.log('currActive: ', currActive);
+                        if (selected) selected.classList.add('active');
+                        if (currActive) currActive.classList.remove('active');
+                        if (allChats && selected && currActive) {
+                            
+                            
+                        }
+                    }
+                }} class="list-group list-group-flush ${this.isMobile() ? '' : 'chat-user-list'}" style="${"display: block;"}">
                     ${this.chatsMap.value.map((data, i) => this.renderChatsListEntry(data.messages.room, i)) }
                 </div>
             </div>
@@ -349,42 +378,26 @@ export default class FriendsView extends BaseElement {
     renderOffcanvas = (content) => {
 
         return html`
-            <button
-                style="${"height: 100vh;"}"
-                class=" d-block h-100 btn btn-primary"
-                type="button"
-                role="button"
-                data-bs-toggle="offcanvas" data-bs-target="#socialCanvas"
-                aria-controls="socialCanvas"
-                aria-label="open chats menu to find people and friends"
-            >
-            <i class="fa-solid fa-comments"></i>
-            </button>
-
-            <div ${ref(this.offcanvasRef)}
-                @show.bs.offcanvas=${() => {
-                    document.body.classList.add("bg-scrolling-element-when-modal-active");
-                }}
-                @hide.bs.offcanvas=${() => {
-                    document.body.classList.remove("bg-scrolling-element-when-modal-active");
-                }}
-                data-bs-backdrop="false"
-                style="${"z-index: 19;"}"
-                class="offcanvas offcanvas-bottom w-100 h-100"
-                tabindex="-1"
-                data-bs-scroll="true"
-                data-bs-backdrop="false"
-                id="socialCanvas"
-                aria-labelledby="socialCanvasLabel">
-                <div class="offcanvas-body p-0">
-                    ${content}
+            <div style="${!this.isMobile() ? 'display:none;' : 'display:block;'}">
+                <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#socialCanvas" aria-controls="socialCanvas">
+                    Show Menu
+                </button>
+    
+                <div ${ref(this.offcanvasRef)}
+                    style="${"width: 100%; z-index: 19;"}"
+                    data-bs-backdrop="false"
+                    class="offcanvas offcanvas-start" tabindex="-1" id="socialCanvas" aria-labelledby="socialCanvasLabel">
+                    <div class="offcanvas-body">
+                        ${content}
+                    </div>
                 </div>
             </div>
         `
     }
 
 
-    setRoomId() {
+    render() {
+        
         let noChats = false;
         if (this.roomId == undefined) {
             const upperChat = this.chatsMap?.value[0];
@@ -393,54 +406,52 @@ export default class FriendsView extends BaseElement {
             }
             this.roomId = upperChat?.messages.room?.room_id;
         }
-    }
 
+   
 
-    
-    renderMenu = () => {
-        const content = html`
-            <div class="friends-view-sidebar">
-                <div class="friends-view-sidebar-header">
+        console.log('render friendsview');
+        
+
+        return html`
+            <div >
+                ${this.renderOffcanvas(html`
                     <div class="mb-2">
                         <profile-search followlink ></profile-search>
                     </div>
-                    <a 
+                    <a
                         @click=${() => {
                             this.offcanvasToggle?.hide();
                             super.requestUpdate();
                         }}
-                        class="align-center btn btn-primary w-100 mb-2" href="/social" role="button">
+                        style="${"height: 3em;"}" class="align-center btn btn-primary w-100 mb-2" href="/social" role="button">
                         <i class="fa-solid fa-users"></i>
                         Friends
                     </a>
-                </div>
-                <div class="chat-user-list-container">
-                    <h6>Chats</h6>
                     ${this.renderChatsList()}
-                </div>
-            </div>
-        `
-        return html`
-            <div class="d-block d-sm-none">
-                ${this.renderOffcanvas(content)}
-            </div>
-            <div class="d-none d-sm-block">
-                ${content}
-            </div>
-        `
-    }
-
-
-    render() {
-        this.setRoomId();
-        return html`
-            <div class="friends-view-container d-flex align-items-stretch" style="${"z-index: 21;"}">
-                    ${this.renderMenu()}
-                    <div class="chat-container" >
+                `)}
+                ${this.isMobile() ? html`  
+                    ${this.#lCurr === 'fv$chats' ? html`
+                        <single-chat-view .chatroom_id=${this.roomId}></single-chat-view>
+                    ` : this.renderFriendsAndRequests()}
+                ` : html`
+                    <div class="row g-0 w-100 px-2 mt-2">
+                        <div class="col-3 text-truncate">
+                            <a style="${"height: 3em;"}" class="align-center btn btn-primary w-100 mb-2" href="/social" role="button">
+                                <i class="fa-solid fa-users"></i>
+                                Friends
+                            </a>
+                            ${this.renderChatsList()}
+                        </div>
+                        <div class="col mx-2 d-flex flex-column" >
+                            <div class="mb-2">
+                                <profile-search followlink ></profile-search>
+                            </div>
                             ${this.#lCurr === 'fv$chats' ? html`
                                 <single-chat-view .chatroom_id=${this.roomId}></single-chat-view>
                             ` : this.renderFriendsAndRequests()}
+                        </div>
                     </div>
+                `}
             </div>
         `;
     }

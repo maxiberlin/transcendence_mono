@@ -115,6 +115,8 @@ export class Pong {
         this.frame.startRender();
     }
     quitGame () {
+        console.log('QUIT GAME CALLED!!!');
+        
         if (!this.#started) return;
         this.#started = false;
         this.frame.stopRender();
@@ -169,11 +171,13 @@ export class PongLocal extends Pong {
         if (this.isRunning()) {
             const score = this.manager.ball.updateBall(elapsedTimeSec, this.manager.paddleLeft, this.manager.paddleRight);
             if (score !== "none") {
-                this.manager.localScored(score);
+                if (this.manager.localScored(score)) {
+                    this.quitGame();
+                }
                 // this.manager.makeAction(score, "local-set-score-check-win-message-main");
             }
         }
-        this.manager.draw();
+        this.manager.draw(true);
     }
 
     startGame() {

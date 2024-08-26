@@ -652,6 +652,10 @@ export class GlobalSockHandler {
     /** @param {string} username */
     getChatRoomForUser = (username) => this.#chatsMap.getRoomForUser(username);
 
+
+    getChatRoomUrl = (username) => true
+
+
     /**
      * @param {number} room_id 
      * @param {string} message 

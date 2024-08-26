@@ -14,8 +14,7 @@ import { PongGameOverlays } from './PongGameOverlays.js';
 import { Ref } from '../../lib_templ/templ/nodes/FuncNode.js';
 import { getPreferredTheme } from '../../services/themeSwitcher.js';
 import { calcContrastColor } from '../../gaming/manager/colorcalc.js';
-import { getMatchLink, getTournamentLink } from './utils.js';
-import { WebsocketErrorCode } from '../../gaming/games/pong/game_worker/utils.js';
+import { getTournamentLink } from './utils.js';
 
 /**
  *
@@ -129,10 +128,6 @@ export default class GameScreen extends BaseElement {
         console.log('game: ', game);
     }
 
-    onRouteChange() {
-        return false;
-    }
-
     disconnectedCallback() {
         super.disconnectedCallback();
         document.body.classList.remove("overflow-hidden");
@@ -147,22 +142,45 @@ export default class GameScreen extends BaseElement {
     connectedCallback() {
         super.connectedCallback();
         this.init();
+        // document.body.classList.add("overflow-hidden");
+
+        // console.log('canvas: ', this.#canvas.value);
+        // console.log('this.#wrapper.value: ', this.#wrapper.value);
+        
+        // if (!this.#canvas.value || !this.#wrapper.value || !this.#gameData) return;
+       
+        // this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, true);
+        
+        // this.toggleColor();
+
+        // this.#closeObs = useCanvasSizes(this.#wrapper.value, this.#aspectRatio, (newW, newH) => {
+        //     console.log('NEW CANVAS SIZES: ', this.#canvas, ", ", this.#canvas.value);
+        //     if (!this.#canvas.value || !this.#wrapper.value) return;
+        //     this.#canvas.value.style.width = `${newW}px`;
+        //     this.#canvas.value.style.height = `${newH}px`;
+        //     const canvasRect = this.#canvas.value.getBoundingClientRect();
+        //     this.currentGame?.resizeCanvas(canvasRect.x, canvasRect.y, newW, newH, window.devicePixelRatio);
+        // });
+
+        // this.setWorkerHandler();
+
+        // this.pongOverlayRef.value?.showWaitForLaunch('launchSelf', this.#gameData);
+        // this.setupDone = true;
+        // super.requestUpdateDirect();
     }
 
     async init() {
         await this.updateComplete;
         document.body.classList.add("overflow-hidden");
-        this.pongOverlayRef.value?.showSelectGameMode((mode) => {
-            this.mode = mode;
-            this.initGame(mode);
-        }); 
-    }
 
-    /** @param {'local' | 'remote'} mode */
-    async initGame(mode) {
+        console.log('canvas: ', this.#canvas.value);
+        console.log('this.#wrapper.value: ', this.#wrapper.value);
+        console.log('this.pongOverlayRef.value: ', this.pongOverlayRef.value);
+        
         if (!this.#canvas.value || !this.#wrapper.value || !this.#gameData) return;
        
-        this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, mode === 'remote');
+        this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, true);
+        // this.currentGame = GameHub.startGame(this.#canvas.value, this.#gameData, false);
         
         this.toggleColor();
 
@@ -177,10 +195,7 @@ export default class GameScreen extends BaseElement {
 
         this.setWorkerHandler();
 
-
-        if (mode === 'remote') {
-            this.pongOverlayRef.value?.showWaitForLaunch('launchSelf', this.#gameData);
-        }
+        this.pongOverlayRef.value?.showWaitForLaunch('launchSelf', this.#gameData);
         this.setupDone = true;
         super.requestUpdateDirect();
     }
@@ -195,118 +210,25 @@ export default class GameScreen extends BaseElement {
         }
     }
 
-    onGameReady = async () => {
-        this.#gameReady = true;
-        console.log('WORKER GAME READY');
-        console.log('this.pongOverlayRef.value: ', this.pongOverlayRef.value);
-        
-        if (!this.pongOverlayRef.value) return;
-        await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
-        this.pongOverlayRef.value?.hide('waitForLaunchModal');
-        await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
-        this.pongOverlayRef.value?.showStartGame(this.#gameData, this.mode === 'remote', () => {
-            if (this.mode === 'remote') {
-                this.pongOverlayRef.value?.showWaitForStart(this.#gameData)
-            }
-            this.currentGame?.worker.postMessage({message: 'worker_game_start'})
-            
-        }); 
-        console.log('END OF FUNC');
-        
-    }
-
-
-    /**
-     * @param {string} [route] 
-     */
-    finishGameAndGoTo = (route) => {
-        this.pongOverlayRef.value?.hide('all');
-        this.currentGame?.quitGame();
-        sessionService.updateData(['game_schedule', 'tournaments']);
-        if (typeof route === 'string') {
-            router.redirect(route);
-        } else {
-            history.back();
-        }
-    };
-
-    onGameDoneRematch = async () => {
-        const user_id = this.#gameData?.player_one.id === this.session.value?.user?.id ? this.#gameData?.player_two.id : this.#gameData?.player_one.id;
-        if (user_id) {
-            const res = await sessionService.createMatch(user_id);
-            if (res) {
-                return this.finishGameAndGoTo(getMatchLink(res));
-            }
-        }
-        return this.finishGameAndGoTo();
-    }
-
-    onGameDoneClose = () => {
-        setTimeout(() => {
-            this.finishGameAndGoTo();
-        }, 400);
-    }
-
-
-
-    /** @param {FromWorkerGameMessageTypes.GameEnd} br */
-    triggerDoneModal = (br) => {
-        this.pongOverlayRef.value?.showGameDone(br, this.onGameDoneClose, this.onGameDoneRematch);
-    }
-
-
-    /** @param {FromWorkerGameMessageTypes.GameEnd} br */
-    handleLocalGameDone = async (br) => {
-        if (this.#gameData) {
-            const data = await sessionService.fetchShort(gameAPI.pushResults(this.#gameData.schedule_id, br.player_one_score, br.player_two_score));
-            if (data) {
-                br.game_result = data;
-                return this.triggerDoneModal(br);
-            } 
-        }
-        return this.finishGameAndGoTo();
-    };
-
-
-    /** @param {FromWorkerGameMessageTypes.GameEnd} br */
-    onGameDone = (br) => {
-        if (this.mode === 'local') {
-            this.handleLocalGameDone(br);
-        } else {
-            this.triggerDoneModal(br);
-        }
-    }
-
-
     setWorkerHandler() {
-        this.currentGame?.on("from-worker-game-ready", this.onGameReady);
-        this.currentGame?.on('from-worker-game-started', (msg) => {
-            this.pongOverlayRef.value?.hide('all');
+        this.currentGame?.setWorkerMessageHandler("from-worker-game-ready", async (msg) => {
+            this.#gameReady = true;
+            console.log('WORKER GAME READY');
+            if (!this.pongOverlayRef.value) return;
+            await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
+            this.pongOverlayRef.value?.hide('waitForLaunchModal');
+            await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
+            // this.pongOverlayRef.value?.hide('all');
+            // setTimeout(() => {
+                this.pongOverlayRef.value?.showStartGame(this.#gameData, () => {
+                    this.currentGame?.worker.postMessage({message: 'worker_game_start'})
+                    this.pongOverlayRef.value?.showWaitForStart(this.#gameData)
+                   
+                }); 
+            // }, 400);
+            // super.requestUpdateDirect();
         })
-        this.currentGame?.on("from-worker-error", (msg) => {
-        })
-        this.currentGame?.on("from-worker-player-scored", (msg) => {
-        })
-        this.currentGame?.on("from-worker-game-done", this.onGameDone)
-        if (this.mode === 'remote') {
-            this.setRemoteWorkerHandler();
-        }
-    }
-
-
-    onRemotePlayerConnected = () => {
-
-    }
-    onRemotePlayerDisconnected = () => {
-
-    }
-    onRemotePlayerReconnected = () => {
-
-    }
-    
-
-    setRemoteWorkerHandler() {
-        this.currentGame?.on('from-worker-game-dismissed', (msg) => {
+        this.currentGame?.setWorkerMessageHandler('from-worker-game-dismissed', (msg) => {
             this.pongOverlayRef.value?.hide('all');
             this.currentGame?.quitGame();
             const user = this.#gameData?.player_one.id === msg.user_id ? this.#gameData?.player_one : this.#gameData?.player_two;
@@ -315,7 +237,14 @@ export default class GameScreen extends BaseElement {
             }
             router.redirect('/');
         })
-        this.currentGame?.on("from-worker-client-connected", (msg) => {
+        this.currentGame?.setWorkerMessageHandler('from-worker-game-started', (msg) => {
+            console.log('WORKER GAME STARTED');
+            this.pongOverlayRef.value?.hide('all');
+
+           
+            // super.requestUpdateDirect();
+        })
+        this.currentGame?.setWorkerMessageHandler("from-worker-client-connected", (msg) => {
             if (msg.user_id === this.session.value?.user?.id) {
                 console.log('client connected: self');
                 
@@ -325,22 +254,38 @@ export default class GameScreen extends BaseElement {
                 console.log('client connected: other');
             }
         })
-        this.currentGame?.on("from-worker-client-disconnected", (msg) => {
+        this.currentGame?.setWorkerMessageHandler("from-worker-client-disconnected", (msg) => {
             this.pongOverlayRef.value?.showDisconnect(this.#gameData, msg.user_id);
         })
-        this.currentGame?.on("from-worker-client-reconnected", (msg) => {
+        this.currentGame?.setWorkerMessageHandler("from-worker-client-reconnected", (msg) => {
             this.pongOverlayRef.value?.hide('disconnectModal');
             super.requestUpdateDirect();
         })
-        this.currentGame?.on("from-worker-game-paused", (msg) => {
+        this.currentGame?.setWorkerMessageHandler("from-worker-game-paused", (msg) => {
             this.#paused = true;
         })
-        this.currentGame?.on("from-worker-game-resumed", (msg) => {
+        this.currentGame?.setWorkerMessageHandler("from-worker-game-resumed", (msg) => {
             this.#paused = false;
         })
+        this.currentGame?.setWorkerMessageHandler("from-worker-error", (msg) => {
+            console.log('worker error: ', msg);
+        })
+        this.currentGame?.setWorkerMessageHandler("from-worker-player-scored", (msg) => {
+            
+        })
+
+        this.currentGame?.setWorkerMessageHandler("from-worker-game-done", (br) => {
+            this.pongOverlayRef.value?.showGameDone(br, () => {
+                this.pongOverlayRef.value?.hide('all');
+                setTimeout(() => {
+                    this.currentGame?.quitGame();
+                    sessionService.updateData(['game_schedule', 'tournaments']);
+                    history.back();
+                }, 400);
+            });
+        })
     }
-
-
+    
     #paused = false;
 
     renderDebugHeader = () => {
@@ -386,7 +331,7 @@ export default class GameScreen extends BaseElement {
                 this.pongOverlayRef.value?.showWaitForLaunch('launchOther', this.#gameData);
                 setTimeout(() => {
                     this.pongOverlayRef.value?.hide('all');
-                    this.pongOverlayRef.value?.showStartGame(this.#gameData, true, () => {
+                    this.pongOverlayRef.value?.showStartGame(this.#gameData, () => {
                         this.pongOverlayRef.value?.hide('all');
                         this.pongOverlayRef.value?.showWaitForStart(this.#gameData);
                         setTimeout(() => {
@@ -408,6 +353,7 @@ export default class GameScreen extends BaseElement {
             >
             <i class="fa-solid fa-${this.#paused ? 'play' : 'pause'}"></i>
         </button>
+
         <button @click=${() => {
             this.currentGame?.quitGame();
             router.redirect("/");
@@ -745,44 +691,44 @@ window.customElements.define('game-screen', GameScreen);
 //         //     this.currentGame?.resizeCanvas(canvasRect.x, canvasRect.y, newW, newH, window.devicePixelRatio);
 //         // });
 
-//         this.currentGame?.on("from-worker-game-ready", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-game-ready", (msg) => {
 //             this.#gameReady = true;
 //             console.log('WORKER GAME READY');
 //             this.#startGameModal.value?.showModal();
 //             super.requestUpdateDirect();
 //         })
-//         this.currentGame?.on("from-worker-client-connected", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-client-connected", (msg) => {
 //             // if (msg.user_id !== this.session.value?.user?.id)
 //             //     document.dispatchEvent(new ToastNotificationSuccessEvent(`${msg.user_id === this.#gameData?.player_one.id ? this.#gameData?.player_one.username : this.#gameData?.player_two.username } joined the game`))
 //         })
-//         this.currentGame?.on("from-worker-client-disconnected", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-client-disconnected", (msg) => {
             
 //             this.#disconnectedUser.self = msg.user_id === this.session.value?.user?.id ? true : false;
 //             this.#disconnectedUser.data = msg.user_id === this.#gameData?.player_one.id ? this.#gameData?.player_one : this.#gameData?.player_two;
 //             this.#disconnectModal.value?.showModal();
 //             super.requestUpdateDirect();
 //         })
-//         this.currentGame?.on("from-worker-client-reconnected", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-client-reconnected", (msg) => {
 //             this.#disconnectModal.value?.hideModal();
 //             super.requestUpdateDirect();
 //         })
-//         this.currentGame?.on("from-worker-game-paused", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-game-paused", (msg) => {
 //             this.#paused = true;
 //         })
-//         this.currentGame?.on("from-worker-game-resumed", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-game-resumed", (msg) => {
 //             this.#paused = false;
 //         })
-//         this.currentGame?.on("from-worker-error", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-error", (msg) => {
 //             console.log('worker error: ', msg);
 //             // this.currentGame?.quitGame();
 //             // document.dispatchEvent(new ToastNotificationErrorEvent(msg.error));
 //             // router.redirect('/')
 //         })
-//         this.currentGame?.on("from-worker-player-scored", (msg) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-player-scored", (msg) => {
             
 //         })
 
-//         this.currentGame?.on("from-worker-game-done", (br) => {
+//         this.currentGame?.setWorkerMessageHandler("from-worker-game-done", (br) => {
 //             this.#gameDoneData = br;
 //             this.#gameDoneModal.value?.showModal()
 //         })

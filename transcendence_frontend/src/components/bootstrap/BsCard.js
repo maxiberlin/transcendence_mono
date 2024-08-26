@@ -152,10 +152,10 @@ export const renderTablelikeCard = (title, icon, contentArray, headingsArray, in
 
 export const renderCard = (title, icon, content) => {
     return html`
-        <div class="card text-center bg-light-subtle" >
+        <div class="card  bg-light-subtle" >
             ${title ?
                 html`
-                <h6 class="my-2 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h6>
+                <h5 class="text-center pt-3 px-3 m-0 card-title">${icon ? html`<i class="fa-solid fa-scroll m-2"></i>` : ''}</i>${title}</h5>
             `
             :   ''}
             <div class="card-body">${content || ''}</div>

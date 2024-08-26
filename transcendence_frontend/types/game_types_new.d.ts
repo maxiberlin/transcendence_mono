@@ -93,6 +93,7 @@ declare namespace PongServerTypes {
         y: number;
         dx: number;
         dy: number;
+        tickno?: number;
     }
     export interface GameUpdateBinaryItem {
         tickno: number;
@@ -499,6 +500,11 @@ declare namespace FromWorkerSocketMessageTypes {
         currentTick?: number;
         tickBuffer?: number;
     }
+    export interface SocketTimes {
+        message: 'from-worker-socket-times';
+        rtt: number;
+        serverClientTimeDiff: number;
+    }
 
    
     export type FromWorkerMessage =
@@ -510,6 +516,7 @@ declare namespace FromWorkerSocketMessageTypes {
             | SocketError
             | SocketMessage
             | SocketUpdates
+            | SocketTimes
 
        
 

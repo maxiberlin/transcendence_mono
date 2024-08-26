@@ -15,6 +15,7 @@ import { BaseElement, html } from '../../lib_templ/BaseElement.js';
  * @attr dropdownitem
  * @attr stretch
  * @attr tooltip
+ * @attr label
  * @prop _async_handler
  */
 export default class BsButton extends BaseElement {
@@ -33,6 +34,7 @@ export default class BsButton extends BaseElement {
         'dropdownitem',
         'stretch',
         'tooltip',
+        'label',
     ];
 
     constructor() {
@@ -50,6 +52,7 @@ export default class BsButton extends BaseElement {
         this.stretch = false;
         this.disabled = false;
         this.tooltip = '';
+        this.label='Button';
 
         this.props._async_handler = async () => {
             console.log('_async_handler wait');
@@ -107,7 +110,7 @@ export default class BsButton extends BaseElement {
                 role="button"
                 aria-pressed="${isPressedAria}"
                 aria-disabled="${isDisabledAria}"
-
+                aria-label="${this.label}"
                 data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="${this.tooltip}"
             >
             ${this.dropdownitem ? html`

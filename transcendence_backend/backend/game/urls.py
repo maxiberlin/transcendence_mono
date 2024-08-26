@@ -11,6 +11,7 @@ urlpatterns = [
     path('invite/cancel/<invite_id>', views.game_invite_cancel, name='game-invite-cancel'),
     path('schedule', views.game_schedule, name='game-schedule'),
     path('history', views.match_history, name='match-history'),
+    path('leaderboard', views.leaderboard, name='leaderboard'),
     
     path('stats', views.player_stats, name='player-stats'),
     path('tournament-create', views.create_tournament, name='create-tournament'),

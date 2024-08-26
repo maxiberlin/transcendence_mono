@@ -125,18 +125,27 @@ export default class BsModal extends BaseElement {
         this.init();
     }
 
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        console.log('BsModal - disconnectedCallback');
+        
+        this.shouldDispose = true;
+        this.#modalControl?.hide();
+    }
+   
+
     async init() {
         await this.updateComplete;
         // console.log('modal: this.myModal.value: ', this.myModal.value);
         
-        if (this.myModal.value)
+        if (this.myModal.value) {
             this.#modalControl = new Modal(this.myModal.value, );
+            console.dir(this.myModal.value);
+            console.log('this.#modalControl: ', this.#modalControl);
+            
+        }
     }
-    
-    disconnectedCallback() {
-        super.disconnectedCallback();
-        this.#modalControl?.dispose();
-    }
+
 
     /** @param {BsModalData} data  */
     setContentAndShow(data) {
@@ -188,7 +197,7 @@ export default class BsModal extends BaseElement {
             
             <div
                 @hide.bs.modal=${() => {
-                    // console.log('BS MODAL HIDE');
+                    console.log('BS MODAL HIDE');
                     this.modalState = 'closing';
                     
                     this.#isOpen = false;
@@ -196,9 +205,11 @@ export default class BsModal extends BaseElement {
                     // super.requestUpdateDirect();
                 }}
                 @hidden.bs.modal=${() => {
-                    // console.log('BS MODAL HIDDEN');
+                    console.log('BS MODAL HIDDEN');
                     this.modalState = 'closed';
-                    if (this.shouldShow) {
+                    if (this.shouldDispose) {
+                        this.#modalControl?.dispose();
+                    } else if (this.shouldShow) {
                         this.showModal();
                         this.shouldShow = false;
                     } else {

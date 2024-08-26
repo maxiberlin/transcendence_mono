@@ -6,6 +6,8 @@
  * @typedef {"initial_connecting" | "reconnecting" | "initial_connected" | "reconnected" | "disconnected" | "closing" | "closed" | "failure"} SocketState
  */
 
+import { useMedian } from './utils';
+
 /**
  * @typedef {"none" | "invalid_url" | "reconnecting_failed"} SocketError
  */
@@ -214,10 +216,25 @@ export class GameSocket {
         }, duration * Math.random());
     };
 
+    rttMedian = useMedian();
+    timediffMedian = useMedian();
     #checkHeartBeatData = (data) => {
         if (data && data.tag === 'hello' && typeof data.heartbeat_ms === 'number') {
             console.log('START HEARTBEAT');
             this.#startHeartBeat(data.heartbeat_ms);
+        } else if (data && data.tag === 'pong') {
+            /** @type {PongServerTypes.Pong} */ 
+            const p = data;
+            console.log('pong: ', p);
+            
+            const clientTimeAtReceive = performance.timeOrigin + performance.now();
+            const serverTimeAtReceive = p.server_timestamp_ms;
+            const clientTimeSent = p.client_timestamp_ms;
+        
+            const roundTripTime = clientTimeAtReceive - clientTimeSent;
+            const serverClientTimeDiff = (serverTimeAtReceive - clientTimeSent) - (roundTripTime / 2);
+            this.rttMedian.addValue(roundTripTime);
+            this.timediffMedian.addValue(serverClientTimeDiff);
         }
     };
 
