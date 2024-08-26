@@ -9,9 +9,11 @@ services:
       - staticfiles:/app/static/
     ports:
       - "8000:8000"
+    depends_on:
+      - postgres
 
   nginx:
-    build: .
+    build: ./transcendence_frontend
     container_name: nginx
     volumes:
       - staticfiles:/app/static/
