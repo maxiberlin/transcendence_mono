@@ -2,7 +2,7 @@ import { ToastNotificationSuccessEvent, ToastNotificationUserEvent } from '../..
 import BaseBase from '../../lib_templ/BaseBase.js';
 import PubSub from '../../lib_templ/reactivity/PubSub.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
-import { fetcher, sessionService } from './API_new.js';
+import { fetcher, sessionService } from './API.js';
 import { ReconnectingSocket } from './Socket.js';
 
 const chatErrors = {
@@ -459,7 +459,7 @@ export class GlobalSockHandler {
 
     async init() {
         this.#notifications = new MessageData();
-        this.#socket = new ReconnectingSocket(`wss://api.${window.location.host}/ws/`)
+        this.#socket = new ReconnectingSocket(import.meta.env.GLOBAL_WEBSOCKET_URL)
         this.#socket.addHandler("initial_connected", () => {
             // console.log('INITIAL CONNECTED');
             this.#initialized = true;

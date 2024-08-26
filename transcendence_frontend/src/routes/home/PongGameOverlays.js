@@ -1,7 +1,7 @@
 import { avatarInfo } from '../../components/bootstrap/AvatarComponent';
 import BsModal from '../../components/bootstrap/BsModal';
 import { BaseElement, createRef, ref, html } from '../../lib_templ/BaseElement.js';
-import { sessionService } from '../../services/api/API_new';
+import { sessionService } from '../../services/api/API';
 
 export class PongGameOverlays extends BaseElement {
     static observedAttributes = [];

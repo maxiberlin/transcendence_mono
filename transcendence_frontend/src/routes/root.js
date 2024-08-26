@@ -1,7 +1,7 @@
 import { ToastNotificationErrorEvent } from '../components/bootstrap/BsToasts.js';
 import { comparePath } from '../components/utils.js';
 import { BaseElement, html } from '../lib_templ/BaseElement.js';
-import { sessionService } from '../services/api/API_new.js';
+import { sessionService } from '../services/api/API.js';
 
 
 export default class PongApp extends BaseElement {

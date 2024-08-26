@@ -1,6 +1,6 @@
 import { html, ifDefined } from '../lib_templ/BaseElement.js';
 import { getTournamentLink } from '../routes/home/utils.js';
-import { sessionService } from '../services/api/API_new.js';
+import { sessionService } from '../services/api/API.js';
 import { avatarLink } from './bootstrap/AvatarComponent';
 import { renderCardInfo } from './bootstrap/BsCard';
 

@@ -1,7 +1,7 @@
 import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
 import { SelectedNavLink } from '../../components/Navs.js';
-import { isStr, sessionService, userAPI } from '../../services/api/API_new.js';
+import { isStr, sessionService, userAPI } from '../../services/api/API.js';
 import { getPreferredTheme, setStoredTheme, setTheme } from '../../services/themeSwitcher.js';
 import { Modal, Offcanvas } from 'bootstrap';
 import { getInputType, inputTypes, renderInput, renderInputByType, renderSubmitButton } from '../auth/renderInput.js';

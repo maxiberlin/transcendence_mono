@@ -7,7 +7,7 @@ import * as bootstrap from 'bootstrap'
 
 
 
-import { sessionService } from './services/api/API_new.js';
+import { sessionService } from './services/api/API.js';
 // import { messageSocketService } from './services/api/GlobalSockHandler.js';
 import router from './services/router.js';
 

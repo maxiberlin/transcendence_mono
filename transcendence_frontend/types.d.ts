@@ -6,7 +6,7 @@
 /// <reference path="./types/chat_types.d.ts" />
 
 
-
+import 'vite/client'
 
 declare namespace RoutingTypes {
 

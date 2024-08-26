@@ -2,7 +2,7 @@ import { actionButtonDropdowns } from '../../../components/ActionButtons.js';
 import { avatarInfo, avatarLink } from '../../../components/bootstrap/AvatarComponent.js';
 import { ToastNotificationErrorEvent } from '../../../components/bootstrap/BsToasts.js';
 import { BaseElement, html, BaseBase, createRef, ref } from '../../../lib_templ/BaseElement.js';
-import { sessionService } from '../../../services/api/API_new.js';
+import { sessionService } from '../../../services/api/API.js';
 import router from '../../../services/router.js';
 import { SelectedSearchResult } from '../../social/ProfileSearch.js';
 import { ListGroup } from '../../../components/AnimL.js';

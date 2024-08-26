@@ -1,7 +1,7 @@
 import { actionButtonGroups, actions, configs, getBtn } from '../../components/ActionButtons';
 import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { sessionService } from '../../services/api/API_new';
+import { sessionService } from '../../services/api/API';
 import { Popover } from 'bootstrap';
 // import { messageSocketService } from '../../services/api/GlobalSockHandler';
 

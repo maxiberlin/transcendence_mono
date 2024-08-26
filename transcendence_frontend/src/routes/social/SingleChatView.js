@@ -5,7 +5,7 @@ import { getTournamentAvatarLink } from '../../components/gameUtils.js';
 import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
-import { sessionService } from '../../services/api/API_new.js';
+import { sessionService } from '../../services/api/API.js';
 
 
 const MSG_TYPE_NOTIFICATION_PAGE = 0
