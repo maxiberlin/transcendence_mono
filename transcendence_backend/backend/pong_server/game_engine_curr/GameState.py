@@ -113,10 +113,10 @@ class GameState:
         # print(f"SCORE: {score}")
 
 
-        # d = [state for state in self.state_history if state.tickno in self.recalculated_snapshots]
-        # self.recalculated_snapshots.clear()
-        # d.sort(key=lambda x: x.tickno)
-        # return GameSnapshotListDataclass(list=d)
+        d = [state for state in self.state_history if state.tickno in self.recalculated_snapshots]
+        self.recalculated_snapshots.clear()
+        d.sort(key=lambda x: x.tickno)
+        return score, GameSnapshotListDataclass(list=d)
 
     def get_snapshots(self):
         d = [state for state in self.state_history if state.tickno in self.recalculated_snapshots]

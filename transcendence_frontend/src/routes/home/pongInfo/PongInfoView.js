@@ -1,3 +1,4 @@
+import { avatarLink } from '../../../components/bootstrap/AvatarComponent';
 import { getPongSvg, renderInlineMatch } from '../../../components/gameUtils';
 import { BaseElement, html, ifDefined } from '../../../lib_templ/BaseElement';
 import { gameAPI, sessionService } from '../../../services/api/API_new';
@@ -68,19 +69,24 @@ export class PongInfoView extends BaseElement {
     renderLeaderBoardTab = () => html`
             <pageinated-list-card
                 onlyarrows
-                title="Match History"
+                title="Leaderboard"
                 icon="user"
                 .page=${this.searchParams?.get('page')??1}
                 .fetchdatacb=${async (page) => {
                     console.log('FETCH HISTORY');
                     if (typeof page !== 'number' || page < 0) return;
-                    const data = await sessionService.fetchAndNotifyOnUnsuccess(gameAPI.getHistory(true, page));
+                    const data = await sessionService.fetchShort(gameAPI.getLeaderboard());
                     console.log('FETCH HISTORY: data: ', data);
                     if (data) {
-                        return [data.max_pages, data.history];
+                        return [1, data];
                     }
                 }}
-                .rendercb=${this.boundCbHistory}
+                .rendercb=${/** @param {APITypes.PlayerData} p  */(p) => html`
+                    <div class="py-2 d-flex justify-content-between align-items-center">
+                        ${avatarLink(p)}
+                        <span>${p.xp}</span>
+                    </div>
+                `}
             >
             </pageinated-list-card>
     `
@@ -90,6 +96,7 @@ export class PongInfoView extends BaseElement {
 
 
     render() {
+        
         console.log('current page from params: ', this.searchParams?.get('page'));
         
         return html`

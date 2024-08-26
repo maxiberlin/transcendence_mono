@@ -19,6 +19,8 @@ class GameSettings(TypedDict):
 class GameObjData(TypedDict):
     x: float
     y: float
+    dx: float
+    dy: float
     w: float
     h: float
     speed_x: float

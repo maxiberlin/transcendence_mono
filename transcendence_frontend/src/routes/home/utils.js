@@ -16,11 +16,11 @@ export function getTournamentLink(game, tournamentId) {
  * @param {{
  *      rand?: boolean,
  *      tournament?: number
- * }} options
+ * }} [options]
  */
 export function getMatchLink(schedule, options) {
-    const url = new URL(`${window.location.origin}/games/${schedule?.game_id?.toLowerCase() ?? 'pong'}/play/${schedule.schedule_id}${options.rand ? '(rand)' : ''}`);
-    if (options.tournament != undefined) {
+    const url = new URL(`${window.location.origin}/games/${schedule?.game_id?.toLowerCase() ?? 'pong'}/play/${schedule.schedule_id}${options?.rand ? '(rand)' : ''}`);
+    if (options?.tournament != undefined) {
         url.searchParams.append('tournament', options.tournament.toString());
     }
     return url.href;

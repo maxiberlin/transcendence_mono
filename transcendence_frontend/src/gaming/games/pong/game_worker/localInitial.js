@@ -13,27 +13,38 @@ const useScale = (scaleX, scaleY) => {
 /** @type {PongGameplayTypes.GameSettings} */
 export const defaultSettings = {
     initial_serve_to: 'initial-serve-left',
-    max_score: 10,
+    max_score: 1,
     point_wait_time_ms: 1000,
     serve_mode: 'serve-winner',
     tick_rate: 66,
 };
 
-const { downscaleX, downscaleY } = useScale(20000, 20000);
+const GAME_WIDTH    = 40000;
+const GAME_HEIGHT   = 20000;
+const BORDER_SIZE   = 600;
+const PADDLE_WIDTH  = 600;
+const PADDLE_HEIGHT = 2600;
+const PADDLE_SPEED  = 18000;
+const WALL_DIST     = 600;
+const BALL_WIDTH    = 600;
+const BALL_HEIGHT   = 600;
+const BALL_SPEED    = 20000;
+// const BALL_SPEED    = 30000;
+const { downscaleX, downscaleY } = useScale(GAME_WIDTH, GAME_HEIGHT);
 const sizesDefault = {
-    width: downscaleX(20000),
-    height: downscaleY(20000),
-    paddle_width: downscaleX(300),
-    paddle_height: downscaleY(2600),
-    paddle_speed_x: downscaleX(0),
-    paddle_speed_y: downscaleY(15000),
-    wall_dist: downscaleX(300),
-    ball_width: downscaleX(300),
-    ball_height: downscaleY(600),
-    ball_speed_x: downscaleX(10000),
-    ball_speed_y: downscaleY(10000),
-    border_width: downscaleX(600),
-    border_height: downscaleY(600),
+    width: downscaleX(GAME_WIDTH),
+    height: downscaleY(GAME_HEIGHT),
+    paddle_width: downscaleX(PADDLE_WIDTH),
+    paddle_height: downscaleY(PADDLE_HEIGHT),
+    paddle_speed_x: downscaleX(PADDLE_SPEED),
+    paddle_speed_y: downscaleY(PADDLE_SPEED),
+    wall_dist: downscaleX(WALL_DIST),
+    ball_width: downscaleX(BALL_WIDTH),
+    ball_height: downscaleY(BALL_HEIGHT),
+    ball_speed_x: downscaleX(BALL_SPEED),
+    ball_speed_y: downscaleY(BALL_SPEED),
+    border_width: downscaleX(BORDER_SIZE),
+    border_height: downscaleY(BORDER_SIZE),
 };
 
 /** @type {PongGameplayTypes.GameObjData} */

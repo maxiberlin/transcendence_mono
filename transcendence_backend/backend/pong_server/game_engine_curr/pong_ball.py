@@ -158,10 +158,25 @@ class PongBall(GameObjDataClass):
         self.dy = self.dy*-1
         self.__calc_y(time_while_collision)
 
-    def __redo_dir_x(self, tick: float, time_while_collision: float):
-        self.__calc_x(tick - time_while_collision)
-        self.dx = self.dx*-1
+
+    def __redo_dir_x_after_bounce(self, tick: float, time_while_collision: float, paddle: PongPaddle, collision: Collision):
+        # self.__calc_x(tick - time_while_collision)
+        self.x = paddle.x + paddle.w  if collision == Collision.COLL_LEFT else paddle.x - self.w
+        # self.dx = self.dx*-1
+        self.__calc_bounce_angle(paddle, collision)
         self.__calc_x(time_while_collision)
+        
+        
+    def __calc_bounce_angle(self, paddle: PongPaddle, collision: Collision):
+        ball_center_y = self.top + self.h/2
+        paddle_center_y = paddle.top + paddle.h/2
+        diff_y_abs = abs(ball_center_y - paddle_center_y)
+        rel_diff_y = diff_y_abs / self.maxPaddleBallDiff
+        new_angle_rad = math.radians(rel_diff_y * 60)
+        self.dx = math.cos(new_angle_rad) if collision == Collision.COLL_LEFT else math.cos(new_angle_rad)*-1
+        self.dy = math.sin(new_angle_rad) if ball_center_y > paddle_center_y else math.sin(new_angle_rad)*-1
+        
+
         
     def get_side_state(self) -> 'PongBall.PositionStates':
         s = PongBall.PositionStates.IS_LEFT_SIDE if self.dx < 0 else PongBall.PositionStates.IS_RIGHT_SIDE
@@ -277,23 +292,13 @@ class PongBall(GameObjDataClass):
                 self.__redo_dir_y(tick, time_while_collision)
             elif collision == Collision.COLL_LEFT or collision == Collision.COLL_RIGHT:
                 # print(f"COLLISION ON ONE SIDE!!!  {'left' if collision == Collision.COLL_LEFT else 'right'}")
-                self.__redo_dir_x(tick, time_while_collision)
-                self.__calc_bounce_angle(paddle, collision)
+                self.__redo_dir_x_after_bounce(tick, time_while_collision, paddle, collision)
+                
                 self.pos_state |= PongBall.PositionStates.HAD_BOUNCE
         return self.pos_state
 
                 
         
-    def __calc_bounce_angle(self, paddle: PongPaddle, collision: Collision):
-        ball_center_y = self.top + self.h/2
-        paddle_center_y = paddle.top + paddle.h/2
-        diff_y_abs = abs(ball_center_y - paddle_center_y)
-        rel_diff_y = diff_y_abs / self.maxPaddleBallDiff
-        new_angle_rad = math.radians(rel_diff_y * 60)
-        self.dx = math.cos(new_angle_rad) if collision == Collision.COLL_LEFT else math.cos(new_angle_rad)*-1
-        self.dy = math.sin(new_angle_rad) if ball_center_y > paddle_center_y else math.sin(new_angle_rad)*-1
-        
-
 
     # def reconcile_tick(self, oldState: GameObjPositionDataclass, paddle_left: "PongPaddle", paddle_right: "PongPaddle", tick_duration_s: float):
     #     if ( (oldState.x + self.w < paddle_left.right and self.right > self.bound_left)

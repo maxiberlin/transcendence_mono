@@ -8,6 +8,8 @@ import { getInputType, inputTypes, renderInput, renderInputByType, renderSubmitB
 import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent } from '../../components/bootstrap/BsToasts.js';
 import router from '../../services/router.js';
 import Router from '../../lib_templ/router/Router.js';
+import { renderCard } from '../../components/bootstrap/BsCard.js';
+import { comparePath } from '../../components/utils.js';
 
 
 export class SettingsView extends BaseElement {
@@ -18,11 +20,9 @@ export class SettingsView extends BaseElement {
 
         /** @type {import('../../components/Navs.js').NavItemConf[]} */
         this.configs = [
-            {text: "Profile",       href:'/settings',               icon: "user", firstActive: true},
+            {text: "Profile",       href:'/settings',               icon: "user"},
             {text: "Account",       href:'/settings/account',       icon: "gear"},
-            {text: "Game",          href:'/settings/game',          icon: "gamepad"},
             {text: "Color Mode",    href:'/settings/color-mode',    icon: "circle-half-stroke"},
-            {text: "Notification",  href:'/settings/notifications', icon: "bell"},
         ]
         this.confMap = {profile: this.configs[0], account: this.configs[1], game: this.configs[2], colorMode: this.configs[3]};
 
@@ -62,8 +62,17 @@ export class SettingsView extends BaseElement {
      */
      onBeforeMount(route, params, url) {
         if (!sessionService.isLoggedIn) {
-            return router.redirect('/');
+            return router.redirect('/auth/login');
         }
+
+        if (comparePath(url.pathname, '/settings/color-mode', false)) {
+            this.configs[2].firstActive = true;
+        } else if (comparePath(url.pathname, '/settings/account', false)) {
+            this.configs[1].firstActive = true;
+        } else {
+            this.configs[0].firstActive = true;
+        }
+
         return this.selectRoute(params);
     }
 
@@ -93,6 +102,7 @@ export class SettingsView extends BaseElement {
 
     connectedCallback() {
         super.connectedCallback();
+        console.log("all nodes: ", document.getElementsByTagName('*').length);
         // this.init();
         // this.addEventListener("selected_nav_link", this.selectedHandler);
         window.addEventListener("resize", this.onShouldUpdate);
@@ -395,13 +405,8 @@ export class SettingsView extends BaseElement {
 
     /** @param {string} title */
     renderContainer = (title, content) => html`
-        <div class="container">
-            <div class="card ">
-                <div class="card-body">
-                    <h3 class="card-title mb-4">${title}</h3>
-                    ${content}
-                </div>
-            </div>
+        <div class="container-fluid p-3">
+            ${renderCard(title, '', content)}
         </div>
     `
 

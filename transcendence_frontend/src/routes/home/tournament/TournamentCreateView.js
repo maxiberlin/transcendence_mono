@@ -8,6 +8,7 @@ import { SelectedSearchResult } from '../../social/ProfileSearch.js';
 import { ListGroup } from '../../../components/AnimL.js';
 import { renderCard, renderCardInfo } from '../../../components/bootstrap/BsCard.js';
 import { getTournamentLink } from '../utils.js';
+import Router from '../../../lib_templ/router/Router.js';
 
 
 export default class TournamentCreateView extends BaseElement {
@@ -50,9 +51,12 @@ export default class TournamentCreateView extends BaseElement {
     }
 
     onBeforeMount(route, params, url) {
+        if (!sessionService.isLoggedIn) {
+            return router.redirect('/auth/login');
+        }
         if (params.game !== "pong") {
             document.dispatchEvent( new ToastNotificationErrorEvent(`Invalid Game ${params.game}`) );
-            return router.redirect("/");
+            return Router.show404;
         }
         this.gameId = params.game;
     }
@@ -176,7 +180,7 @@ export default class TournamentCreateView extends BaseElement {
                     <img
                         class="rounded-5 object-fit-cover border border-white border-3"
                         alt="avatar"
-                        src="/public/images/match_rr_2.webp"
+                        src="/images/match_rr_2.webp"
                         width="100"
                         height="100"
                     />
@@ -214,7 +218,7 @@ export default class TournamentCreateView extends BaseElement {
                     <img
                         class="rounded-3 object-fit-cover border border-white border-3"
                         alt="avatar"
-                        src="/public/images/match_se_2.webp"
+                        src="/images/match_se_2.webp"
                         width="100"
                         height="100"
                     />

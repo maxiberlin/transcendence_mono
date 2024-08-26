@@ -228,9 +228,9 @@ export class BaseElement extends BaseBase {
     /**
      * @param {string} route
      * @param {object} params
-     * @returns {Promise<symbol | void> | symbol | void}
+     * @returns {Promise<symbol | void> | symbol | void | boolean}
      */
-    onRouteChange(route, params, url) {}
+    onRouteChange(route, params, url) {return true;}
 
     onBeforeUnMount() {}
 

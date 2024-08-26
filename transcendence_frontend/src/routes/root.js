@@ -1,4 +1,5 @@
 import { ToastNotificationErrorEvent } from '../components/bootstrap/BsToasts.js';
+import { comparePath } from '../components/utils.js';
 import { BaseElement, html } from '../lib_templ/BaseElement.js';
 import { sessionService } from '../services/api/API_new.js';
 
@@ -69,6 +70,21 @@ export default class PongApp extends BaseElement {
         {text: '', href: '/profile', icon: 'user'},
         {text: '', href: '/settings', icon: 'gear'},
     ];
+
+
+    /** @param {URL} url  */
+    beforeRootMount(url) {
+        if (comparePath(url.pathname, '/settings', false)) {
+            this.configs[3].firstActive = true;
+        } else if (comparePath(url.pathname, '/profile', false)) {
+            this.configs[2].firstActive = true;
+        } else if (comparePath(url.pathname, '/social', false)) {
+            this.configs[1].firstActive = true;
+        } else {
+            this.configs[0].firstActive = true;
+        }
+    }
+
 
     render() {
         this.configs[1].displayCount = this.unreadChatsCount?.value;

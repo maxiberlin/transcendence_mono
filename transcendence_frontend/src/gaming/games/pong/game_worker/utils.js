@@ -153,7 +153,7 @@ export const useMedian = () => {
  * @returns {(newTime: number) => number}
  */
 // eslint-disable-next-line no-unused-vars
-function useFps(time) {
+export function useFps(time) {
     let currTime = time ?? performance.now();
     let fpsCount = 0;
     let currFps = 0;

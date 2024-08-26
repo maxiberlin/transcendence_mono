@@ -277,7 +277,7 @@ export class ProfileView extends BaseElement {
         this.profileUserData = this.sessionUser.value?.user;
         this.allLoaded = true;
         super.requestUpdate();
-        const data = await sessionService.fetchShort(gameAPI.getStats());
+        const data = sessionService.fetchShort(gameAPI.getStats());
         await sessionService.updateData(['user']);
         await this.updateComplete;
         if (this.statsImageWrapperRef.value instanceof HTMLImageElement) {
@@ -286,19 +286,15 @@ export class ProfileView extends BaseElement {
                 this.statsImageWrapperRef.value.src = `data:image/png;base64, ${data}`;
             }
         }
-        this.allLoaded = true;
         super.requestUpdate();
     }
 
 
-    /** @param {number} userId  */
     async handleFetchOther(userId) {
         this.blockedData = null;
         if (userId == undefined) return;
         console.log('fetch deb1');
         this.profileUserData = sessionService.cachedProfileData.get(userId);
-        console.log('cached: ', );
-        
         if (this.profileUserData) {
             this.allLoaded = true;
             super.requestUpdate();
@@ -319,30 +315,55 @@ export class ProfileView extends BaseElement {
                 throw new Error(message);
             }
         }) || undefined;
-        if (this.profileUserData) {
-            sessionService.cachedProfileData.set(userId, this.profileUserData);
-        }
-        this.allLoaded = true;
         super.requestUpdate();
     }
 
     /**
-     * @param {{pk: string | undefined}} params
+     * @param {{pk: string | undefined, searchParams: URLSearchParams | undefined}} a
+     * @param {boolean} shouldRerender
      */
-    handleRoute(params) {
+    handleUrlParams({pk, searchParams}, shouldRerender) {
         // this.routerParams = params;
         const sessionUserId = this.sessionUser.value?.user?.id;
 
+        if (searchParams instanceof URLSearchParams) {
+            this.searchParams = searchParams;
+            this.searchParams?.forEach((v, k) => {
+                console.log('key: ', k, ': ', v);
+                
+            })
+        }
 
-      
-
-        const user_id = Number(params.pk)
-        if (params.pk === undefined || (sessionUserId != undefined && sessionUserId === user_id)) {
+        const user_id = Number(pk)
+        if ((pk == undefined && sessionUserId != undefined) || sessionUserId === pk) {
             this.handleFetchSelf();
-        } else if (!isNaN(user_id)) {
-            this.handleFetchOther(user_id);
-        } else {
+            // this.isSelf = true;
+            // this.profileUserData = this.sessionUser.value?.user;
+            // this.profileUserGameResults = this.sessionUser.value?.game_results;
+            // sessionService.fetchAndNotifyOnUnsuccess(gameAPI.getStats()).then(async (data) => {
+            //     await sessionService.updateData(['user']);
+            //     await this.updateComplete;
+            //     if (this.statsImageWrapperRef.value instanceof HTMLImageElement) {
+            //         if (data) this.imageData = data;
+            //         this.statsImageWrapperRef.value.src = `data:image/png;base64, ${data}`;
+            //     }
+            //     this.allLoaded = true;
+            //     super.requestUpdate();
+            // });
+            // this.allLoaded = true;
+            // super.requestUpdate();
+            // return true;
+        } else if (pk == undefined || isNaN(user_id)) {
             return Router.show404;
+            // document.dispatchEvent( new ToastNotificationErrorEvent("User not found") );
+            // return false;
+        } else {
+            this.handleFetchOther(user_id);
+            // this.fetchProfileData(user_id, shouldRerender);
+            // this.fetchProfileData(user_id, shouldRerender);
+            console.log('after handleUrlParams');
+            
+            return true;
         }
     }
     /**
@@ -352,55 +373,43 @@ export class ProfileView extends BaseElement {
      * @returns {symbol | void}
      */
     onBeforeMount(route, params, url) {
-        this.url = url;
+        // console.log("onBeforeMount");
         this.params = params;
         if (!sessionService.isLoggedIn) {
-            return router.redirect('/auth/login');
+            return router.redirect('/');
         }
-        return this.handleRoute(params)
+        // const success = await this.handleUrlParams(params, true);
+        // if (!this.handleUrlParams(params, true)) {
+        //     return router.redirect("/");
+        // }
+        return this.handleUrlParams(params, true)
     }
 
-    /**
-     * @param {string} route
-     * @param {object} params
-     * @param {URL} url
-     * @returns {symbol | void}
-     */
     onRouteChange(route, params, url) {
-        console.log('this url: ', this.url);
-
-        const shouldRefetch = this.url && this.url.pathname !== url.pathname;
-        this.url = url;
+        // console.log("onRouteChange, params: ", params);
+        // this.handleUrlParams(params, false);
+        const res = this.handleUrlParams(params, true);
+        if (res != true) {
+            return res;
+        }
         
-        if (shouldRefetch) {
-            this.handleRoute(params);
-        } 
         super.requestUpdate();
     }
 
+    onBeforeUnMount() {
+        // console.log('onBeforeUnMount: profilePromise: ', this.getProfilePromise);
+        // console.log('onBeforeUnMount: profileHistoryPromise: ', this.getProfileHistoryPromise);
+        // console.log('onBeforeUnMount: profileStatsPromise: ', this.getProfileStatsPromise);
+        
+    }
 
-    async fetchProfileData(id, shouldup) {
+    /** @param {*} type  */
+    async updateSessionuserDataAndRerender(type) {
 
     }
 
-    /** @param {'friend' | 'friend-request' | 'user'} type */
-    renderUserActionButtons = (type) => !this.profileUserData ? '' : html`
-        ${type === 'user' ? '' : html`
-            <button disabled class="btn btn-dark me-1">
-                <i class="fa-solid fa-${type === 'friend' ? 'user-check' : 'user-clock'}"></i>
-            </button>
-        `}
-
-        <div>
-        ${
-            type === 'user' ? actionButtonDropdowns.userActions(this.profileUserData.id) :
-            actionButtonDropdowns.friendActions(this.profileUserData.id)
-         }
-        </div>
-    `
-
-    getBtn = () => {
-
+    renderActionButtons() {
+        
     }
 
     /**
@@ -596,7 +605,7 @@ export class ProfileView extends BaseElement {
         console.log('this.profileUserData?.wins: ', this.profileUserData?.wins);
         console.log('this.profileUserData?.games_played: ', this.profileUserData?.games_played);
         console.log('this.profileUserData?.losses: ', this.profileUserData?.losses);
-
+        
         return html`
             <div class="opacity-transition ${this.allLoaded ? 'content-loaded' : ''}">
                 ${this.blockedData ? this.renderBlockedPage() : html`
@@ -639,7 +648,7 @@ export class ProfileView extends BaseElement {
                             header
                             title="Match History"
                             icon="user"
-                            
+                            .page=${this.searchParams?.get('page')??1}
                             .fetchdatacb=${async (page) => {
                                 if (typeof page !== 'number' || page < 0 || !this.profileUserData) return;
                                 const data = await sessionService.fetchAndNotifyOnUnsuccess(gameAPI.getHistory(this.profileUserData.username, page));
@@ -649,7 +658,6 @@ export class ProfileView extends BaseElement {
                                 }
                             }}
                             .rendercb=${this.renderGameHistoryItem.bind(this)}
-                            .page=${this.url?.searchParams?.get('page')??1}
                         >
                         </pageinated-list-card>
                         

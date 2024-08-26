@@ -16,6 +16,7 @@ import router from '../../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../../components/bootstrap/BsToasts.js';
 import { getMatchLink } from '../utils.js';
 import { getMatchIcon, getTournamentIcon } from '../../../components/gameUtils.js';
+import Router from '../../../lib_templ/router/Router.js';
 
 export class TournamentDetailsView extends BaseElement {
     constructor() {
@@ -68,16 +69,16 @@ export class TournamentDetailsView extends BaseElement {
     onBeforeMount(route, params, url) {
         console.log('tournament details view - params: ', params);
         if (!sessionService.isLoggedIn) {
-            return router.redirect('/');
+            return router.redirect('/auth/login');
         }
         if (params.game !== "pong") {
             document.dispatchEvent( new ToastNotificationErrorEvent("unknown game") );
-            return router.redirect('/');
+            return Router.show404;
         }
         const tournamentId = Number(params.tournament_id)
         if (params.tournament_id == undefined || isNaN(tournamentId)) {
             document.dispatchEvent( new ToastNotificationErrorEvent("Tournnament not found") );
-            return router.redirect('/');
+            return Router.show404;
         }
         this.fetchTournamentData(tournamentId);
     }
@@ -130,7 +131,7 @@ export class TournamentDetailsView extends BaseElement {
                                     ${avatarInfo(data.player_two)}
                                 </div>
                                 <div class="col-12 col-sm-auto py-2">
-                                    <a href="${getMatchLink(data, {rand: true, tournament: this.tournamentData?.id})}" role="button" class="w-100 btn btn-outline-primary">
+                                    <a href="${getMatchLink(data, {rand: false, tournament: this.tournamentData?.id})}" role="button" class="w-100 btn btn-outline-primary">
                                         <i class="fa-solid fa-gamepad"></i>
                                         start
                                     </a>

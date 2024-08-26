@@ -33,8 +33,8 @@ export class ListCard extends ListGroup {
         this.title = '';
         this.icon = '';
         this.flush = true;
-       /** @type {ListCardProps<T>} */
-        this.props = this.props;  // Re-cast the props to ListCardProps
+    //    /** @type {ListCardProps<T>} */
+        // this.props = this.props;  // Re-cast the props to ListCardProps
         // this.props.header = html``;
         // this.props.footer = html``;
     }
@@ -50,7 +50,7 @@ export class ListCard extends ListGroup {
 
     render() {
         return html`
-            <div class="card bg-light-subtle text-center">
+            <div class="card ${this.light ? 'bg-light-subtle' : ''} text-center">
                 ${this.props.header ? html`
                     <div class="card-header">
                         ${this.props.header}
@@ -65,9 +65,11 @@ export class ListCard extends ListGroup {
                         ${super.render()}
                     </div>
                 </div>
-                <div class="card-footer">
-                    ${this.props.footer ? this.props.footer : ''}
-                </div>
+                ${this.props.footer ? html`
+                    <div class="card-footer">
+                       ${this.props.footer}
+                    </div>
+                ` : ''}
             </div>
         `
     }

@@ -217,6 +217,12 @@ export const gameAPI = {
      */
     sendInvite: async (user_id) =>
         await fetcher.$post(`/game/invite/${user_id}`, { bodyData: { game_id: 0, game_mode: "1vs1", tournament: null } }),
+    /**
+     * @param {number} user_id 
+     * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem>>}
+     */
+    createMatch: async (user_id) =>
+        await fetcher.$post(`/game/schedule`, { bodyData: {user_id, game_id: 0, game_mode: "1vs1", tournament: null } }),
     
     /**
      * @param {number} invite_id
@@ -252,13 +258,21 @@ export const gameAPI = {
     },
     
     /**
-     * @param {string | true} [username]
-     * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentItem[]>>}
+     * @param {number} [page]
+     * @param {number} [userId]
+     * @param {number} [creatorId]
+     * @param {APITypes.TournamentStatus[]} [status]
+     * @param {APITypes.TournamentMode[]} [mode]
+     * @returns {Promise<APITypes.ApiResponse<{max_pages: number, tournaments: APITypes.TournamentItem[]}>>}
      */
-    getTournaments: async (username) =>
-        !username ? await fetcher.$get(`/game/tournaments`)
-        : username == true ? await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: ''})})
-        : await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({user: username})}),
+    getTournaments: async (page, userId, creatorId, status, mode) =>
+        await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({
+            page: page?.toString() ?? '',
+            user: userId?.toString() ?? '',
+            creator: creatorId?.toString() ?? '',
+            status: status?.join(',') ?? '',
+            mode: mode?.join(',') ?? ''
+        })}),
     
     /**
      * @param {number} tournament_id
@@ -291,10 +305,23 @@ export const gameAPI = {
             }}));
     },
     /**
+     * @param {number} schedule_id
+     * @param {number} score_one
+     * @param {number} score_two
+     * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem>>}
+     */
+    pushResults: async (schedule_id, score_one, score_two) => {
+        return (await fetcher.$post(`/game/result`, {bodyData: {
+                schedule_id,
+                score_one,
+                score_two
+            }}));
+    },
+    /**
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem[]>>}
      */
     getGameSchedule: async () =>
-        await fetcher.$post(`/game/schedule`),
+        await fetcher.$get(`/game/schedule`),
     
     /**
      * @param {string | true} [username]
@@ -311,6 +338,12 @@ export const gameAPI = {
      */
     getStats: async () =>
         await fetcher.$get(`/game/stats`),
+    
+    /**
+     * @returns {Promise<APITypes.ApiResponse<APITypes.PlayerData[]>>}
+     */
+    getLeaderboard: async () =>
+        await fetcher.$get(`/game/leaderboard`),
     
 
 };
@@ -372,6 +405,7 @@ export class SessionStore {
         } catch (error) {
             this.handleFetchError(error);
         }
+        return false;
     }
 
     /**
@@ -381,9 +415,13 @@ export class SessionStore {
     */
     async fetchShort(fetchPromise) {
         const r = await this.fetchAndNotifyOnUnsuccess(fetchPromise, (c, m) => {
+            console.log('FETCH error: ', c, 'MSG: ', m);
+            
             if (c !== 200) throw Error(m);
         });
-        return r === undefined ? false : r;
+        console.log('FETCH SHORT: R: ', r);
+        
+        return r;
     }
 
     /**
@@ -602,8 +640,23 @@ export class SessionStore {
     /** @param {number} user_id  */
     async sendGameInvitation(user_id) {
         if (!this.#isLoggedIn || !this.#sessionData) return;
-        await gameAPI.sendInvite(user_id);
-        await this.updateData(["game_invitations_sent"]);
+        const res = await this.fetchShort(gameAPI.sendInvite(user_id));
+        console.log('res: ', res);
+        if(res !== false) {
+            await this.updateData(["game_invitations_sent"]);
+        }
+    }
+
+    /**
+     * @param {number} user_id
+     */
+    async createMatch(user_id) {
+        if (!this.#isLoggedIn || !this.#sessionData) return;
+        const res = await this.fetchShort(gameAPI.createMatch(user_id));
+        if (res) {
+            await this.updateData(['game_schedule']);
+            return res;
+        }
     }
 
     /**
@@ -649,10 +702,10 @@ export class SessionStore {
         console.log('SESSIONSERVICE: updateData: ', lists);
         
         if (!user_id) throw new Error("unable to fetch data without the user id");
-        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<{ history: APITypes.GameScheduleItem[]; max_pages: number; }> | APITypes.ApiResponse<APITypes.TournamentItem[]> > []} */
+        /** @type {Promise<APITypes.ApiResponse<APITypes.UserData> | APITypes.ApiResponse<APITypes.FriendRequestItem[]> | APITypes.ApiResponse<APITypes.GameInvitationItem[]> | APITypes.ApiResponse<APITypes.GameScheduleItem[]> | APITypes.ApiResponse<{ history: APITypes.GameScheduleItem[]; max_pages: number; }> | APITypes.ApiResponse<{max_pages: number, tournaments: APITypes.TournamentItem[]}> > []} */
         let promises = [];
-        if (1) {
-        // if (lists.length == 1 && lists[0] == "all") {
+        // if (1) {
+        if (lists.length == 1 && lists[0] == "all") {
             // console.log('fetch all');
             lists = ["user", "friend_requests_received", "friend_requests_sent", "game_invitations_received", "game_invitations_sent", "game_schedule", "game_results", "tournaments"]
             promises = [
@@ -691,7 +744,7 @@ export class SessionStore {
                         promises.push(gameAPI.getHistory());
                         break;
                     case "tournaments":
-                        promises.push(gameAPI.getTournaments());
+                        promises.push(gameAPI.getTournaments(undefined, user_id));
                         break;
                     default:
                         throw new Error("INVALID UPDATE ITEM");
@@ -710,6 +763,9 @@ export class SessionStore {
                     if (Object.hasOwn(val.data, 'history')) {
                         // @ts-ignore
                         this.#sessionData[lists[i]] = val.data.history;
+                    } else if (Object.hasOwn(val.data, 'tournaments')) {
+                        // @ts-ignore
+                        this.#sessionData[lists[i]] = val.data.tournaments;
                     } else {
                         this.#sessionData[lists[i]] = val.data
                     }

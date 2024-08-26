@@ -48,12 +48,14 @@ export default class ProfileSearch extends BaseElement {
         super.connectedCallback();
         document.body.addEventListener('click', this.boundInputHandler);
         document.body.addEventListener('keydown', this.boundNavKeyHandler);
+        document.body.addEventListener('keyup', this.boundNavKeyHandler);
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
         document.body.removeEventListener('click', this.boundInputHandler);
         document.body.removeEventListener('keydown', this.boundNavKeyHandler);
+        document.body.removeEventListener('keyup', this.boundNavKeyHandler);
     }
 
     async handleInput(e) {
@@ -161,18 +163,30 @@ export default class ProfileSearch extends BaseElement {
 
     /** @param {KeyboardEvent} ev  */
     #handleSearchResultKeyNav(ev) {
-        if (this.#showRes) {
-            if (ev.key === 'Escape') {
-                ev.preventDefault();
-                this.#inptElem?.blur();
-                this.#showRes = false;
-                this.#currSearchNavPos = -1;
+        if (ev.type  === 'keyup') {
+            // console.log('active element: ', document.activeElement);
+            if (ev.key === 'Tab' && this.#inptElem && this.#inptElem === document.activeElement) {
+                this.#showRes = true;
                 super.requestUpdate();
-            } else if (this.#searchData instanceof Array) {
-                this.handleSelectionKeypress(ev);
-            }
+            } 
         } else {
-            this.#currSearchNavPos = -1;
+            if (this.#showRes) {
+                if (ev.key === 'Escape') {
+                    ev.preventDefault();
+                    this.#inptElem?.blur();
+                    this.#showRes = false;
+                    this.#currSearchNavPos = -1;
+                    super.requestUpdate();
+                } else if ((ev.key === 'Tab' && this.#inptElem && this.#inptElem.value === '')) {
+                    this.#showRes = false;
+                    this.#currSearchNavPos = -1;
+                    super.requestUpdate();
+                } else if (this.#searchData instanceof Array) {
+                    this.handleSelectionKeypress(ev);
+                }
+            } else {
+                    this.#currSearchNavPos = -1;
+            }
         }
     }
 
@@ -279,6 +293,7 @@ export default class ProfileSearch extends BaseElement {
                         ${(el) => { this.#inptElem = el; }}
                         @input=${this.handleInput.bind(this)}
                        
+                        inputmode="search"
                         id="${this.inputElemId}"
                         class="form-control"
                         type="search"

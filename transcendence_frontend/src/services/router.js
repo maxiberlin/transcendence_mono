@@ -193,11 +193,11 @@ customElements.define('pong-not-found', class extends BaseElement {
     render() {
         return html`
             <div class="h-100 w-100 d-flex align-items-center justify-content-center">
-                <a style="${"transform: translate(0, -180px);"}" href="/" class="btn btn-primary position-fixed">Back to Home</a>
-                <img class="pong-full-image" src="/public/images/404_4.webp"  alt="404 not found image">
+                <a style="${"transform: translate(0, -70px);"}" href="/" class="btn btn-primary position-fixed">Back to Home</a>
+                <img class="pong-full-image" src="/images/404_4.webp"  alt="404 not found image">
             </div>
         `
-            // <img style="max-height: 80vh" class="img-fluid" src="/public/images/404_2.webp"  alt="404 not found image">
+            // <img style="max-height: 80vh" class="img-fluid" src="/images/404_2.webp"  alt="404 not found image">
     }
 });
 

@@ -5,7 +5,7 @@ import { NotFoundComp, InvalidComp } from './routerDefaults.js';
 
 function assertParam(value, type) {
     let convertedValue;
-    console.log('assertParam: value: ', value, ', type: ', type);
+    // console.log('assertParam: value: ', value, ', type: ', type);
     
     switch (type) {
         case 'int':
@@ -136,7 +136,7 @@ export default class Router {
 
     /** @param {string} route  */
     async mountRootAndGoTo(route) {
-        console.log('remount root, init: ', this.#isInit);
+        // console.log('remount root, init: ', this.#isInit);
         if (this.#root != undefined) {
             this.#root.remove();
         }
@@ -144,6 +144,11 @@ export default class Router {
         if (this.#root == undefined) {
             this.#root = document.createElement(Router.componentinvalidComponent.component);
         }
+
+        if ('beforeRootMount' in this.#root && typeof this.#root.beforeRootMount === 'function') {
+            this.#root.beforeRootMount(new URL(route, window.location.origin));
+        }
+
         document.body.appendChild(this.#root);
 
         if (this.#root instanceof BaseElement) {
@@ -163,7 +168,7 @@ export default class Router {
         this.rootComponent = rootElem;
 
         if (this.#isInit)  {
-            console.log('was init, remount root');
+            // console.log('was init, remount root');
             this.mountRootAndGoTo(window.location.href);
             return;
         }
@@ -191,7 +196,7 @@ export default class Router {
             }
         });
         window.addEventListener('popstate', (event) => {
-            console.log("popstate!")
+            // console.log("popstate!")
             if (!event.state?.route) {
                 // // console.log("no prev entry: go to '/'");
                 this.go('/', false);
@@ -211,15 +216,15 @@ export default class Router {
      */
     #findRoute(urlSegments, params) {
         const match = this.#routes?.find((route) => {
-            console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
-            console.log("FIND ROUTE: route.segments?.length: ", route.segments?.length, " | urlSegments: ", urlSegments.length);
+            // console.log("FIND ROUTE: route: ", route, " | urlSegments: ", urlSegments);
+            // console.log("FIND ROUTE: route.segments?.length: ", route.segments?.length, " | urlSegments: ", urlSegments.length);
             
             if (route.segments?.length !== urlSegments.length) {
                 return false;
             }
             const isMatch = route.segments.every((segment, i) => {
-                console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
-                console.log("segments: ", segment);
+                // console.log("evetry segment: seg1: ", segment, " | seg2: ", urlSegments[i], " | equal? ", segment === urlSegments[i]);
+                // console.log("segments: ", segment);
                 if (segment[0] === ':') {
                     route[segment.slice(1)] = decodeURIComponent(
                         urlSegments[i],
@@ -245,7 +250,7 @@ export default class Router {
                 if (match !== null && match[1] != undefined && match[2] != undefined) {
                     try {
                         const param = assertParam(segmentUri, match[2]);
-                        console.log('returned param: ', param);
+                        // console.log('returned param: ', param);
                         return [true, match[1], param];
                     } catch (error) {
                         console.log('Error asserting the type: ', error);
@@ -277,14 +282,14 @@ export default class Router {
                 return false;
             }
             return route.segments.every((segment, i) => {
-                console.log('route: ', route);
-                console.log('segment: ', segment);
+                // console.log('route: ', route);
+                // console.log('segment: ', segment);
                 
                 if (segment[0] === ':') {
                     params[segment.slice(1)] = decodeURIComponent( urlSegments[i] );
                 }
-                console.log('added: ', route[segment.slice(1)]);
-                console.log('added route: ', route);
+                // console.log('added: ', route[segment.slice(1)]);
+                // console.log('added route: ', route);
                 
                 return segment === urlSegments[i] || segment[0] === ':';
             });
@@ -319,8 +324,8 @@ export default class Router {
         if (component instanceof BaseElement &&typeof component.onBeforeMount === 'function') {
             // console.log('Router: mountComp. isOk!');
             val = component.onBeforeMount(route, params, url);
-            console.log('mountComp: val: ', val);
-            console.log('val === Router.makeRedirect: ', val === Router.makeRedirect);
+            // console.log('mountComp: val: ', val);
+            // console.log('val === Router.makeRedirect: ', val === Router.makeRedirect);
             
             if (val === Router.makeRedirect || val === Router.show404) {
                 return val;
@@ -355,11 +360,11 @@ export default class Router {
      * @returns {symbol}
      */
     redirect(route) {
-        console.log('REDIRECT: state?: ',history.state);
+        // console.log('REDIRECT: state?: ',history.state);
         
         if (typeof route === 'string' && route === 'history.back' && typeof this.lastRoute === 'string') {
             // this.goneBackMakeReplace = true;
-            console.log('HISTORY REDIRECT BACK: ', this.lastRoute);
+            // console.log('HISTORY REDIRECT BACK: ', this.lastRoute);
             // history.back();
             
             window.history.replaceState({ route: this.lastRoute }, '', this.lastRoute);
@@ -398,18 +403,18 @@ export default class Router {
             return;
         }
 
-        console.log('router go to: ', route);
+        // console.log('router go to: ', route);
         if (!this.#isInit) this.#isInit = true;
         
         const url = new URL(route, window.location.origin);
 
         let scrollUp = true;
         if (this.lastRoute && this.lastRoute.pathname === url.pathname) {
-            console.log('ROUTER!!! OK ARE THE SAME!!!');
+            // console.log('ROUTER!!! OK ARE THE SAME!!!');
             scrollUp = false;
         }
         route = url.pathname;
-        console.log('route url: ', url);
+        // console.log('route url: ', url);
         
         const params = {};
         params.searchParams = url.searchParams;
@@ -426,8 +431,25 @@ export default class Router {
         let [matchObj, component] = this.createComponentFromRoute(this.#findRoute(urlSegments, params));
       
         let curr = this.getOutlet()?.firstElementChild;
-        if (!curr) {
-            console.log('Router - mount directly!');
+
+        let isAlreadyMounted = false;
+        if (curr && curr.tagName === component.tagName && curr instanceof BaseElement && typeof curr.onRouteChange === 'function') {
+            isAlreadyMounted = true;
+            const res = curr.onRouteChange(route, params, url);
+            if (res === Router.makeRedirect) {
+                return;
+            } else if (res === Router.show404) {
+                [matchObj, component] = this.createComponentFromRoute(Router.componentDefault404);
+                this.unmountComp(curr, route);
+                this.mountComp(component, route, params, url);
+            } else if (res === false) {
+                this.unmountComp(curr, route);
+                isAlreadyMounted = false;
+            }
+        }
+
+        if (!isAlreadyMounted && !curr) {
+            // console.log('Router - mount directly!');
             
             const res = this.mountComp(component, route, params, url);
             if (res === Router.makeRedirect) {
@@ -437,20 +459,7 @@ export default class Router {
                 this.mountComp(component, route, params, url);
             }
         }
-        else if (curr?.tagName === component.tagName
-            && curr instanceof BaseElement
-            && typeof curr.onRouteChange === 'function') {
-            const res = curr.onRouteChange(route, params, url);
-            if (res === Router.makeRedirect) {
-                return;
-            } else if (res === Router.show404) {
-                [matchObj, component] = this.createComponentFromRoute(Router.componentDefault404);
-                this.unmountComp(curr, route);
-                this.mountComp(component, route, params, url);
-            }
-            
-        }
-        else if (curr instanceof HTMLElement) {
+        else if (!isAlreadyMounted && curr instanceof HTMLElement) {
             console.log('Router - unmount: ', curr, ' mount: ', component);
             this.unmountComp(curr, route);
             const res = this.mountComp(component, route, params, url);
@@ -462,6 +471,7 @@ export default class Router {
             }
             
         }
+
         if (!isFromHistory && scrollUp) {
             // console.log('scroll to topp!!!');
             window.scrollTo({left: 0, top: 0, behavior: 'auto'});
@@ -469,7 +479,7 @@ export default class Router {
             // console.log('no scroll! from history');
         }
         // Router.toggleHistoryState(route, addToHistory);
-        console.log('set history to: ', url.href);
+        // console.log('set history to: ', url.href);
         
         Router.toggleHistoryState(url.href, addToHistory);
         document.title = matchObj.title;

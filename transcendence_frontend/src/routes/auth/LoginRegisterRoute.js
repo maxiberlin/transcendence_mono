@@ -99,7 +99,7 @@ export default class LoginRegisterRoute extends BaseElement {
             type: 'login',
             title: 'Welcome Back!',
             func: this.showLogin,
-            link: '/auth/pwforgot',
+            link: '/auth/register',
         },
         {
             type: 'register',
@@ -139,9 +139,10 @@ export default class LoginRegisterRoute extends BaseElement {
         
         if (authroute === 'logout') {
             if (sessionService.isLoggedIn) {
-                sessionService.logout();
+                sessionService.logout().then(() => {
+                    return router.redirect('/');
+                });
             }
-            return router.redirect('/');
         } else if (typeof route === 'string') {
             const val = this.routes.find(r => r.type === authroute)
             console.log('loginroute val: ', val);
@@ -424,35 +425,39 @@ export default class LoginRegisterRoute extends BaseElement {
         ${LoginRegisterRoute.renderInput(inputTypes.username, true, true)}
         ${LoginRegisterRoute.renderInput(inputTypes.curr_password, false, true)}
         <small class="text-body-secondary"
-            >Forgot your password?
-            <a id="login-to-pw-forgotten" href="${link}"> click here</a>
+            >Don't have an Account?
+            <a id="login-to-pw-forgotten" href="${link}"> Register here</a>
         </small>
         ${LoginRegisterRoute.showButton(
             showSpinner,
             'Sign-in',
             'signing-in...',
         )}
+        ${this.render42Login()}
+    `
+
+    render42Login = () => html`
         <bs-button ._async_handler=${async () => {
-            /** @type {APITypes.ApiResponse<APITypes.Intra42Data>} */
-            const data = await fetcher.$get('/o/login');
-            console.log('login with 42 - data: ', data);
-            
-            if (data.success) {
-                if (data.data.redirect) {
-                    window.location.href = data.data.redirect_url;
-                    console.log('redirect to: ', data.data.redirect_url);
+                /** @type {APITypes.ApiResponse<APITypes.Intra42Data>} */
+                const data = await fetcher.$get('/o/login');
+                console.log('login with 42 - data: ', data);
+                
+                if (data.success) {
+                    if (data.data.redirect) {
+                        window.location.href = data.data.redirect_url;
+                        console.log('redirect to: ', data.data.redirect_url);
+                    } else {
+                        document.dispatchEvent(new ToastNotificationErrorEvent('no redirect provided'));
+                    }
                 } else {
-                    document.dispatchEvent(new ToastNotificationErrorEvent('no redirect provided'));
+                    document.dispatchEvent(new ToastNotificationErrorEvent(data.message));
                 }
-            } else {
-                document.dispatchEvent(new ToastNotificationErrorEvent(data.message));
-            }
-        }}
+            }}
         
-        stretch
-        text="Login with 42"
+            stretch
+            text="Login with 42"
         ></bs-button>
-    `;
+    `
 
     showRegister = (link, showSpinner) => html`
         ${LoginRegisterRoute.renderInput(inputTypes.username, true, true, this.onInputChange.bind(this))}
@@ -469,11 +474,13 @@ export default class LoginRegisterRoute extends BaseElement {
             true,
             this.onInputChange.bind(this),
         )}
+        
         ${LoginRegisterRoute.showButton(
             showSpinner,
             'Sign-Up',
             'signing-up...',
         )}
+        ${this.render42Login()}
         <small id="singnup-disclaimer" class="text-body-secondary">
             By clicking Sign up, you agree to the terms of use.
         </small>
@@ -483,6 +490,7 @@ export default class LoginRegisterRoute extends BaseElement {
                 <a id="login-to-other-site" href="${link}">sign-in</a>
             </small>
         </div>
+        
     `;
 
     

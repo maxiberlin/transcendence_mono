@@ -119,12 +119,50 @@ export default class DrawObj {
         //     this.sh,
         // );
         ctx.fillRect(
-            this.x * this.canvasWidth,
-            this.y * this.canvasHeight,
-            this.w * this.canvasWidth,
-            this.h * this.canvasHeight,
+            Math.trunc(this.x * this.canvasWidth),
+            Math.trunc(this.y * this.canvasHeight),
+            Math.trunc(this.w * this.canvasWidth),
+            Math.trunc(this.h * this.canvasHeight),
         );
     }
+
+
+    /**
+     * 
+     * 
+     * Ball - Paddle Right: 
+     * Paddle Right X: 0.97
+     * Ball was at: X 0.9556817876028206
+     * Ball width: 0.015
+     * Ball right was: 0.970681
+     * 
+     * relVeloX = ball.dx(0.9886345408450067) * ball.speedX(0.5) - paddleRight.dx(0) * paddleRight.speedX(0.45)
+     * relVeloX = ball.dx(0.9886345408450067) * ball.speedX(0.5)
+     * relVeloX = 0.494317
+     * reciRelVeloX = 1/0.494317 = 2.02299
+     * 
+     * diffTimeX = Math.abs(this.right - obj.left) * reciRelVeloX;
+     * diffTimeX = Math.abs(0.970681 - 0.97) * 2.02299
+     * diffTimeX = 0.000681 * 2.02299
+     * diffTimeX = 0.00033663
+     * 
+     * Ball - Paddle Y: 
+     * Paddle Right Y: 0.6604499999999999
+     * Paddle Right Bottom: 0.6604499999999999 + 0.065
+     * Ball was at: Y 0.7576085069133881
+     * 
+     * relVeloY = ball.dy(-0.15033876628528944) * ball.speedY(1) - paddleRight.dy(1) * paddleRight.speedY(0.45)
+     * relVeloY = -0.15033876628528944 - 0.45
+     * relVeloY = -0.6003387662852895
+     * reciRelVeloX = 1/0.6003387662852895 = 1.6657261802160312
+     * 
+     * diffTimeY = Math.abs(obj.bottom - this.top) * reciRelVeloY;
+     * diffTimeY = Math.abs(0.970681 - 0.7254499999999999) * 1.6657261802160312
+     * diffTimeY = 0.2452310000000001 * 1.6657261802160312
+     * diffTimeY = 0.4084876969005577
+     * 
+     * 
+     */
 
     /**
      * @param {DrawObj} obj 
@@ -163,6 +201,22 @@ export default class DrawObj {
             return (diffTimeX < diffTimeY ? [collisionX, diffTimeX] : [collisionY, diffTimeY]);
         }
         return [DrawObj.COLL_NONE, Infinity];
+    }
+
+    static getCollisionStr(c) {
+        if (c === this.COLL_NONE) {
+            return 'COLL_NONE';
+        } else if (c === this.COLL_TOP) {
+            return 'COLL_TOP';
+        } else if (c === this.COLL_RIGHT) {
+            return 'COLL_RIGHT';
+        } else if (c === this.COLL_BOTTOM) {
+            return 'COLL_BOTTOM';
+        } else if (c === this.COLL_LEFT) {
+            return 'COLL_LEFT';
+        } else {
+            return `UNKNOWN_COLLISION: ${c}`;
+        }
     }
 
     static COLL_NONE = 0;

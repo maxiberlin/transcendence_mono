@@ -127,7 +127,7 @@ class PongGame:
         if self.running == True:
             return False
         self.game_loop_task = asyncio.get_running_loop().create_task(self.__game_loop())
-        self.game_update_task = asyncio.get_running_loop().create_task(self.__send_udpdate())
+        # self.game_update_task = asyncio.get_running_loop().create_task(self.__send_udpdate())
         print("start game loop task")
         if on_done_cb is not None:
             self.game_loop_task.add_done_callback(on_done_cb)
@@ -294,7 +294,7 @@ class PongGame:
             
         self.running = False
 
-    def __send_scores(self, score):
+    def __check_scores(self, score):
         if score == PongBall.Scored.SCORE_PLAYER_LEFT:
             self.gameResults.player_one_score += 1
             self.__send_score("left", self.gameResults.player_one_score)
@@ -357,13 +357,14 @@ class PongGame:
                 maxtaim = max(maxtaim, diff)
                 print(f"\nTIME SINCE LAST UPDATE: {diff}, min: {mintaim}, max: {maxtaim}")
                 taim = currtiam
-                data = self.game_state.update()
+                score, data = self.game_state.update()
+                self.__check_scores(score)
 
                 # msg_server.start_coro_send_to_consumer(self.game_channel, data)
-                # await layer.group_send(self.game_channel, {
-                #     "type": "handle_broadcast_binary",
-                #     "server_broadcast": data.tobin()
-                # })
+                await layer.group_send(self.game_channel, {
+                    "type": "handle_broadcast_binary",
+                    "server_broadcast": data.tobin()
+                })
               
                 
                 sleep_time = self.game_timer.stopwatch_end()

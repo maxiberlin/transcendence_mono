@@ -92,7 +92,7 @@ const handleSocketMessage = (data) => {
             const list = parseSnapshot(data);
 
             
-            console.log('PARSE UPDATE');
+            // console.log('PARSE UPDATE');
             
             // setTimeout(() => {
             //     console.log('SEND UPDATE AFTER TIMEOUT');
@@ -100,8 +100,12 @@ const handleSocketMessage = (data) => {
             //     updateQueue = [];
             // }, 10);
             // insertNewSnapshots(list);
-            
-            pushToMainWorker({message: 'from-worker-socket-new-snapshots', snapshots: list});
+            /** @type {FromWorkerSocketMessageTypes.NewSnapshots} */
+            const msg = {
+                message: 'from-worker-socket-new-snapshots',
+                snapshots: list,
+            };
+            pushToMainWorker(msg);
             if (moveCommandBuffer.length > 0) {
                 pushCommandToSocket({cmd: 'client-move-list', movements: moveCommandBuffer});
                 moveCommandBuffer = [];
@@ -113,6 +117,15 @@ const handleSocketMessage = (data) => {
                 
                 
                 if (message.tag === 'hello' || message.tag === 'pong') {
+                    if (message.tag == 'pong') {
+                        /** @type {FromWorkerSocketMessageTypes.SocketTimes} */
+                        const msg = {
+                            message: 'from-worker-socket-times',
+                            rtt: socket?.rttMedian.getMedian() ?? 0,
+                            serverClientTimeDiff: socket?.timediffMedian.getMedian() ?? 0
+                        }
+                        pushToMainWorker(msg);
+                    }
                     return;
                 }
                 pushToMainWorker({message: 'from-worker-socket-message', broadcast: message});
