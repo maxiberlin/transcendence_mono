@@ -459,7 +459,7 @@ export class GlobalSockHandler {
 
     async init() {
         this.#notifications = new MessageData();
-        this.#socket = new ReconnectingSocket(import.meta.env.GLOBAL_WEBSOCKET_URL)
+        this.#socket = new ReconnectingSocket(import.meta.env.VITE_GLOBAL_WEBSOCKET_URL)
         this.#socket.addHandler("initial_connected", () => {
             // console.log('INITIAL CONNECTED');
             this.#initialized = true;

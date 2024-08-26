@@ -11,15 +11,20 @@ services:
       - "8000:8000"
 
   nginx:
-    build: .
-    container_name: nginx
+    image: nginx:1.19.0-alpine
     volumes:
       - staticfiles:/app/static/
+      - ./transcendence_frontend/dist:/var/www/pong_spa
+      - ./nginx/nginx.conf.d:/etc/nginx/conf.d
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl/pong42.com:/etc/nginx/ssl/pong
     ports:
       - "80:80"
       - "443:443"
     depends_on:
       - backend
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
 
   redis:
     image: redis:7
