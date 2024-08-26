@@ -5,7 +5,7 @@ import { ShapeAnimator } from '../../components/AnimL.js';
 import { BaseElement, createRef, html, ifDefined, ref } from '../../lib_templ/BaseElement.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
-import { sessionService } from '../../services/api/API_new.js';
+import { sessionService } from '../../services/api/API.js';
 import router from '../../services/router.js';
 
 export default class ChatView extends BaseElement {

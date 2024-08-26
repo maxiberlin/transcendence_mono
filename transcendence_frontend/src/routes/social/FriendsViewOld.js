@@ -1,5 +1,5 @@
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
-import { sessionService } from '../../services/api/API_new.js';
+import { sessionService } from '../../services/api/API.js';
 import { actions, actionButtonDropdowns, actionButtonGroups } from '../../components/ActionButtons.js';
 import router from '../../services/router.js';
 import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';

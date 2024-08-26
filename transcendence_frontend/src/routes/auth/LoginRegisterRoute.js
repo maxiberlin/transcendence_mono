@@ -1,7 +1,7 @@
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
-import { fetcher, sessionService } from '../../services/api/API_new.js';
+import { fetcher, sessionService } from '../../services/api/API.js';
 import router from '../../services/router.js';
 
 /**

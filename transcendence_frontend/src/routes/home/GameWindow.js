@@ -4,7 +4,7 @@ import { renderListCard, renderListItem, renderCardInfo, renderListItemAnchor, r
 import { actions, actionButtonGroups } from '../../components/ActionButtons.js';
 import { avatarLink } from '../../components/bootstrap/AvatarComponent.js';
 
-import { sessionService } from '../../services/api/API_new.js';
+import { sessionService } from '../../services/api/API.js';
 import { get1vs1MatchImg, getMatchIcon, getRRMatchImg, getSEMatchImg, getStatusBadge, getTournamentIcon, renderInlineMatch } from '../../components/gameUtils.js';
 
 import { Tooltip } from 'bootstrap';

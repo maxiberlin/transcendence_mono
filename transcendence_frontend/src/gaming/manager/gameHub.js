@@ -5,7 +5,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable no-console */
-import { sessionService } from '../../services/api/API_new.js';
+import { sessionService } from '../../services/api/API.js';
 
 /**
  * @param {HTMLCanvasElement} canvas

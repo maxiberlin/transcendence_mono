@@ -1,7 +1,7 @@
 import { renderCardInfo } from '../../../components/bootstrap/BsCard';
 import { getStatusBadge, getTournamentIcon } from '../../../components/gameUtils';
 import { BaseElement, html } from '../../../lib_templ/BaseElement';
-import { gameAPI, sessionService } from '../../../services/api/API_new';
+import { gameAPI, sessionService } from '../../../services/api/API';
 import router from '../../../services/router';
 import { getTournamentLink } from '../utils';
 

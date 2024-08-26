@@ -1,7 +1,7 @@
 import { avatarLink } from '../../../components/bootstrap/AvatarComponent';
 import { getPongSvg, renderInlineMatch } from '../../../components/gameUtils';
 import { BaseElement, html, ifDefined } from '../../../lib_templ/BaseElement';
-import { gameAPI, sessionService } from '../../../services/api/API_new';
+import { gameAPI, sessionService } from '../../../services/api/API';
 
 export class PongInfoView extends BaseElement {
     static observedAttributes = [];

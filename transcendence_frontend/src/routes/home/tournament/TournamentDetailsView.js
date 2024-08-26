@@ -11,7 +11,7 @@ import {
 } from '../../../components/bootstrap/BsCard.js';
 import { avatarInfo, avatarLink } from '../../../components/bootstrap/AvatarComponent.js';
 import { BaseElement, html } from '../../../lib_templ/BaseElement.js';
-import { fetcher, gameAPI, sessionService, userAPI } from '../../../services/api/API_new.js';
+import { fetcher, gameAPI, sessionService, userAPI } from '../../../services/api/API.js';
 import router from '../../../services/router.js';
 import { ToastNotificationErrorEvent } from '../../../components/bootstrap/BsToasts.js';
 import { getMatchLink } from '../utils.js';

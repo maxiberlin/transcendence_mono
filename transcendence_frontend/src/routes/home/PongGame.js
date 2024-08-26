@@ -4,7 +4,7 @@
 import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
 import GameHub from '../../gaming/manager/gameHub.js';
 import { avatarInfo, avatarLink } from '../../components/bootstrap/AvatarComponent.js';
-import { gameAPI, sessionService } from '../../services/api/API_new.js';
+import { gameAPI, sessionService } from '../../services/api/API.js';
 import router from '../../services/router.js';
 import { ToastNotificationErrorEvent, ToastNotificationSuccessEvent, ToastNotificationUserEvent } from '../../components/bootstrap/BsToasts.js';
 import BsModal from '../../components/bootstrap/BsModal.js';
