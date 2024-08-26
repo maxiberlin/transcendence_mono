@@ -6,4 +6,5 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = pong42.com
 DNS.2 = api.pong42.com
+DNS.3 = pgadmin.pong42.com
 IP.1 = 35.198.107.15

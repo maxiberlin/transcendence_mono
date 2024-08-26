@@ -36,6 +36,7 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = $MYCERT
 DNS.2 = api.$MYCERT
+DNS.3 = pgadmin.$MYCERT
 IP.1 = $IP
 EOF
 

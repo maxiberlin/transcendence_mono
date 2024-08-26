@@ -19,8 +19,10 @@ import router from '../router.js';
 
 export const isStr = (s) => typeof s === 'string';
 
-const url = new URL(window.location.origin);
-export let fetcher = new Fetcher(import.meta.env.BACKEND_URL, {
+console.log('backend url: ', import.meta.env.VITE_BACKEND_URL);
+
+// const url = new URL(window.location.origin);
+export let fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
     credentials: 'include',
 });
 
@@ -33,13 +35,13 @@ async function createFetcher(csrftoken) {
         if (typeof r.data.csrfToken !== 'string') throw Error("!");
         const csrfHeader = new Headers();
         csrfHeader.append('X-CSRFToken', r.data.csrfToken,)
-        fetcher = new Fetcher(import.meta.env.BACKEND_URL, {
+        fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
             credentials: 'include',
             headers: csrfHeader
         }, undefined);
     } else {
         console.log('createFetcher NO CSRF');
-        fetcher = new Fetcher(import.meta.env.BACKEND_URL, {
+        fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
             credentials: 'include',
         }, undefined);
     }

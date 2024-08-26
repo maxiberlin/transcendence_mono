@@ -111,7 +111,18 @@
   padding: 0;
   transition: padding 0.3s ease;
   width: 100%;
+  min-height: 100vh;
   height: auto;
+}
+@media (min-width: 577px) {
+  .pong-content {
+    padding-top: calc(74px + env(safe-area-inset-top));
+  }
+}
+@media (max-width: 576px) {
+  .pong-content {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
 }
 
 .pong-full-image {

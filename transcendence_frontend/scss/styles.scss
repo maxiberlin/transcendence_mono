@@ -130,24 +130,24 @@ $pong-navigation-nav-height: 74px;
     padding: 0;
     transition: padding 0.3s ease;
     width: 100%;
-    // min-height: 100vh;
+    min-height: 100vh;
     // max-height: 100vh;
     height: auto;
     // box-sizing: content-box !important;
     
 
-    // @media (min-width: 577px) {
-    //     padding-top: calc($pong-navigation-nav-height + env(safe-area-inset-top));
+    @media (min-width: 577px) {
+        padding-top: calc($pong-navigation-nav-height + env(safe-area-inset-top));
         
-    //     // padding-bottom: 1em;
-    //     // padding: calc(4.7em + env(safe-area-inset-top)) 0 1em 0;
-    // }
+        // padding-bottom: 1em;
+        // padding: calc(4.7em + env(safe-area-inset-top)) 0 1em 0;
+    }
 
-    // @media (max-width: 576px) {
-    //     padding-bottom: calc($pong-navigation-nav-height + env(safe-area-inset-bottom));
-    //     // padding-top: 1em;
-    //     // padding-bottom: calc(7em + env(safe-area-inset-bottom));
-    // }
+    @media (max-width: 576px) {
+        padding-bottom: calc($pong-navigation-nav-height + env(safe-area-inset-bottom));
+        // padding-top: 1em;
+        // padding-bottom: calc(7em + env(safe-area-inset-bottom));
+    }
 }
 
 // $pong-content-height: calc(100vh - calc($pong-navigation-nav-height + env(safe-area-inset-bottom)));

@@ -15,13 +15,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 AUTH_USER_MODEL = 'user.UserAccount'
 
 ALLOWED_HOSTS = ['*']
 
-BASE_URL = 'http://127.0.0.1/'
+# BASE_URL = 'http://127.0.0.1/'
+BASE_URL = os.getenv('VITE_FRONTEND_URL')
 
 
 LOGIN_URL = '/login'
@@ -67,14 +68,15 @@ MIDDLEWARE = [
     'user.utils.JsonMiddleware'
 ]
 
+    # "http://127.0.0.1",
+    # "http://localhost",
+    # "http://127.0.0.1:5500",
+    # "http://localhost:5500",
+    # "https://pong.com",
+    # "https://pong42.com",
+    # "https://pongparty.com",
 CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1",
-    "http://localhost",
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
-    "https://pong.com",
-    "https://pong42.com",
-    "https://pongparty.com",
+    os.getenv('VITE_FRONTEND_URL')
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -82,12 +84,13 @@ CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True
 
+    # "http://127.0.0.1:5500",
+    # "http://localhost:5500",
+    # "https://pong.com",
+    # "https://pong42.com",
+    # "https://pongparty.com",
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
-    "https://pong.com",
-    "https://pong42.com",
-    "https://pongparty.com",
+    os.getenv('VITE_FRONTEND_URL')
 ]
 
 
@@ -115,11 +118,11 @@ ASGI_APPLICATION = 'backend.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        # 'CONFIG': {
-        #     'hosts': [('redis', 6379)],
-        # },
+        # 'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('redis', 6379)],
+        },
     },
 }
 
@@ -130,23 +133,23 @@ CHANNEL_LAYERS = {
 
 # DB_DIR = Path(__file__).resolve().parent.parent
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('DB_USER'),
-#         'PASSWORD': os.getenv('DB_PASSWORD'),
-#         'HOST': os.getenv('DB_HOST'),
-#         'PORT': os.getenv('DB_PORT'),
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+    }
+}
 
 
 # Password validation
