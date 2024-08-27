@@ -227,8 +227,8 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_SECURE = False
 # CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = False
 
 
 # UserAccount.objects.create(username='melanie', email='frwegohwerg@web.de', password='asd')

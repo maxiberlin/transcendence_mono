@@ -23,7 +23,7 @@ ARG NGINX_FRONTEND_URI
 ARG NGINX_BACKEND_URI
 
 
-RUN apt-get update && apt-get install -y openssl
+# RUN apt-get update && apt-get install -y openssl
 # RUN apk upgrade --update-cache --available && \
 #     apk add openssl && \
 #     rm -rf /var/cache/apk/*
@@ -34,35 +34,32 @@ RUN apt-get update && apt-get install -y openssl
 
 
 
-RUN mkdir -p /etc/nginx/ssl/private
-RUN mkdir -p /etc/nginx/ssl/certs
+# RUN mkdir -p /etc/nginx/ssl/private
+# RUN mkdir -p /etc/nginx/ssl/certs
 
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-	-keyout /etc/nginx/ssl/private/$NGINX_FRONTEND_URI.key \
-	-out /etc/nginx/ssl/certs/$NGINX_FRONTEND_URI.crt \
-	-subj "/CN=*.$NGINX_FRONTEND_URI/C=AT/ST=default/L=default/O=MyOrg" \
-    -addext "authorityKeyIdentifier=keyid,issuer" \
-    -addext "basicConstraints=CA:FALSE" \
-    -addext "extendedKeyUsage = serverAuth, clientAuth" \
-    -addext "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment" \
-    -addext "subjectAltName=DNS.1:$NGINX_FRONTEND_URI,DNS.2:$NGINX_BACKEND_URI" 
+# RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+# 	-keyout /etc/nginx/ssl/private/$NGINX_FRONTEND_URI.key \
+# 	-out /etc/nginx/ssl/certs/$NGINX_FRONTEND_URI.crt \
+# 	-subj "/CN=*.$NGINX_FRONTEND_URI/C=AT/ST=default/L=default/O=MyOrg" \
+#     -extensions san \
+#     -config <( \
+#         echo '[req]'; \
+#         echo 'distinguished_name=req'; \
+#         echo '[san]'; \
+#         echo 'subjectAltName=DNS:localhost,DNS:example.org')
 
-# RUN <<EOT
-#     openssl req -x509 -nodes -days 365 -newkey rsa:2048
-#     -keyout /etc/nginx/ssl/private/$NGINX_FRONTEND_URI.key
-#     -out /etc/nginx/ssl/certs/$NGINX_FRONTEND_URI.crt
-#     -subj "/CN=*.$NGINX_FRONTEND_URI/C=AT/ST=default/L=default/O=MyOrg"
-#     -extfile << EOF
-#         authorityKeyIdentifier=keyid,issuer
-#         basicConstraints=CA:FALSE
-#         extendedKeyUsage = serverAuth, clientAuth
-#         keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-#         subjectAltName = @alt_names
-#         [alt_names]
-#         DNS.1 = $NGINX_FRONTEND_URI
-#         DNS.2 = $NGINX_BACKEND_URI
-#         EOF
-# EOT
+# RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+# 	-keyout /etc/nginx/ssl/private/$NGINX_FRONTEND_URI.key \
+# 	-out /etc/nginx/ssl/certs/$NGINX_FRONTEND_URI.crt \
+# 	-subj "/CN=*.$NGINX_FRONTEND_URI/C=AT/ST=default/L=default/O=MyOrg" \
+#     -addext "authorityKeyIdentifier=keyid,issuer" \
+#     -addext "basicConstraints=CA:FALSE" \
+#     -addext "extendedKeyUsage = serverAuth, clientAuth" \
+#     -addext "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment" \
+#     -addext "subjectAltName=DNS:$NGINX_FRONTEND_URI,DNS:$NGINX_BACKEND_URI" 
+
+COPY ./ssl/localhost/localhost.crt /etc/nginx/ssl/certs/localhost.crt
+COPY ./ssl/localhost/localhost.key /etc/nginx/ssl/private/localhost.key
 
 COPY --from=build /app/build /var/www/pong_spa
 

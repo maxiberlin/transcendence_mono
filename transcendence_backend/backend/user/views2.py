@@ -24,7 +24,7 @@ from django.http.request import HttpRequest
 from django.contrib.auth.hashers import check_password
 
 
-
+@csrf_exempt
 @require_POST
 def register_view(request):
     user: UserAccount = request.user
@@ -53,7 +53,7 @@ def register_view(request):
 def csrf(request):
     return HttpSuccess200(data={'csrfToken': get_token(request)})
 
-# 
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     if request.method == "GET":
