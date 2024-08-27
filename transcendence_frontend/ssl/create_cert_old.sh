@@ -1,6 +1,7 @@
 #!/bin/bash
 
 MYCERT=localhost
+IP=35.198.107.15
 
 
 CANAME=rootCA
@@ -35,6 +36,8 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = $MYCERT
 DNS.2 = api.$MYCERT
+DNS.3 = pgadmin.$MYCERT
+IP.1 = $IP
 EOF
 
 openssl x509 -req -days 365 -sha256 \

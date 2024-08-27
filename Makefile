@@ -15,7 +15,7 @@ restart: stop run
 clean: stop
 	@docker rmi -f $$(docker images -qa);
 	@docker rm -f $$(docker ps -a -q);
-	@docker volume rm $$(docker volume ls -q);
+	@docker volume rm $(docker volume ls -q);
 
 re: clean all
 

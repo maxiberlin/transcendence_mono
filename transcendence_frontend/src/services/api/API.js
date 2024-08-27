@@ -19,6 +19,7 @@ import router from '../router.js';
 
 export const isStr = (s) => typeof s === 'string';
 
+console.log('env vite: ', import.meta.env);
 console.log('backend url: ', import.meta.env.VITE_BACKEND_URL);
 
 // const url = new URL(window.location.origin);
