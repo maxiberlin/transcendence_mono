@@ -4,6 +4,7 @@ services:
     build: ./transcendence_backend
     container_name: backend
     env_file: '.env'
+    
     volumes:
       - backend_data:/app/
       - staticfiles:/app/static/
@@ -13,20 +14,28 @@ services:
       - postgres
 
   nginx:
-    build: ./transcendence_frontend
+    build:
+      context: ./transcendence_frontend
+      args:
+        - VITE_BACKEND_URL=${BACKEND_URL}
+        - VITE_FRONTEND_URL=${FRONTEND_URL}
+        - VITE_GLOBAL_WEBSOCKET_URL=${GLOBAL_WEBSOCKET_URL}
+        - NGINX_FRONTEND_URI=${NGINX_FRONTEND_URI}
+        - NGINX_BACKEND_URI=${NGINX_BACKEND_URI}
     container_name: nginx
     volumes:
       - staticfiles:/app/static/
     ports:
       - "80:80"
       - "443:443"
+    env_file: './.env'
     depends_on:
       - backend
 
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "6380:6380"
 
   postgres:
     image: postgres:14-alpine

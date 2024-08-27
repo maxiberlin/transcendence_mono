@@ -15,14 +15,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 AUTH_USER_MODEL = 'user.UserAccount'
 
 ALLOWED_HOSTS = ['*']
 
 # BASE_URL = 'http://127.0.0.1/'
-BASE_URL = os.getenv('VITE_FRONTEND_URL')
+BASE_URL = os.getenv('FRONTEND_URL')
 
 
 LOGIN_URL = '/login'
@@ -76,7 +76,7 @@ MIDDLEWARE = [
     # "https://pong42.com",
     # "https://pongparty.com",
 CSRF_TRUSTED_ORIGINS = [
-    os.getenv('VITE_FRONTEND_URL')
+    os.getenv('FRONTEND_URL')
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -90,7 +90,7 @@ SESSION_COOKIE_SECURE = True
     # "https://pong42.com",
     # "https://pongparty.com",
 CORS_ALLOWED_ORIGINS = [
-    os.getenv('VITE_FRONTEND_URL')
+    os.getenv('FRONTEND_URL')
 ]
 
 
@@ -121,7 +121,7 @@ CHANNEL_LAYERS = {
         # 'BACKEND': 'channels.layers.InMemoryChannelLayer',
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('redis', 6379)],
+            'hosts': [('redis', 6380)],
         },
     },
 }
@@ -226,8 +226,12 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 
+
+# UserAccount.objects.create(username='melanie', email='frwegohwerg@web.de', password='asd')
 # """
 # Django settings for backend project.
 
