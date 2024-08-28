@@ -8,10 +8,13 @@ upstream api {
     server backend:8000;
 }
 
+# upstream frontend_devserver {
+#     server vite:5173;
+# }
 
 server {
     listen 80;
-    server_name ${NGINX_FRONTEND_URI} ${NGINX_BACKEND_URI};
+    server_name ${NGINX_FRONTEND_URI} ${NGINX_BACKEND_URI} ${NGINX_IP_ADDRESS};
     return 301 https://$host$request_uri;
 }
 
@@ -53,8 +56,21 @@ server {
     location / {
         root /var/www/pong_spa;
         try_files $uri /index.html;
+
+        # proxy_pass http://frontend_devserver;
+        # proxy_http_version 1.1;
+        # proxy_set_header Upgrade $http_upgrade;
+        # # proxy_set_header Connection $connection_upgrade;
+        # proxy_set_header Connection "Upgrade";
+        # proxy_redirect off;
+        # proxy_set_header Host $host;
+        # proxy_set_header X-Real-IP $remote_addr;
+        # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+
+
 
 
 # upstream pga {

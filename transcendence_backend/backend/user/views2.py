@@ -332,7 +332,7 @@ def callback(request):
         login(request, user)
         user.status = 'online'
         user.save()
-        return HttpResponseRedirect(f"{{os.getenv('FRONTEND_URL')}}")
+        return HttpResponseRedirect(f"{os.getenv('FRONTEND_URL')}")
         # return HttpResponseRedirect('https://pong42.com/')
         return HttpSuccess200(message='Login successful!')
     else:

@@ -21,6 +21,7 @@ FROM nginx:1.19.0
 
 ARG NGINX_FRONTEND_URI
 ARG NGINX_BACKEND_URI
+ARG NGINX_IP_ADDRESS
 
 
 # RUN apt-get update && apt-get install -y openssl
@@ -34,8 +35,8 @@ ARG NGINX_BACKEND_URI
 
 
 
-# RUN mkdir -p /etc/nginx/ssl/private
-# RUN mkdir -p /etc/nginx/ssl/certs
+RUN mkdir -p /etc/nginx/ssl/private
+RUN mkdir -p /etc/nginx/ssl/certs
 
 # RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # 	-keyout /etc/nginx/ssl/private/$NGINX_FRONTEND_URI.key \
@@ -49,19 +50,19 @@ ARG NGINX_BACKEND_URI
 #         echo 'subjectAltName=DNS:localhost,DNS:example.org')
 
 # RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-# 	-keyout /etc/nginx/ssl/private/$NGINX_FRONTEND_URI.key \
-# 	-out /etc/nginx/ssl/certs/$NGINX_FRONTEND_URI.crt \
-# 	-subj "/CN=*.$NGINX_FRONTEND_URI/C=AT/ST=default/L=default/O=MyOrg" \
+# 	-keyout /etc/nginx/ssl/private/pong.key \
+# 	-out /etc/nginx/ssl/certs/pong.crt \
+# 	-subj "/CN=$NGINX_IP_ADDRESS/C=AT/ST=default/L=default/O=MyOrg" \
 #     -addext "authorityKeyIdentifier=keyid,issuer" \
 #     -addext "basicConstraints=CA:FALSE" \
 #     -addext "extendedKeyUsage = serverAuth, clientAuth" \
 #     -addext "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment" \
-#     -addext "subjectAltName=DNS:$NGINX_FRONTEND_URI" 
+#     -addext "subjectAltName=IP:$NGINX_IP_ADDRESS" 
 
 COPY --from=build /app/build /var/www/pong_spa
 
-COPY ./ssl/localhost/localhost.crt /etc/nginx/ssl/certs/localhost.crt
-COPY ./ssl/localhost/localhost.key /etc/nginx/ssl/private/localhost.key
+COPY ./ssl/localhost/pong.crt /etc/nginx/ssl/certs/pong.crt
+COPY ./ssl/localhost/pong.key /etc/nginx/ssl/private/pong.key
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/nginx.conf.d/default.conf.template /etc/nginx/templates/

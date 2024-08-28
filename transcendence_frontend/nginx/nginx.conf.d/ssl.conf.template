@@ -1,5 +1,5 @@
-ssl_certificate /etc/nginx/ssl/certs/${NGINX_FRONTEND_URI}.crt;
-ssl_certificate_key /etc/nginx/ssl/private/${NGINX_FRONTEND_URI}.key;
+ssl_certificate /etc/nginx/ssl/certs/pong.crt;
+ssl_certificate_key /etc/nginx/ssl/private/pong.key;
 # ssl_trusted_certificate /etc/nginx/ssl/pong/rootCA.crt;
 
 

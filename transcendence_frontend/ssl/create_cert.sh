@@ -35,6 +35,7 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = $MYCERT
 DNS.2 = api.$MYCERT
+IP=10.12.5.2
 EOF
 
 openssl x509 -req -days 365 -sha256 \

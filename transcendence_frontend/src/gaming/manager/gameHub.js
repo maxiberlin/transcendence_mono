@@ -203,7 +203,7 @@ export default class GameHub {
         this.touchHandler = useMouseTouchEvents(canvas, this.worker);
         try {
             const url = new URL(window.location.origin);
-            const socketUrl = `wss://api.${url.host}/ws/game/${gameData.schedule_id}/`;
+            const socketUrl = `${import.meta.env.VITE_GLOBAL_WEBSOCKET_URL}game/${gameData.schedule_id}/`;
             const offscreencanvas = canvas.transferControlToOffscreen();
             
             console.log('create msg to worker: userid: ', GameHub.currentUser.value?.user?.id);

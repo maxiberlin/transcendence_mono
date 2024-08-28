@@ -8,11 +8,22 @@ services:
     volumes:
       - backend_data:/app/
       - staticfiles:/app/static/
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     depends_on:
       - postgres
       - redis
+
+  vite:
+    build:
+      dockerfile: ./Dockerfile.vite
+      context: ./transcendence_frontend
+      args:
+        - VITE_BACKEND_URL=${BACKEND_URL}
+        - VITE_FRONTEND_URL=${FRONTEND_URL}
+        - VITE_GLOBAL_WEBSOCKET_URL=${GLOBAL_WEBSOCKET_URL}
+    volumes:
+      - ./transcendence_frontend/:/app/
 
   nginx:
     build:
@@ -23,7 +34,10 @@ services:
         - VITE_GLOBAL_WEBSOCKET_URL=${GLOBAL_WEBSOCKET_URL}
         - NGINX_FRONTEND_URI=${NGINX_FRONTEND_URI}
         - NGINX_BACKEND_URI=${NGINX_BACKEND_URI}
+        - NGINX_IP_ADDRESS=${NGINX_IP_ADDRESS}
     container_name: nginx
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
     volumes:
       - staticfiles:/app/static/
     ports:
@@ -33,15 +47,18 @@ services:
     depends_on:
       - backend
 
+
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
+    container_name: 'redis'
+    # ports:
+    #   - "6380:6380"
 
   postgres:
     image: postgres:14-alpine
-    ports:
-      - 5432:5432
+    container_name: 'postgres'
+    # ports:
+    #   - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     env_file: '.env'
@@ -66,6 +83,7 @@ volumes:
       device: ./transcendence_backend/backend
       o: bind
       type: none
+
 
   postgres-data:
 

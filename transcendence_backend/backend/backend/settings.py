@@ -1,8 +1,8 @@
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from pathlib import Path
 
-load_dotenv()
+# load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,7 +15,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 
 AUTH_USER_MODEL = 'user.UserAccount'
 
@@ -66,7 +67,10 @@ MIDDLEWARE = [
     'user.utils.JsonMiddleware'
 ]
 
-CSRF_TRUSTED_ORIGINS = [ os.getenv('FRONTEND_URL') ]
+CSRF_TRUSTED_ORIGINS = [ 
+    os.getenv('FRONTEND_URL'),
+    'https://10.12.5.2:5173'
+]
 CSRF_COOKIE_SECURE = False
 # SESSION_COOKIE_DOMAIN=os.getenv('FRONTEND_URL')
 # SESSION_COOKIE_DOMAIN=os.getenv('BACKEND_URL')
@@ -75,7 +79,10 @@ SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [ os.getenv('FRONTEND_URL') ]
+CORS_ALLOWED_ORIGINS = [ 
+    os.getenv('FRONTEND_URL'),
+    'https://10.12.5.2:5173'
+]
 
 
 ROOT_URLCONF = 'backend.urls'
@@ -193,6 +200,7 @@ STATICFILES_DIRS = [
 MEDIA_URL = 'media/'
 # MEDIA_ROOT = os.path.join(BASE_DIR, '../static/media')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'static/media')
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

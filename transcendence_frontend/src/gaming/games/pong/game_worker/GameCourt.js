@@ -78,20 +78,20 @@ export default class GameCourt extends DrawObj {
         ctx.lineTo(x_center, y + h - bH / 2.0);
         ctx.stroke();
 
-        // ctx.fillStyle = this.borderColor;
-        // ctx.font = `${textHeight}px sans-serif`;
-        // ctx.textAlign = 'right';
-        // if (fps) {
-        //     ctx.fillText(fps.toString(), x_center - bH, bH + textHeight);
-        // } else {
-        //     ctx.fillText(this.scoreL.toString(), x_center - bH, bH + textHeight);
-        // }
-        // ctx.textAlign = 'left';
-        // if (qlen) {
-        //     ctx.fillText(qlen.toString(), x_center + bH, bH + textHeight);
-        // } else {
-        //     ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
-        // }
+        ctx.fillStyle = this.borderColor;
+        ctx.font = `${textHeight}px sans-serif`;
+        ctx.textAlign = 'right';
+        if (fps) {
+            ctx.fillText(fps.toString(), x_center - bH, bH + textHeight);
+        } else {
+            ctx.fillText(this.scoreL.toString(), x_center - bH, bH + textHeight);
+        }
+        ctx.textAlign = 'left';
+        if (qlen) {
+            ctx.fillText(qlen.toString(), x_center + bH, bH + textHeight);
+        } else {
+            ctx.fillText(this.scoreR.toString(), x_center + bH, bH + textHeight);
+        }
     }
 }
 

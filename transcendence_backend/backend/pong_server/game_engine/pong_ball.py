@@ -145,6 +145,8 @@ class PongBall(GameObjDataClass):
         
         self.maxPaddleBallDiff = (settings.ball_height/settings.height + settings.paddle_height/settings.height) / 2
         self.should_reconcile = False
+
+        self.initial_timeout = 3
   
 
     def __calc_x(self, tick: float):
@@ -229,9 +231,9 @@ class PongBall(GameObjDataClass):
             return PongBall.Scored.SCORE_NONE
         if self.pos_state & PongBall.PositionStates.HAD_SCORE:
             if self.pos_state & PongBall.PositionStates.IS_LEFT_SIDE:
-                score = PongBall.Scored.SCORE_PLAYER_LEFT
-            elif self.pos_state & PongBall.PositionStates.IS_RIGHT_SIDE:
                 score = PongBall.Scored.SCORE_PLAYER_RIGHT
+            elif self.pos_state & PongBall.PositionStates.IS_RIGHT_SIDE:
+                score = PongBall.Scored.SCORE_PLAYER_LEFT
         if score != PongBall.Scored.SCORE_NONE:
             # print(f"APPLY TIMEOUT")
             self.state.apply_timeout(score)
@@ -241,14 +243,19 @@ class PongBall(GameObjDataClass):
     
     def update_pos(self, tick: float, paddle_left: "PongPaddle", paddle_right: "PongPaddle"):
         res = self.state.apply_tick(tick)
-        # print(f'APPLY TICK RES: ', res)
-        if res == 'timeout done':
-            self.x = self.initial_x_unscaled
-            self.y = self.initial_y_unscaled
-            self.dx, self.dy = self.state.get_ball_angle()
-        
+        if self.initial_timeout is not None:
+            self.initial_timeout -= tick
+            if self.initial_timeout < 0:
+                self.initial_timeout = None
+        else:
+            # print(f'APPLY TICK RES: ', res)
+            if res == 'timeout done':
+                self.x = self.initial_x_unscaled
+                self.y = self.initial_y_unscaled
+                self.dx, self.dy = self.state.get_ball_angle()
+            
 
-        self.__update_pos(tick, paddle_left, paddle_right)
+            self.__update_pos(tick, paddle_left, paddle_right)
     
     def __update_pos(self, tick: float, paddle_left: "PongPaddle", paddle_right: "PongPaddle") -> 'PongBall.PositionStates':
 

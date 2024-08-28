@@ -462,7 +462,7 @@ export class GlobalSockHandler {
         console.log('import.meta.env: ', import.meta.env);
         console.log('import.meta.env.VITE_GLOBAL_WEBSOCKET_URL: ', import.meta.env.VITE_GLOBAL_WEBSOCKET_URL);
         
-        this.#socket = new ReconnectingSocket(import.meta.env.VITE_GLOBAL_WEBSOCKET_URL)
+        this.#socket = new ReconnectingSocket(`${import.meta.env.VITE_GLOBAL_WEBSOCKET_URL}`)
         this.#socket.addHandler("initial_connected", () => {
             // console.log('INITIAL CONNECTED');
             this.#initialized = true;

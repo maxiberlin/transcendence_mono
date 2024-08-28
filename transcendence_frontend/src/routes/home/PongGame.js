@@ -153,6 +153,8 @@ export default class GameScreen extends BaseElement {
         await this.updateComplete;
         document.body.classList.add("overflow-hidden");
         this.pongOverlayRef.value?.showSelectGameMode((mode) => {
+            console.log("start game: ", mode);
+            
             this.mode = mode;
             this.initGame(mode);
         }); 
@@ -202,15 +204,18 @@ export default class GameScreen extends BaseElement {
         
         if (!this.pongOverlayRef.value) return;
         await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
-        this.pongOverlayRef.value?.hide('waitForLaunchModal');
-        await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
-        this.pongOverlayRef.value?.showStartGame(this.#gameData, this.mode === 'remote', () => {
-            if (this.mode === 'remote') {
-                this.pongOverlayRef.value?.showWaitForStart(this.#gameData)
-            }
-            this.currentGame?.worker.postMessage({message: 'worker_game_start'})
-            
-        }); 
+        await this.pongOverlayRef.value?.hide('all');
+        // await this.pongOverlayRef.value.waitForLaunchModal.value?.updateComplete;
+        setTimeout(() => {
+            this.pongOverlayRef.value?.showStartGame(this.#gameData, this.mode === 'remote', () => {
+                if (this.mode === 'remote') {
+                    this.pongOverlayRef.value?.showWaitForStart(this.#gameData)
+                }
+                this.currentGame?.worker.postMessage({message: 'worker_game_start'})
+                
+            }); 
+
+        }, 20);
         console.log('END OF FUNC');
         
     }
@@ -280,8 +285,8 @@ export default class GameScreen extends BaseElement {
 
     setWorkerHandler() {
         this.currentGame?.on("from-worker-game-ready", this.onGameReady);
-        this.currentGame?.on('from-worker-game-started', (msg) => {
-            this.pongOverlayRef.value?.hide('all');
+        this.currentGame?.on('from-worker-game-started', async (msg) => {
+            await this.pongOverlayRef.value?.hide('all');
         })
         this.currentGame?.on("from-worker-error", (msg) => {
         })
@@ -429,6 +434,10 @@ export default class GameScreen extends BaseElement {
                         ${this.renderGameHeader()}
                     </div>
                     <div ${ref(this.#wrapper)} class="game-screen">
+                        <div class="d-flex justify-content-evenly m-4 w-100">
+                            ${avatarInfo(this.#gameData?.player_one)}
+                            ${avatarInfo(this.#gameData?.player_two)}
+                        </div>
                         <canvas ${ref(this.#canvas)} ></canvas>
                     </div>
                 </div>

@@ -365,21 +365,21 @@ export let fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
 /** @param {boolean} csrftoken  */
 async function createFetcher(csrftoken) {
     
-    if (csrftoken) {
-        const r = await fetcher.$get('/api/csrf');
-        if (typeof r.data.csrfToken !== 'string') throw Error("!");
-        const csrfHeader = new Headers();
-        csrfHeader.append('X-CSRFToken', r.data.csrfToken,)
-        fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
-            credentials: 'include',
-            headers: csrfHeader
-        }, undefined);
-    } else {
-        console.log('createFetcher NO CSRF');
-        fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
-            credentials: 'include',
-        }, undefined);
-    }
+    // if (csrftoken) {
+    //     const r = await fetcher.$get('/api/csrf');
+    //     if (typeof r.data.csrfToken !== 'string') throw Error("!");
+    //     const csrfHeader = new Headers();
+    //     csrfHeader.append('X-CSRFToken', r.data.csrfToken,)
+    //     fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
+    //         credentials: 'include',
+    //         headers: csrfHeader
+    //     }, undefined);
+    // } else {
+    //     console.log('createFetcher NO CSRF');
+    //     fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
+    //         credentials: 'include',
+    //     }, undefined);
+    // }
     return fetcher;
 }
 

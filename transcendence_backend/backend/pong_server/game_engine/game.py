@@ -32,15 +32,15 @@ from game.serializers import serializer_game_result
 @database_sync_to_async
 def create_game_result(data: 'GameData'):
     pass
-    # game = GameSchedule.objects.filter(pk=data.schedule_id).first()
-    # if game is None:
-    #     return
-    # try:
-    #     result = game.finish_game_and_update(data.player_one_score, data.player_two_score)
-    #     result_data = serializer_game_result(result)
-    #     return result_data
-    # except Exception as e:
-    #     logger.error(f"Error finish game when called: finish_game_and_update: {e}")
+    game = GameSchedule.objects.filter(pk=data.schedule_id).first()
+    if game is None:
+        return
+    try:
+        result = game.finish_game_and_update(data.player_one_score, data.player_two_score)
+        result_data = serializer_game_result(result)
+        return result_data
+    except Exception as e:
+        logger.error(f"Error finish game when called: finish_game_and_update: {e}")
 
 
 @dataclass

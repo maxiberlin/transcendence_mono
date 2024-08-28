@@ -549,18 +549,18 @@ export class PongRemote extends Pong {
         // }
         // const curr = this.#updateQueue[0];
         // const next = this.#updateQueue[1];
-        const curr = this.#updateQueue.find(u => u.timestamp_ms > prevRenderTime);
-        const next = this.#updateQueue.find(u => u.timestamp_ms > renderTime);
-        this.#updateQueue = this.#updateQueue.filter(u => u.timestamp_ms >= prevRenderTime);
+        // const curr = this.#updateQueue.find(u => u.timestamp_ms > prevRenderTime);
+        // const next = this.#updateQueue.find(u => u.timestamp_ms > renderTime);
+        // this.#updateQueue = this.#updateQueue.filter(u => u.timestamp_ms >= prevRenderTime);
 
-        // const curr = this.#updateQueue.find(u => u.tickno > prevRenderTick);
-        // const next = this.#updateQueue.find(u => u.tickno > renderTick);
-        // this.#updateQueue = this.#updateQueue.filter(u => u.tickno >= prevRenderTick);
+        const curr = this.#updateQueue.find(u => u.tickno > prevRenderTick);
+        const next = this.#updateQueue.find(u => u.tickno > renderTick);
+        this.#updateQueue = this.#updateQueue.filter(u => u.tickno >= prevRenderTick);
         
 
         if (curr && next) {
-            const elapsed = (renderTime - curr.timestamp_ms) / (next.timestamp_ms - curr.timestamp_ms);
-            // const elapsed = this.#tickbuffer / this.#tickDuration;
+            // const elapsed = (renderTime - curr.timestamp_ms) / (next.timestamp_ms - curr.timestamp_ms);
+            const elapsed = this.#tickbuffer / this.#tickDuration;
             // const elapsed = (this.#tickbuffer + (this.rtt/2)) / this.#tickDuration;
          
             // if (this.manager.side === 'left') {
@@ -578,8 +578,8 @@ export class PongRemote extends Pong {
             
             this.extrapolateByElapsedSinceLastRender(elapsedMs/1000);
         }
-        this.manager.draw(this.manager.scoreBreak == false, this.#updateQueue.length, this.fpss(workerCurrentTimeMs));
-        // this.manager.draw(this.manager.scoreBreak == false);
+        // this.manager.draw(this.manager.scoreBreak == false, this.#updateQueue.length, this.fpss(workerCurrentTimeMs));
+        this.manager.draw(this.manager.scoreBreak == false);
     }
 
     fpss = useFps(performance.now());

@@ -1,4 +1,3 @@
-import { Modal } from 'bootstrap';
 import { avatarInfo } from '../../components/bootstrap/AvatarComponent';
 import BsModal from '../../components/bootstrap/BsModal';
 import { BaseElement, createRef, ref, html } from '../../lib_templ/BaseElement.js';
@@ -11,18 +10,7 @@ export class PongGameOverlays extends BaseElement {
         this.session = sessionService.subscribe(this);
     }
     /** @type {import('../../lib_templ/BaseElement').Ref<BsModal>} */
-    waitForLaunchModal = createRef();
-    /** @type {import('../../lib_templ/BaseElement').Ref<BsModal>} */
-    waitForStartModal = createRef();
-    /** @type {import('../../lib_templ/BaseElement').Ref<BsModal>} */
-    startGameModal = createRef();
-    /** @type {import('../../lib_templ/BaseElement').Ref<BsModal>} */
-    disconnectModal = createRef();
-    /** @type {import('../../lib_templ/BaseElement').Ref<BsModal>} */
-    gameDoneModal = createRef();
-
-
-
+    modal = createRef();
 
     /** @param {APITypes.GameScheduleItem | null} [data] @param {number} [id] */
     getPlayerDataFromId = (data, id) => (id != undefined && data?.player_one.id === id) ? data?.player_one : data?.player_two;
@@ -46,8 +34,8 @@ export class PongGameOverlays extends BaseElement {
     /** @param {'launchSelf' | 'launchOther'} type @param {APITypes.GameScheduleItem | null} [gameData] */
     showWaitForLaunch = async (type, gameData) => {
         await this.updateComplete;
-        await this.waitForLaunchModal.value?.updateComplete;
-        this.waitForLaunchModal.value?.setContentAndShow({
+        await this.modal.value?.updateComplete;
+        this.modal.value?.setContentAndShow({
         content: html`
             <div class="d-flex flex-column align-items-center">
                 ${type === 'launchSelf' ? html`
@@ -71,8 +59,8 @@ export class PongGameOverlays extends BaseElement {
     /** @param {APITypes.GameScheduleItem | null} [gameData] */
     showWaitForStart = async (gameData) => {
         await this.updateComplete;
-        await this.waitForStartModal.value?.updateComplete;
-        this.waitForStartModal.value?.setContentAndShow({
+        await this.modal.value?.updateComplete;
+        this.modal.value?.setContentAndShow({
         content: html`
             <div class="d-flex flex-column align-items-center">
                 <div class="d-flex align-items-center">
@@ -96,8 +84,8 @@ export class PongGameOverlays extends BaseElement {
      */
     showStartGame = async (gameData, showTimer=false, onStart) => {
         await this.updateComplete;
-        await this.startGameModal.value?.updateComplete;
-        this.startGameModal.value?.setContentAndShow({
+        await this.modal.value?.updateComplete;
+        this.modal.value?.setContentAndShow({
         header: !showTimer ? undefined : html`
                     <span>Pong Match starts in: </span>
                     <timer-comp timeout="3" ></timer-comp>`,
@@ -110,7 +98,7 @@ export class PongGameOverlays extends BaseElement {
         `,
         footer: html`
             <bs-button text="Start Game" ._async_handler=${(e)=> {
-                this.startGameModal.value?.hideModal();
+                this.modal.value?.hideModal();
                 if (onStart) onStart();
             }}></bs-button>
         `
@@ -120,8 +108,8 @@ export class PongGameOverlays extends BaseElement {
      */
     showSelectGameMode = async (onSelect) => {
         await this.updateComplete;
-        await this.startGameModal.value?.updateComplete;
-        this.startGameModal.value?.setContentAndShow({
+        await this.modal.value?.updateComplete;
+        this.modal.value?.setContentAndShow({
         header: html`
             <h3>Play Local or Remote</h3>
         `,
@@ -143,11 +131,11 @@ export class PongGameOverlays extends BaseElement {
         `,
         footer: html`
             <bs-button text="Play Local" ._async_handler=${(e)=> {
-                this.startGameModal.value?.hideModal();
+                this.modal.value?.hideModal();
                 if (onSelect) onSelect('local');
             }}></bs-button>
             <bs-button text="Play Remote" ._async_handler=${(e)=> {
-                this.startGameModal.value?.hideModal();
+                this.modal.value?.hideModal();
                 if (onSelect) onSelect('remote');
             }}></bs-button>
         `
@@ -159,8 +147,8 @@ export class PongGameOverlays extends BaseElement {
      */
     showDisconnect = async (gameData, id) => {
         await this.updateComplete;
-        await this.gameDoneModal.value?.updateComplete;
-        this.disconnectModal.value?.setContentAndShow({
+        await this.modal.value?.updateComplete;
+        this.modal.value?.setContentAndShow({
         header: html`<span>Connection Lost</span>`,
         content: html`
             <div class="d-flex flex-row align-items-center justify-content-center">
@@ -175,7 +163,7 @@ export class PongGameOverlays extends BaseElement {
         `,
          footer: html`
          <bs-button text="Close" ._async_handler=${(e)=> {
-             this.disconnectModal.value?.hideModal();
+             this.modal.value?.hideModal();
          }}></bs-button>
      `
     })}
@@ -188,11 +176,11 @@ export class PongGameOverlays extends BaseElement {
     showGameDone = async (data, onDoneCb, onRematch) => {
         // this.hide('all');
         await this.updateComplete;
-        await this.gameDoneModal.value?.updateComplete;
+        await this.modal.value?.updateComplete;
         const hasWon = data?.winner_id === this.session.value?.user?.id;
         const myPlayer = this.getPlayerDataSelf(data?.game_result);
         const myXp = hasWon ? data?.game_result?.result.winner_xp : data?.game_result?.result.loser_xp;
-        this.gameDoneModal.value?.setContentAndShow({
+        this.modal.value?.setContentAndShow({
         header: html`
             <span>${hasWon ? 'You won the Match!' : 'You lost the Match'}</span>
         `,
@@ -207,7 +195,7 @@ export class PongGameOverlays extends BaseElement {
             color="success"
             text="ask for a rematch"
             ._async_handler=${(e) => {
-                this.gameDoneModal.value?.hideModal();
+                this.modal.value?.hideModal();
                 if (onRematch && typeof onRematch === 'function') onRematch();
             }}
             ></bs-button>
@@ -215,7 +203,7 @@ export class PongGameOverlays extends BaseElement {
             text="Close the Game"
             ._async_handler=${(e) => {
                 if (onDoneCb && typeof onDoneCb === 'function') onDoneCb();
-                this.gameDoneModal.value?.hideModal();
+                this.modal.value?.hideModal();
             }}
             ></bs-button>
         `
@@ -224,71 +212,18 @@ export class PongGameOverlays extends BaseElement {
     /** @param {'waitForLaunchModal' | 'waitForStartModal' | 'startGameModal' | 'disconnectModal' | 'gameDoneModal' | 'all'} type  */
     async hide(type) {
         await this.updateComplete;
-        await this.waitForLaunchModal.value?.updateComplete;
-        await this.waitForStartModal.value?.updateComplete;
-        await this.startGameModal.value?.updateComplete;
-        await this.disconnectModal.value?.updateComplete;
-        await this.gameDoneModal.value?.updateComplete;
+        await this.modal.value?.updateComplete;
 
-
-
-
-        await new Promise(resolve => setTimeout(resolve, 50));
-        if (type === 'all' || type === 'waitForLaunchModal') {
-            console.log("CLOSE waitForLaunchModal");
-            
-            this.waitForLaunchModal.value?.hideModal();
-        }
-        if (type === 'all' || type === 'waitForStartModal') {
-            console.log("CLOSE waitForStartModal");
-            
-            this.waitForStartModal.value?.hideModal();
-        }
-        if (type === 'all' || type === 'startGameModal') {
-            console.log("CLOSE startGameModal");
-            
-            this.startGameModal.value?.hideModal();
-        }
-        if (type === 'all' || type === 'disconnectModal') {
-            console.log("CLOSE disconnectModal");
-            
-            this.disconnectModal.value?.hideModal();
-        }
-        if (type === 'all' || type === 'gameDoneModal') {
-            console.log("CLOSE gameDoneModal");
-            
-            this.gameDoneModal.value?.hideModal();
-        }
-        await this.updateComplete;
-        await this.waitForLaunchModal.value?.updateComplete;
-        await this.waitForStartModal.value?.updateComplete;
-        await this.startGameModal.value?.updateComplete;
-        await this.disconnectModal.value?.updateComplete;
-        await this.gameDoneModal.value?.updateComplete;
-
-        
-        setTimeout(() => {
-            const mo = document.querySelectorAll('.modal');
-            mo.forEach((m) => {
-                const i = Modal.getOrCreateInstance(m);
-                i.hide();
-                console.log(i);
-                console.log("elem: ",);
-                
-                if (mo instanceof HTMLElement) {
-                    mo.classList.remove("show");
-                }
-            });
-        }, 300);
+        if (type === 'all' || type === 'waitForLaunchModal') this.modal.value?.hideModal();
+        if (type === 'all' || type === 'waitForStartModal') this.modal.value?.hideModal();
+        if (type === 'all' || type === 'startGameModal') this.modal.value?.hideModal();
+        if (type === 'all' || type === 'disconnectModal') this.modal.value?.hideModal();
+        if (type === 'all' || type === 'gameDoneModal') this.modal.value?.hideModal();
     }
 
     render() {
         return html`
-            <bs-modal fade ${ref(this.waitForLaunchModal)} ></bs-modal>
-            <bs-modal fade ${ref(this.waitForStartModal)} ></bs-modal>
-            <bs-modal fade ${ref(this.startGameModal)} ></bs-modal>
-            <bs-modal fade ${ref(this.disconnectModal)} ></bs-modal>
-            <bs-modal fade ${ref(this.gameDoneModal)} ></bs-modal>
+            <bs-modal fade ${ref(this.modal)} ></bs-modal>
         `
     }
 }

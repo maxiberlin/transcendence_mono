@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BaseElement, createRef, html, ref } from '../../lib_templ/BaseElement.js';
 import { Modal } from 'bootstrap';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
@@ -131,6 +132,7 @@ export default class BsModal extends BaseElement {
         
         this.shouldDispose = true;
         this.#modalControl?.hide();
+        this.#modalControl?.dispose();
     }
    
 
@@ -145,15 +147,20 @@ export default class BsModal extends BaseElement {
             
         }
     }
-
+    /** @type {Promise<boolean>} */
+    isHidden = new Promise( (res) => (this.triggerHidden = res) );
 
     /** @param {BsModalData} data  */
-    setContentAndShow(data) {
+    async setContentAndShow(data) {
         // console.log('BsModal: setContentAndShow: ', data);
         
-        this.props.data = data;
-        this.showModal();
+        this._props.data = data;
+        this.#modalControl.hide();
+        await this.isHidden;
+        this.#modalControl?.show();
+        isHidden = new Promise( (res) => (this.triggerHidden = res) );
     }
+
 
     showModal() {
         // console.log('BS MODAL: showModal() func');
@@ -186,6 +193,8 @@ export default class BsModal extends BaseElement {
     /** @type {Modal | undefined} */
     #modalControl;
     myModal = createRef();
+
+
     render() {
         
         // console.log('render Modal');
@@ -197,38 +206,38 @@ export default class BsModal extends BaseElement {
             
             <div
                 @hide.bs.modal=${() => {
-                    console.log('BS MODAL HIDE');
-                    this.modalState = 'closing';
-                    
-                    this.#isOpen = false;
+                    // console.log('BS MODAL HIDE');
+                    // this.modalState = 'closing';
+                    // this.#isOpen = false;
                     // console.log('request Update');
                     // super.requestUpdateDirect();
                 }}
                 @hidden.bs.modal=${() => {
-                    console.log('BS MODAL HIDDEN');
-                    this.modalState = 'closed';
-                    if (this.shouldDispose) {
-                        // this.#modalControl?.dispose();
-                    } else if (this.shouldShow) {
-                        this.showModal();
-                        this.shouldShow = false;
-                    } else {
-                        this.#isOpen = false;
-                        // console.log('request Update');
-                        super.requestUpdate();
-                    }
+                    this.triggerHidden();
+                    // console.log('BS MODAL HIDDEN');
+                    // this.modalState = 'closed';
+                    // if (this.shouldDispose) {
+                    //     this.#modalControl?.dispose();
+                    // } else if (this.shouldShow) {
+                    //     this.showModal();
+                    //     this.shouldShow = false;
+                    // } else {
+                    //     this.#isOpen = false;
+                    //     // console.log('request Update');
+                    //     super.requestUpdateDirect();
+                    // }
                 }}
                 @show.bs.modal=${() => {
                     // console.log('BS MODAL SHOW');
-                    this.modalState = 'opening';
-                    this.#isOpen = true;
+                    // this.modalState = 'opening';
+                    // this.#isOpen = true;
                     // console.log('request Update');
-                    super.requestUpdate();
+                    super.requestUpdateDirect();
                 }}
                 @shown.bs.modal=${() => {
                     // console.log('BS MODAL SHOWN');
-                    this.modalState = 'open';
-                    this.#isOpen = true;
+                    // this.modalState = 'open';
+                    // this.#isOpen = true;
                     // console.log('request Update');
                     // super.requestUpdateDirect();
                 }}

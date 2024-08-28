@@ -13,7 +13,7 @@ const useScale = (scaleX, scaleY) => {
 /** @type {PongGameplayTypes.GameSettings} */
 export const defaultSettings = {
     initial_serve_to: 'initial-serve-left',
-    max_score: 1,
+    max_score: 10,
     point_wait_time_ms: 1000,
     serve_mode: 'serve-winner',
     tick_rate: 66,
