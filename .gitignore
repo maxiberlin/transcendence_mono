@@ -1,4 +1,4 @@
 .env
 tmp
 backend_jacob
-database_data
+database_datapostgres-data/
