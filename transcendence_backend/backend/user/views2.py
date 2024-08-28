@@ -1,3 +1,4 @@
+import os
 import json
 from django.conf import settings
 from django.shortcuts import render, redirect
@@ -270,7 +271,9 @@ def login_auth(request):
     if request.user.is_authenticated:
         return HttpSuccess200(message='You have an active session.', data={'user_id': request.user.pk})
     # redirect_uri = 'http://localhost:8000/callback/'
-    redirect_uri = 'https://api.pong42.com/callback/'
+    # redirect_uri = 'https://api.pong42.com/callback/'
+    redirect_uri = f"{os.getenv('BACKEND_URL')}/api/callback/"
+    print(f"REDIRECT: {redirect_uri}")
     client_id = settings.CLIENT_ID
     authorization_url = f'https://api.intra.42.fr/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code'
     # return HttpSuccess200(message='', data={'redirect': True, 'redirect_url': authorization_url})
@@ -281,7 +284,9 @@ def callback(request):
     client_id = settings.CLIENT_ID
     client_secret = settings.CLIENT_SECRET
     # redirect_uri = 'http://localhost:8000/callback/'
-    redirect_uri = 'https://api.pong42.com/callback/'
+    # redirect_uri = 'https://api.pong42.com/callback/'
+    redirect_uri = f"{os.getenv('BACKEND_URL')}/api/callback/"
+    print(f"REDIRECT2: {redirect_uri}")
     token_url = 'https://api.intra.42.fr/oauth/token'
     response = requests.post(token_url, data={
         'grant_type': 'authorization_code',
@@ -294,7 +299,8 @@ def callback(request):
     # print(f"token data: {token_data}")
     access_token = token_data.get('access_token')
     if access_token is None:
-        return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/no-access-token')
+        return HttpResponseRedirect(f"{os.getenv('FRONTEND_URL')}/auth/oauth-failure/no-access-token")
+        # return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/no-access-token')
         return HttpUnauthorized401(message='Invalid credentials')
     # Use the access token to get user info
     user_info_response = requests.get('https://api.intra.42.fr/v2/me', headers={
@@ -305,11 +311,13 @@ def callback(request):
 
     user = UserAccount.objects.filter(username=user_info['login']).first()
     if user is not None and user.oauth is None:
-        return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/username-in-use')
+        return HttpResponseRedirect(f"{os.getenv('FRONTEND_URL')}/auth/oauth-failure/username-in-use")
+        # return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/username-in-use')
 
     user = UserAccount.objects.filter(email=user_info['email']).first()
     if user is not None and user.oauth is None:
-        return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/email-in-use')
+        return HttpResponseRedirect(f"{os.getenv('FRONTEND_URL')}/auth/oauth-failure/email-in-use")
+        # return HttpResponseRedirect('https://pong42.com/auth/oauth-failure/email-in-use')
     
     
 
@@ -324,10 +332,12 @@ def callback(request):
         login(request, user)
         user.status = 'online'
         user.save()
-        return HttpResponseRedirect('https://pong42.com/')
+        return HttpResponseRedirect(f"{{os.getenv('FRONTEND_URL')}}")
+        # return HttpResponseRedirect('https://pong42.com/')
         return HttpSuccess200(message='Login successful!')
     else:
-        return HttpResponseRedirect('https://pong42.com/login')
+        return HttpResponseRedirect(f"{os.getenv('FRONTEND_URL')}/login")
+        # return HttpResponseRedirect('https://pong42.com/login')
         return HttpUnauthorized401(message='Invalid credentials')
 
 

@@ -17,6 +17,340 @@ import router from '../router.js';
 // api at subdomain api.
 
 
+// export const isStr = (s) => typeof s === 'string';
+
+// console.log('env vite: ', import.meta.env);
+// console.log('backend url: ', import.meta.env.VITE_BACKEND_URL);
+
+// // const url = new URL(window.location.origin);
+// export let fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
+//     credentials: 'include',
+// });
+
+
+// /** @param {boolean} csrftoken  */
+// async function createFetcher(csrftoken) {
+    
+//     if (csrftoken) {
+//         const r = await fetcher.$get('/csrf');
+//         if (typeof r.data.csrfToken !== 'string') throw Error("!");
+//         const csrfHeader = new Headers();
+//         csrfHeader.append('X-CSRFToken', r.data.csrfToken,)
+//         fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
+//             credentials: 'include',
+//             headers: csrfHeader
+//         }, undefined);
+//     } else {
+//         console.log('createFetcher NO CSRF');
+//         fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
+//             credentials: 'include',
+//         }, undefined);
+//     }
+//     return fetcher;
+// }
+
+
+
+// export const userAPI = {
+//     /**
+//      * @param {string} username
+//      * @param {string} email
+//      * @param {string} password
+//      * @param {string} confirmPassword
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     register: async (username, email, password, confirmPassword) =>
+//         await fetcher.$post('/register', {
+//             bodyData: { username, email, password, confirmPassword },
+//         }),
+
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.LoginData>>}
+//      */
+//     getCurrentSession: async () =>
+//         await fetcher.$get(`/login`),
+
+//     /**
+//      * @param {string} username
+//      * @param {string} password
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.LoginData>>}
+//      */
+//     authenticate: async (username, password) =>
+//         await fetcher.$post(`/login`, { bodyData: { username, password } }),
+
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     logout: async () =>
+//         await fetcher.$post(`/logout`),
+
+//     /**
+//      * @param {number} user_id
+//      * @param {string} current_password
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     deleteProfile: async (user_id, current_password) =>
+//         await fetcher.$post(`/profile/${user_id}/delete`, {bodyData: {
+//             current_password
+//         }}),
+
+//     /**
+//      * @param {string} newPassword
+//      * @param {string} oldPassword
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     changePassword: async (newPassword, oldPassword) =>
+//         await fetcher.$post(`/password-change`, {bodyData: {
+//             old_password: oldPassword,
+//             new_password: newPassword,
+//         }}),
+
+//     /**
+//      * @param {number} user_id
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.UserData>>}
+//      */
+//     getProfile: async (user_id) =>
+//         await fetcher.$get(`/profile/${user_id}`),
+
+//     /**
+//      * @param {number} user_id
+//      * @param {FormData} data
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.UserData>>}
+//      */
+//     postProfile: async (user_id, data) =>
+//         await fetcher.$post(`/profile/${user_id}/edit`, {bodyData: data}),
+//     /**
+//      * @param {string} query
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.SearchResult[]>>}
+//      */
+//     searchUser: async (query) =>
+//         await fetcher.$get(`/search`, { searchParams: new URLSearchParams({ q: query }) }),
+// };
+
+// export const friendAPI = {
+//     /**
+//      * @param {number} user_id
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.FriendRequestItem[]>>}
+//      */
+//     getRequestsReceived: async (user_id) =>
+//         await fetcher.$get(`/friend/requests/${user_id}`),
+
+//     /**
+//      * @param {number} user_id
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.FriendRequestItem[]>>}
+//      */
+//     getRequestsSent: async (user_id) =>
+//         await fetcher.$get(`/friend/requests-sent/${user_id}`),
+
+//     /**
+//      * @param {number} receiver_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     sendRequest: async (receiver_id) =>
+//         await fetcher.$post('/friend/request', { bodyData: { receiver_id } }),
+
+//     /**
+//      * @param {number} friend_request_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     cancelRequest: async (friend_request_id) =>
+//         await fetcher.$post(`/friend/request/cancel/${friend_request_id}`),
+
+//     /**
+//      * @param {number} friend_request_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     acceptRequest: async (friend_request_id) =>
+//         await fetcher.$post(`/friend/request/accept/${friend_request_id}`),
+
+//     /**
+//      * @param {number} friend_request_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     rejectRequest: async (friend_request_id) =>
+//         await fetcher.$post(`/friend/request/reject/${friend_request_id}`),
+
+//     /**
+//      * @param {number} receiver_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     removeFriend: async (receiver_id) =>
+//         await fetcher.$post('/friend/remove', { bodyData: { receiver_id } }),
+
+//     /**
+//      * @param {number} user_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     blockUser: async (user_id) =>
+//         await fetcher.$post(`/friend/block/${user_id}`),
+
+//     /**
+//      * @param {number} user_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     unblockUser: async (user_id) =>
+//         await fetcher.$post(`/friend/unblock/${user_id}`),
+// };
+
+// export const gameAPI = {
+//     /**
+//      * @param {number} schedule_id
+//      * @param {number} score_one
+//      * @param {number} score_two
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     postResult: async (schedule_id, score_one, score_two) =>
+//         await fetcher.$post(`/game/result`, { bodyData: {schedule_id, score_one, score_two} }),
+    
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.GameInvitationItem[]>>}
+//      */
+//     getInvitesReceived: async () =>
+//         await fetcher.$get(`/game/invites-recieved`),
+    
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.GameInvitationItem[]>>}
+//      */
+//     getInvitesSent: async () =>
+//         await fetcher.$get(`/game/invites-sent`),
+    
+//     /**
+//      * @param {number} user_id 
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     sendInvite: async (user_id) =>
+//         await fetcher.$post(`/game/invite/${user_id}`, { bodyData: { game_id: 0, game_mode: "1vs1", tournament: null } }),
+//     /**
+//      * @param {number} user_id 
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem>>}
+//      */
+//     createMatch: async (user_id) =>
+//         await fetcher.$post(`/game/schedule`, { bodyData: {user_id, game_id: 0, game_mode: "1vs1", tournament: null } }),
+    
+//     /**
+//      * @param {number} invite_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     acceptInvite: async (invite_id) =>
+//         await fetcher.$post(`/game/invite/accept/${invite_id}`),
+
+//     /**
+//      * @param {number} invite_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     cancelInvite: async (invite_id) =>
+//         await fetcher.$post(`/game/invite/cancel/${invite_id}`),
+    
+//     /**
+//      * @param {number} invite_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     rejectInvite: async (invite_id) =>
+//         await fetcher.$post(`/game/invite/reject/${invite_id}`),
+    
+//     /**
+//      * @param {string} name
+//      * @param {APITypes.TournamentMode} mode
+//      * @param {number[]} players 
+//      * @returns {Promise<APITypes.ApiResponse<{tournament_id: number}>>}
+//      */
+//     createTournament: async (name, mode, players) => {
+//         return await fetcher.$post(`/game/tournament-create`, {
+//             bodyData: { name, mode, game_id: 0, players }
+//         })
+//     },
+    
+//     /**
+//      * @param {number} [page]
+//      * @param {number} [userId]
+//      * @param {number} [creatorId]
+//      * @param {APITypes.TournamentStatus[]} [status]
+//      * @param {APITypes.TournamentMode[]} [mode]
+//      * @returns {Promise<APITypes.ApiResponse<{max_pages: number, tournaments: APITypes.TournamentItem[]}>>}
+//      */
+//     getTournaments: async (page, userId, creatorId, status, mode) =>
+//         await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({
+//             page: page?.toString() ?? '',
+//             user: userId?.toString() ?? '',
+//             creator: creatorId?.toString() ?? '',
+//             status: status?.join(',') ?? '',
+//             mode: mode?.join(',') ?? ''
+//         })}),
+    
+//     /**
+//      * @param {number} tournament_id
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentData>>}
+//      */
+//     getTournamentDetails: async (tournament_id) =>
+//         await fetcher.$get(`/game/tournament-details/${tournament_id}`),
+    
+
+//     /**
+//      * @param {number} schedule_id
+//      * @returns {Promise<APITypes.ApiResponse<null>>}
+//      */
+//     pushRandomResults: async (schedule_id, max_score) => {
+//         let score_one, score_two;
+//         const rand = Math.random();
+//         if (rand < 0.5) {
+//             score_one = max_score;
+//             score_two = Math.trunc(Math.random() * max_score);
+//         } else {
+//             score_two = max_score;
+//             score_one = Math.trunc(Math.random() * max_score);
+//         }
+//         console.log('score one: ', score_one);
+//         console.log('score two: ', score_two);
+//         return (await fetcher.$post(`/game/result`, {bodyData: {
+//                 schedule_id,
+//                 score_one,
+//                 score_two
+//             }}));
+//     },
+//     /**
+//      * @param {number} schedule_id
+//      * @param {number} score_one
+//      * @param {number} score_two
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem>>}
+//      */
+//     pushResults: async (schedule_id, score_one, score_two) => {
+//         return (await fetcher.$post(`/game/result`, {bodyData: {
+//                 schedule_id,
+//                 score_one,
+//                 score_two
+//             }}));
+//     },
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem[]>>}
+//      */
+//     getGameSchedule: async () =>
+//         await fetcher.$get(`/game/schedule`),
+    
+//     /**
+//      * @param {string | true} [username]
+//      * @param {number} [page]
+//      * @returns {Promise<APITypes.ApiResponse<{history: APITypes.GameScheduleItem[], max_pages: number}>>}
+//      */
+//     getHistory: async (username, page) =>
+//         !username ? await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ page: page ? page.toString() : '1' }) } )
+//         : username == true ? await fetcher.$get(`/game/history`, {searchParams: new URLSearchParams({user: '', page: page ? page.toString() : '1'})})
+//         : await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ user: username, page: page ? page.toString() : '1' }) } ),
+        
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<string>>}
+//      */
+//     getStats: async () =>
+//         await fetcher.$get(`/game/stats`),
+    
+//     /**
+//      * @returns {Promise<APITypes.ApiResponse<APITypes.PlayerData[]>>}
+//      */
+//     getLeaderboard: async () =>
+//         await fetcher.$get(`/game/leaderboard`),
+    
+
+// };
+
 export const isStr = (s) => typeof s === 'string';
 
 console.log('env vite: ', import.meta.env);
@@ -32,7 +366,7 @@ export let fetcher = new Fetcher(import.meta.env.VITE_BACKEND_URL, {
 async function createFetcher(csrftoken) {
     
     if (csrftoken) {
-        const r = await fetcher.$get('/csrf');
+        const r = await fetcher.$get('/api/csrf');
         if (typeof r.data.csrfToken !== 'string') throw Error("!");
         const csrfHeader = new Headers();
         csrfHeader.append('X-CSRFToken', r.data.csrfToken,)
@@ -60,7 +394,7 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     register: async (username, email, password, confirmPassword) =>
-        await fetcher.$post('/register', {
+        await fetcher.$post('/api/register', {
             bodyData: { username, email, password, confirmPassword },
         }),
 
@@ -68,7 +402,7 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.LoginData>>}
      */
     getCurrentSession: async () =>
-        await fetcher.$get(`/login`),
+        await fetcher.$get(`/api/login`),
 
     /**
      * @param {string} username
@@ -76,13 +410,16 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.LoginData>>}
      */
     authenticate: async (username, password) =>
-        await fetcher.$post(`/login`, { bodyData: { username, password } }),
+        await fetcher.$post(`/api/login`, { bodyData: { username, password } }),
+
+    auth42: async () =>
+        fetcher.$get('api/o/login'),
 
     /**
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     logout: async () =>
-        await fetcher.$post(`/logout`),
+        await fetcher.$post(`/api/logout`),
 
     /**
      * @param {number} user_id
@@ -90,7 +427,7 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     deleteProfile: async (user_id, current_password) =>
-        await fetcher.$post(`/profile/${user_id}/delete`, {bodyData: {
+        await fetcher.$post(`/api/profile/${user_id}/delete`, {bodyData: {
             current_password
         }}),
 
@@ -100,7 +437,7 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     changePassword: async (newPassword, oldPassword) =>
-        await fetcher.$post(`/password-change`, {bodyData: {
+        await fetcher.$post(`/api/password-change`, {bodyData: {
             old_password: oldPassword,
             new_password: newPassword,
         }}),
@@ -110,7 +447,7 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.UserData>>}
      */
     getProfile: async (user_id) =>
-        await fetcher.$get(`/profile/${user_id}`),
+        await fetcher.$get(`/api/profile/${user_id}`),
 
     /**
      * @param {number} user_id
@@ -118,13 +455,13 @@ export const userAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.UserData>>}
      */
     postProfile: async (user_id, data) =>
-        await fetcher.$post(`/profile/${user_id}/edit`, {bodyData: data}),
+        await fetcher.$post(`/api/profile/${user_id}/edit`, {bodyData: data}),
     /**
      * @param {string} query
      * @returns {Promise<APITypes.ApiResponse<APITypes.SearchResult[]>>}
      */
     searchUser: async (query) =>
-        await fetcher.$get(`/search`, { searchParams: new URLSearchParams({ q: query }) }),
+        await fetcher.$get(`/api/search`, { searchParams: new URLSearchParams({ q: query }) }),
 };
 
 export const friendAPI = {
@@ -133,63 +470,63 @@ export const friendAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.FriendRequestItem[]>>}
      */
     getRequestsReceived: async (user_id) =>
-        await fetcher.$get(`/friend/requests/${user_id}`),
+        await fetcher.$get(`/api/friend/requests/${user_id}`),
 
     /**
      * @param {number} user_id
      * @returns {Promise<APITypes.ApiResponse<APITypes.FriendRequestItem[]>>}
      */
     getRequestsSent: async (user_id) =>
-        await fetcher.$get(`/friend/requests-sent/${user_id}`),
+        await fetcher.$get(`/api/friend/requests-sent/${user_id}`),
 
     /**
      * @param {number} receiver_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     sendRequest: async (receiver_id) =>
-        await fetcher.$post('/friend/request', { bodyData: { receiver_id } }),
+        await fetcher.$post('/api/friend/request', { bodyData: { receiver_id } }),
 
     /**
      * @param {number} friend_request_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     cancelRequest: async (friend_request_id) =>
-        await fetcher.$post(`/friend/request/cancel/${friend_request_id}`),
+        await fetcher.$post(`/api/friend/request/cancel/${friend_request_id}`),
 
     /**
      * @param {number} friend_request_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     acceptRequest: async (friend_request_id) =>
-        await fetcher.$post(`/friend/request/accept/${friend_request_id}`),
+        await fetcher.$post(`/api/friend/request/accept/${friend_request_id}`),
 
     /**
      * @param {number} friend_request_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     rejectRequest: async (friend_request_id) =>
-        await fetcher.$post(`/friend/request/reject/${friend_request_id}`),
+        await fetcher.$post(`/api/friend/request/reject/${friend_request_id}`),
 
     /**
      * @param {number} receiver_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     removeFriend: async (receiver_id) =>
-        await fetcher.$post('/friend/remove', { bodyData: { receiver_id } }),
+        await fetcher.$post('/api/friend/remove', { bodyData: { receiver_id } }),
 
     /**
      * @param {number} user_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     blockUser: async (user_id) =>
-        await fetcher.$post(`/friend/block/${user_id}`),
+        await fetcher.$post(`/api/friend/block/${user_id}`),
 
     /**
      * @param {number} user_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     unblockUser: async (user_id) =>
-        await fetcher.$post(`/friend/unblock/${user_id}`),
+        await fetcher.$post(`/api/friend/unblock/${user_id}`),
 };
 
 export const gameAPI = {
@@ -200,53 +537,53 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     postResult: async (schedule_id, score_one, score_two) =>
-        await fetcher.$post(`/game/result`, { bodyData: {schedule_id, score_one, score_two} }),
+        await fetcher.$post(`/api/game/result`, { bodyData: {schedule_id, score_one, score_two} }),
     
     /**
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameInvitationItem[]>>}
      */
     getInvitesReceived: async () =>
-        await fetcher.$get(`/game/invites-recieved`),
+        await fetcher.$get(`/api/game/invites-recieved`),
     
     /**
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameInvitationItem[]>>}
      */
     getInvitesSent: async () =>
-        await fetcher.$get(`/game/invites-sent`),
+        await fetcher.$get(`/api/game/invites-sent`),
     
     /**
      * @param {number} user_id 
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     sendInvite: async (user_id) =>
-        await fetcher.$post(`/game/invite/${user_id}`, { bodyData: { game_id: 0, game_mode: "1vs1", tournament: null } }),
+        await fetcher.$post(`/api/game/invite/${user_id}`, { bodyData: { game_id: 0, game_mode: "1vs1", tournament: null } }),
     /**
      * @param {number} user_id 
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem>>}
      */
     createMatch: async (user_id) =>
-        await fetcher.$post(`/game/schedule`, { bodyData: {user_id, game_id: 0, game_mode: "1vs1", tournament: null } }),
+        await fetcher.$post(`/api/game/schedule`, { bodyData: {user_id, game_id: 0, game_mode: "1vs1", tournament: null } }),
     
     /**
      * @param {number} invite_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     acceptInvite: async (invite_id) =>
-        await fetcher.$post(`/game/invite/accept/${invite_id}`),
+        await fetcher.$post(`/api/game/invite/accept/${invite_id}`),
 
     /**
      * @param {number} invite_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     cancelInvite: async (invite_id) =>
-        await fetcher.$post(`/game/invite/cancel/${invite_id}`),
+        await fetcher.$post(`/api/game/invite/cancel/${invite_id}`),
     
     /**
      * @param {number} invite_id
      * @returns {Promise<APITypes.ApiResponse<null>>}
      */
     rejectInvite: async (invite_id) =>
-        await fetcher.$post(`/game/invite/reject/${invite_id}`),
+        await fetcher.$post(`/api/game/invite/reject/${invite_id}`),
     
     /**
      * @param {string} name
@@ -255,7 +592,7 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<{tournament_id: number}>>}
      */
     createTournament: async (name, mode, players) => {
-        return await fetcher.$post(`/game/tournament-create`, {
+        return await fetcher.$post(`/api/game/tournament-create`, {
             bodyData: { name, mode, game_id: 0, players }
         })
     },
@@ -269,7 +606,7 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<{max_pages: number, tournaments: APITypes.TournamentItem[]}>>}
      */
     getTournaments: async (page, userId, creatorId, status, mode) =>
-        await fetcher.$get(`/game/tournaments`, {searchParams: new URLSearchParams({
+        await fetcher.$get(`/api/game/tournaments`, {searchParams: new URLSearchParams({
             page: page?.toString() ?? '',
             user: userId?.toString() ?? '',
             creator: creatorId?.toString() ?? '',
@@ -282,7 +619,7 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.TournamentData>>}
      */
     getTournamentDetails: async (tournament_id) =>
-        await fetcher.$get(`/game/tournament-details/${tournament_id}`),
+        await fetcher.$get(`/api/game/tournament-details/${tournament_id}`),
     
 
     /**
@@ -301,7 +638,7 @@ export const gameAPI = {
         }
         console.log('score one: ', score_one);
         console.log('score two: ', score_two);
-        return (await fetcher.$post(`/game/result`, {bodyData: {
+        return (await fetcher.$post(`/api/game/result`, {bodyData: {
                 schedule_id,
                 score_one,
                 score_two
@@ -314,7 +651,7 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem>>}
      */
     pushResults: async (schedule_id, score_one, score_two) => {
-        return (await fetcher.$post(`/game/result`, {bodyData: {
+        return (await fetcher.$post(`/api/game/result`, {bodyData: {
                 schedule_id,
                 score_one,
                 score_two
@@ -324,7 +661,7 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<APITypes.GameScheduleItem[]>>}
      */
     getGameSchedule: async () =>
-        await fetcher.$get(`/game/schedule`),
+        await fetcher.$get(`/api/game/schedule`),
     
     /**
      * @param {string | true} [username]
@@ -332,24 +669,27 @@ export const gameAPI = {
      * @returns {Promise<APITypes.ApiResponse<{history: APITypes.GameScheduleItem[], max_pages: number}>>}
      */
     getHistory: async (username, page) =>
-        !username ? await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ page: page ? page.toString() : '1' }) } )
-        : username == true ? await fetcher.$get(`/game/history`, {searchParams: new URLSearchParams({user: '', page: page ? page.toString() : '1'})})
-        : await fetcher.$get(`/game/history`, { searchParams: new URLSearchParams({ user: username, page: page ? page.toString() : '1' }) } ),
+        !username ? await fetcher.$get(`/api/game/history`, { searchParams: new URLSearchParams({ page: page ? page.toString() : '1' }) } )
+        : username == true ? await fetcher.$get(`/api/game/history`, {searchParams: new URLSearchParams({user: '', page: page ? page.toString() : '1'})})
+        : await fetcher.$get(`/api/game/history`, { searchParams: new URLSearchParams({ user: username, page: page ? page.toString() : '1' }) } ),
         
     /**
      * @returns {Promise<APITypes.ApiResponse<string>>}
      */
     getStats: async () =>
-        await fetcher.$get(`/game/stats`),
+        await fetcher.$get(`/api/game/stats`),
     
-    /**
-     * @returns {Promise<APITypes.ApiResponse<APITypes.PlayerData[]>>}
-     */
+    /** @returns {Promise<APITypes.ApiResponse<APITypes.PlayerData[]>>} */
     getLeaderboard: async () =>
-        await fetcher.$get(`/game/leaderboard`),
+        await fetcher.$get(`/api/game/leaderboard`),
     
 
 };
+
+/** @returns {Promise<APITypes.ApiResponse<APITypes.ChatRoomData[]>>} */
+export const chatAPI = {
+    getChatRooms: () => fetcher.$get('/api/chat/rooms'),
+}
 
 
 export class SessionStore {

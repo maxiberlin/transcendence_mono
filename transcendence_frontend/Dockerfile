@@ -56,16 +56,18 @@ ARG NGINX_BACKEND_URI
 #     -addext "basicConstraints=CA:FALSE" \
 #     -addext "extendedKeyUsage = serverAuth, clientAuth" \
 #     -addext "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment" \
-#     -addext "subjectAltName=DNS:$NGINX_FRONTEND_URI,DNS:$NGINX_BACKEND_URI" 
+#     -addext "subjectAltName=DNS:$NGINX_FRONTEND_URI" 
+
+COPY --from=build /app/build /var/www/pong_spa
 
 COPY ./ssl/localhost/localhost.crt /etc/nginx/ssl/certs/localhost.crt
 COPY ./ssl/localhost/localhost.key /etc/nginx/ssl/private/localhost.key
 
-COPY --from=build /app/build /var/www/pong_spa
-
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/nginx.conf.d/default.conf.template /etc/nginx/templates/
 COPY nginx/nginx.conf.d/ssl.conf.template /etc/nginx/templates/
+
+
 
 EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]

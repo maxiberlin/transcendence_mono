@@ -2,7 +2,7 @@ import { ToastNotificationSuccessEvent, ToastNotificationUserEvent } from '../..
 import BaseBase from '../../lib_templ/BaseBase.js';
 import PubSub from '../../lib_templ/reactivity/PubSub.js';
 import PubSubConsumer from '../../lib_templ/reactivity/PubSubConsumer.js';
-import { fetcher, sessionService } from './API.js';
+import { chatAPI, fetcher, sessionService } from './API.js';
 import { ReconnectingSocket } from './Socket.js';
 
 const chatErrors = {
@@ -459,6 +459,9 @@ export class GlobalSockHandler {
 
     async init() {
         this.#notifications = new MessageData();
+        console.log('import.meta.env: ', import.meta.env);
+        console.log('import.meta.env.VITE_GLOBAL_WEBSOCKET_URL: ', import.meta.env.VITE_GLOBAL_WEBSOCKET_URL);
+        
         this.#socket = new ReconnectingSocket(import.meta.env.VITE_GLOBAL_WEBSOCKET_URL)
         this.#socket.addHandler("initial_connected", () => {
             // console.log('INITIAL CONNECTED');
@@ -488,7 +491,7 @@ export class GlobalSockHandler {
         })
         this.#socket.addHandler("message", this.handleSocketMessage);
          /** @type {APITypes.ApiResponse<APITypes.ChatRoomData[]>} */
-         const data =  await fetcher.$get('/chat/rooms');
+         const data =  await chatAPI.getChatRooms();
          if (data.success !== true) return;
          /** @type {Promise<APITypes.ApiResponse<APITypes.ChatMessageList>>[]} */
          const chatMessagePromises = [];

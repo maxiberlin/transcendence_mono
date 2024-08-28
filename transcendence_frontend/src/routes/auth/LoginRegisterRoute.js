@@ -1,7 +1,7 @@
 import { ToastNotificationErrorEvent } from '../../components/bootstrap/BsToasts.js';
 import { BaseElement, html } from '../../lib_templ/BaseElement.js';
 import { TemplateAsLiteral } from '../../lib_templ/templ/TemplateAsLiteral.js';
-import { fetcher, sessionService } from '../../services/api/API.js';
+import { fetcher, sessionService, userAPI } from '../../services/api/API.js';
 import router from '../../services/router.js';
 
 /**
@@ -439,7 +439,7 @@ export default class LoginRegisterRoute extends BaseElement {
     render42Login = () => html`
         <bs-button ._async_handler=${async () => {
                 /** @type {APITypes.ApiResponse<APITypes.Intra42Data>} */
-                const data = await fetcher.$get('/o/login');
+                const data = await userAPI.auth42();
                 console.log('login with 42 - data: ', data);
                 
                 if (data.success) {

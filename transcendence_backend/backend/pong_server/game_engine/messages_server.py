@@ -4,8 +4,10 @@ from enum import Enum
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 import logging
-import struct
 from game.serializers import GameResultData
+import asyncio
+from .types import GameSettings, GameObjData, GameObjPositionData
+from .game_base_class import BaseBroadcastBin
 
 
 HEARTBEAT_INTERVAL_MS = 1000
@@ -38,6 +40,7 @@ class WebsocketErrorCode(Enum):
 
 
 
+
 # Error handling message: You cannot use AsyncToSync in the same thread as an async event loop - just await the async function directly.
 
 class CommandError(Exception):
@@ -49,39 +52,6 @@ class CommandError(Exception):
         self.error_code = error_code
 
 
-ServeMode = Literal["serve-winner", "serve-loser", "serve-random"]
-
-ServeSide = Literal["serve-left", "serve-right"]
-
-class GameSettings(TypedDict):
-    point_wait_time_ms: float
-    serve_mode: ServeMode
-    initial_serve_to: ServeSide
-    max_score: int
-    tick_rate: int
-    tick_duration_ms: int
-    border_height: float
-    border_width: float
-
-
-class GameObjData(TypedDict):
-    x: float
-    y: float
-    w: float
-    h: float
-    speed_x: float
-    speed_y: float
-    bound_top: float
-    bound_bottom: float
-    bound_left: float
-    bound_right: float
-
-
-class GameObjPositionData(TypedDict):
-    x: float
-    y: float
-    dx: float
-    dy: float
 
 class ConsumerMessage(TypedDict):
     type: Literal["handle_broadcast", "handle_broadcast_binary"]
@@ -123,6 +93,24 @@ async def sync_send_to_consumer(server_broadcast: "BaseBroadcast", channel_name:
     return await async_send_to_consumer(server_broadcast, channel_name, group_name)
 
 
+background_tasks: set[asyncio.Task] = set()
+
+def start_coro(coro):
+    task = asyncio.get_running_loop().create_task(coro)
+    background_tasks.add(task)
+    def on_msg_done(task: asyncio.Task[bool]) -> object:
+        e = task.exception()
+        if e is not None:
+            logging.error(f"Error: start_coro exception in coroutine: {e}")
+        background_tasks.discard(task)
+        
+    task.add_done_callback(on_msg_done)
+
+def start_coro_send_to_consumer(game_channel:str, server_broadcast: 'BaseBroadcast | BaseBroadcastBin'):
+    start_coro(async_send_to_consumer(server_broadcast, group_name=game_channel))
+
+
+
 def _convert_enum_dict(data):
     return {key: val.value if isinstance(val, Enum) else val for key, val in data}
 
@@ -144,10 +132,10 @@ class BaseBroadcast:
     #         "server_broadcast": asdict(self, dict_factory=_convert_enum_dict)
     #     }
 
-@dataclass(slots=True)
-class BaseBroadcastBin:
-    def tobin(self):
-        pass
+# @dataclass(slots=True)
+# class BaseBroadcastBin:
+#     def tobin(self):
+#         pass
 
 
 @dataclass
@@ -170,42 +158,46 @@ class GameReady(BaseBroadcast):
     user_id_left: int
     user_id_right: int
 
-@dataclass
-class GameObjPositionDataclass(BaseBroadcastBin):
-    x: float
-    y: float
-    dx: float
-    dy: float
+# @dataclass
+# class GameObjPositionDataclass(BaseBroadcastBin):
+#     x: float
+#     y: float
+#     dx: float
+#     dy: float
+#     state: int = field(default=0)
     
-    def tobin(self):
-        return struct.pack("ff", self.x, self.y)
+#     def tobin(self):
+#         return struct.pack("ffff", self.x, self.y, self.dx, self.dy)
 
-@dataclass
-class GameSnapshotDataclass(BaseBroadcastBin):
-    tickno: int
-    timestamp_ms: float
-    tick_duration_s: float
-    ball: GameObjPositionDataclass
-    paddle_left: GameObjPositionDataclass
-    paddle_right: GameObjPositionDataclass
-    
-    def print(self):
-        print(f"tickno: {self.tickno}")
-        print(f"ball x: {self.ball.x}")
-        print(f"ball y: {self.ball.y}")
-    
-    def tobin(self):
-        return struct.pack("If", self.tickno, self.timestamp_ms) + self.ball.tobin() + self.paddle_left.tobin() + self.paddle_right.tobin()
 
-@dataclass
-class GameSnapshotListDataclass(BaseBroadcastBin):
-    list: list[GameSnapshotDataclass]
+
+# @dataclass
+# class GameSnapshotDataclass(BaseBroadcastBin):
+#     tickno: int
+#     timestamp_ms: float
+#     tick_duration_s: float
+#     ball: GameObjPositionDataclass
+#     paddle_left: GameObjPositionDataclass
+#     paddle_right: GameObjPositionDataclass
+#     movements: list = field(default=[])
     
-    def tobin(self):
-        data = bytes()
-        for i in self.list:
-            data += i.tobin()
-        return struct.pack("I", len(self.list)) + data
+#     def print(self):
+#         print(f"tickno: {self.tickno}")
+#         print(f"ball x: {self.ball.x}")
+#         print(f"ball y: {self.ball.y}")
+    
+#     def tobin(self):
+#         return struct.pack("If", self.tickno, self.timestamp_ms) + self.ball.tobin() + self.paddle_left.tobin() + self.paddle_right.tobin()
+
+# @dataclass
+# class GameSnapshotListDataclass(BaseBroadcastBin):
+#     list: list[GameSnapshotDataclass]
+    
+#     def tobin(self):
+#         data = bytes()
+#         for i in self.list:
+#             data += i.tobin()
+#         return struct.pack("I", len(self.list)) + data
 
 @dataclass
 class GameUpdate(BaseBroadcast):
@@ -235,6 +227,11 @@ class GamePaused(BaseBroadcast):
 @dataclass
 class GameResumed(BaseBroadcast):
     tag = "server-game-resumed"
+
+@dataclass
+class GameDismissed(BaseBroadcast):
+    tag = "server-game-dismissed"
+    user_id: int
 
 
 @dataclass
@@ -298,7 +295,8 @@ ServerMessage: TypeAlias = Union[
     UserConnected,
     UserDisconnected,
     UserReconnected,
-    Error
+    Error,
+    GameDismissed
 ]
 
 

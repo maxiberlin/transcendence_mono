@@ -5,8 +5,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 # from .game_engine.messages_client import ClientCommand, GameEngineMessage, GameEngineMessageResponse
 from channels_redis.core import RedisChannelLayer
 from channels.layers import InMemoryChannelLayer, get_channel_layer
-from .game_engine_curr import messages_server as msg_server
-from .game_engine_curr import messages_client as msg_client
+from .game_engine import messages_server as msg_server
+from .game_engine import messages_client as msg_client
 from user.models import UserAccount
 import asyncio
 from websocket_server.constants import MSG_TYPE_GAME_START_REQUESTED

@@ -21,7 +21,6 @@ AUTH_USER_MODEL = 'user.UserAccount'
 
 ALLOWED_HOSTS = ['*']
 
-# BASE_URL = 'http://127.0.0.1/'
 BASE_URL = os.getenv('FRONTEND_URL')
 
 
@@ -43,7 +42,6 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'channels',
-    # 'django_extensions',
 
     'user',
     'chat',
@@ -68,30 +66,16 @@ MIDDLEWARE = [
     'user.utils.JsonMiddleware'
 ]
 
-    # "http://127.0.0.1",
-    # "http://localhost",
-    # "http://127.0.0.1:5500",
-    # "http://localhost:5500",
-    # "https://pong.com",
-    # "https://pong42.com",
-    # "https://pongparty.com",
-CSRF_TRUSTED_ORIGINS = [
-    os.getenv('FRONTEND_URL')
-]
-
-CORS_ALLOW_CREDENTIALS = True
-
+CSRF_TRUSTED_ORIGINS = [ os.getenv('FRONTEND_URL') ]
+CSRF_COOKIE_SECURE = False
+# SESSION_COOKIE_DOMAIN=os.getenv('FRONTEND_URL')
+# SESSION_COOKIE_DOMAIN=os.getenv('BACKEND_URL')
+# SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True
 
-    # "http://127.0.0.1:5500",
-    # "http://localhost:5500",
-    # "https://pong.com",
-    # "https://pong42.com",
-    # "https://pongparty.com",
-CORS_ALLOWED_ORIGINS = [
-    os.getenv('FRONTEND_URL')
-]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [ os.getenv('FRONTEND_URL') ]
 
 
 ROOT_URLCONF = 'backend.urls'
@@ -118,10 +102,9 @@ ASGI_APPLICATION = 'backend.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        # 'BACKEND': 'channels.layers.InMemoryChannelLayer',
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('redis', 6380)],
+            'hosts': [('redis', 6379)],
         },
     },
 }
@@ -225,10 +208,7 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
-CSRF_COOKIE_SECURE = False
-# CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = False
+
 
 
 # UserAccount.objects.create(username='melanie', email='frwegohwerg@web.de', password='asd')

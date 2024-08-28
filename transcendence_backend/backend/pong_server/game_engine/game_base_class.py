@@ -2,7 +2,27 @@ import struct
 import math
 from enum import Enum
 import dataclasses
-from .messages_server import GameObjData, GameObjPositionData, GameObjPositionDataclass
+from typing import TypedDict
+from .types import GameObjData, GameObjPositionData
+
+
+@dataclasses.dataclass(slots=True)
+class BaseBroadcastBin:
+    def tobin(self):
+        pass
+
+@dataclasses.dataclass
+class GameObjPositionDataclass(BaseBroadcastBin):
+    x: float
+    y: float
+    dx: float
+    dy: float
+    state: int = dataclasses.field(default=0)
+    
+    def tobin(self):
+        return struct.pack("ffff", self.x, self.y, self.dx, self.dy)
+
+
 
 class Collision(Enum):
     COLL_NONE = 0
@@ -115,7 +135,9 @@ class GameObjDataClass:
             "speed_y": self.speed_y,
             "w": self.w,
             "x": self.x,
-            "y": self.y
+            "y": self.y,
+            "dx": self.dx,
+            "dy": self.dy,
         }
 
     def getPositionalDataAsDict(self) -> GameObjPositionData:

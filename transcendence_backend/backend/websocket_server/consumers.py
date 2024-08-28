@@ -29,7 +29,7 @@ from notification.models import Notification, NotificationData
 # from django.db import close_old_connections
 # from asgiref.sync import SyncToAsync
 
-from pong_server.game_engine_curr import messages_client as game_engine_client_messages
+from pong_server.game_engine import messages_client as game_engine_client_messages
 
 def use_timeout(timeout_ms: int):
     def get_time():

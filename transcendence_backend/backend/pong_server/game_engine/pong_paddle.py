@@ -1,11 +1,12 @@
 # from .pong_objs import PongObj
-from .game_base_class import GameObjDataClass, Collision
+from .game_base_class import GameObjDataClass, GameObjPositionDataclass, BaseBroadcastBin
 from .pong_settings import PongSettings
 from enum import Enum
-import math
-from .messages_client import ClientMoveDirection
-from .messages_server import GameObjPositionDataclass
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import struct
+from typing import Literal
+
+ClientMoveDirection = Literal["up", "down", "release_up", "release_down", "none"]
 
 @dataclass(slots=True)
 class ClientMoveItem:
@@ -14,6 +15,45 @@ class ClientMoveItem:
     tick: int
     timediff_ms: float
     paddle: "PongPaddle"
+
+    def print_item(self):
+        print(f"paddle: {'left' if self.paddle.x < 0.5 else 'right'}")
+        print(f"tick: {self.tick}")
+        print(f"tickdiff: {self.timediff_ms}")
+        if self.new_y is not None:
+            print(f"new_y: {self.new_y}")
+        if self.action is not None:
+            print(f"action: {self.action}")
+
+@dataclass
+class GameSnapshotDataclass(BaseBroadcastBin):
+    tickno: int
+    timestamp_ms: float
+    tick_duration_s: float
+    ball: GameObjPositionDataclass
+    paddle_left: GameObjPositionDataclass
+    paddle_right: GameObjPositionDataclass
+    movements: list[ClientMoveItem] = field(default_factory=list)
+    
+    def print(self):
+        print(f"tickno: {self.tickno}")
+        print(f"ball x: {self.ball.x}")
+        print(f"ball y: {self.ball.y}")
+    
+    def tobin(self):
+        return struct.pack("If", self.tickno, self.timestamp_ms) + self.ball.tobin() + self.paddle_left.tobin() + self.paddle_right.tobin()
+
+@dataclass
+class GameSnapshotListDataclass(BaseBroadcastBin):
+    list: list[GameSnapshotDataclass]
+    
+    def tobin(self):
+        data = bytes()
+        for i in self.list:
+            data += i.tobin()
+        return struct.pack("I", len(self.list)) + data
+
+
 
 class PongPaddle(GameObjDataClass):
     class PaddlePos:
@@ -56,28 +96,61 @@ class PongPaddle(GameObjDataClass):
         elif move_item.new_y is not None:
             self.__set_y_position(move_item.new_y)
             
-    def reconcile_tick_list(self, oldState: GameObjPositionDataclass, move_item: list[ClientMoveItem], tick_duration_s: float):
-        pass
+    # def reconcile_tick_list(self, oldState: GameObjPositionDataclass, move_item: list[ClientMoveItem], tick_duration_s: float):
+        #  else:
+        #     previous_timediff_s = 0
+        #     for item in move_item:
+        #         self.update_pos(current_timediff_s - previous_timediff_s)
+        #         current_timediff_s = item.timediff_ms / 1000
+        #         if item.paddle == self:
+        #             self.trigger_action(item)
+        #         previous_timediff_s = current_timediff_s
+        #     self.update_pos(tick_duration_s - previous_timediff_s)
 
-    def reconcile_tick(self, oldState: GameObjPositionDataclass, move_item: ClientMoveItem | list[ClientMoveItem], tick_duration_s: float):
+    # def reconcile_tick(self, oldState: GameObjPositionDataclass, move_item: ClientMoveItem | list[ClientMoveItem], tick_duration_s: float):
+    #     super().setPositionalDataFromDataclass(oldState)
+    #     if isinstance(move_item, ClientMoveItem):
+    #         if move_item.paddle == self:
+    #             diff_s = move_item.timediff_ms / 1000
+    #             self.update_pos(diff_s)
+    #             self.trigger_action(move_item)
+    #             self.update_pos(tick_duration_s - diff_s)
+    #         else:
+    #             self.update_pos(tick_duration_s)
+    #     else:
+    #         previous_timediff_s = 0
+    #         for item in move_item:
+    #             self.update_pos(current_timediff_s - previous_timediff_s)
+    #             current_timediff_s = item.timediff_ms / 1000
+    #             if item.paddle == self:
+    #                 self.trigger_action(item)
+    #             previous_timediff_s = current_timediff_s
+    #         self.update_pos(tick_duration_s - previous_timediff_s)
+    #     return super().getPositionalDataclass()
+
+    def reconcile_tick(self, oldState: GameObjPositionDataclass, moves: list[ClientMoveItem], tick_duration_s: float):
         super().setPositionalDataFromDataclass(oldState)
-        if isinstance(move_item, ClientMoveItem):
-            if move_item.paddle == self:
-                diff_s = move_item.timediff_ms / 1000
-                self.update_pos(diff_s)
-                self.trigger_action(move_item)
-                self.update_pos(tick_duration_s - diff_s)
+        if len(moves) == 0:
+            self.update_pos(tick_duration_s)
+        elif len(moves) == 1:
+            if moves[0].paddle == self:
+                diff = moves[0].timediff_ms / 1000
+                self.update_pos(diff)
+                self.trigger_action(moves[0])
+                self.update_pos(tick_duration_s - diff)
             else:
                 self.update_pos(tick_duration_s)
         else:
             previous_timediff_s = 0
-            for item in move_item:
+            for move in moves:
+                current_timediff_s = move.timediff_ms / 1000
                 self.update_pos(current_timediff_s - previous_timediff_s)
-                current_timediff_s = item.timediff_ms / 1000
-                if item.paddle == self:
-                    self.trigger_action(item)
+                if move.paddle == self:
+                    self.trigger_action(move)
                 previous_timediff_s = current_timediff_s
             self.update_pos(tick_duration_s - previous_timediff_s)
+        return super().getPositionalDataclass()
+       
                 
 
     def __update_pos(self, y: float):

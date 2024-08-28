@@ -29,19 +29,33 @@ handler404 = error_404
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('user.urls')),
+
+    path('api/o/', include(oauth2_urls)),
+    path('api/o/login', login_auth, name='oauth2-login'),
+    path('api/callback/', callback, name='login-callback'),
+
+    path('api/', include('user.urls')),
+    path('api/friend/', include('friends.urls')),
+    path('api/game/', include('game.urls')),
+    path('api/chat/', include('chat.urls')),
 
 
-    path('o/', include(oauth2_urls)),
-    # path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
-    path('o/login', login_auth, name='oauth2-login'),
-    path('callback/', callback, name='login-callback'),
-
-    path('friend/', include('friends.urls')),
-    path('game/', include('game.urls')),
-    path('chat/', include('chat.urls')),
 ]
     # path('remote', include('pong_server.urls')),
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('', include('user.urls')),
+
+#     path('o/', include(oauth2_urls)),
+#     # path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+#     path('o/login', login_auth, name='oauth2-login'),
+#     path('callback/', callback, name='login-callback'),
+
+#     path('friend/', include('friends.urls')),
+#     path('game/', include('game.urls')),
+#     path('chat/', include('chat.urls')),
+# ]
+#     # path('remote', include('pong_server.urls')),
 
 
 

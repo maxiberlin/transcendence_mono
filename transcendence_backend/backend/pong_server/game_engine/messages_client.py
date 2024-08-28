@@ -1,11 +1,11 @@
 from typing import Literal, TypedDict, TypeAlias, NotRequired, Any, LiteralString, Final, Union
-from enum import Enum
-import uuid
 from channels.layers import get_channel_layer
 from .messages_server import WebsocketErrorCode
 import logging
 from asgiref.sync import async_to_sync
 from enum import StrEnum
+from .pong_paddle import ClientMoveDirection
+from websocket_server.constants import InternalCommand as MainInternal
 
 # class ClientBaseCommand(TypedDict):
 #     cmd: Literal["default_cmd"]
@@ -20,7 +20,7 @@ class ClientBaseCommand(TypedDict):
     internal: NotRequired[int]
 
 
-ClientMoveDirection = Literal["up", "down", "release_up", "release_down", "none"]
+
 
 
 # class ClientPingCommand(ClientBaseCommand):
@@ -72,8 +72,24 @@ class ClientMoveCommand(ClientBaseCommand):
     cmd: Literal["client-move"]
     timestamp_sec: float
     timestamp_ms: int
+    tickno: NotRequired[int]
+    tickdiff: NotRequired[float]
     action: ClientMoveDirection
     new_y: float
+
+class MovementKey(TypedDict):
+    tickno: int
+    tickdiff: float
+    action: ClientMoveDirection
+
+class MovementMouse(TypedDict):
+    tickno: int
+    tickdiff: float
+    new_y: float
+
+class ClientMoveCommandList(ClientBaseCommand):
+    cmd: Literal["client-move-list"]
+    movements: list[MovementKey | MovementMouse]
 
 class ClientPauseCommand(ClientBaseCommand):
     cmd: Literal["client-pause"]
@@ -94,6 +110,7 @@ ClientCommand = Union[
     ClientJoinCommand,
     ClientReadyCommand,
     ClientMoveCommand,
+    ClientMoveCommandList,
     ClientPauseCommand,
     ClientResumeCommand,
     ClientLeaveCommand,
@@ -110,10 +127,15 @@ class InternalTimeoutCommand(ClientBaseCommand):
 class InternalReconnectedCommand(ClientBaseCommand):
     cmd: Literal["client-reconnected"]
 
+class InternalGameDismissed(ClientBaseCommand):
+    cmd: Literal["client-game-dismissed"]
+    schedule_id: int
+
 InternalCommand: TypeAlias = \
     InternalDisconnectedCommand \
     | InternalReconnectedCommand \
-    | InternalTimeoutCommand
+    | InternalTimeoutCommand \
+    | InternalGameDismissed
 
 
 class GameEngineMessage(TypedDict):
@@ -213,6 +235,21 @@ class InternalMessenger:
         })
 
 
+class MainInternalCommand(TypedDict):
+    user_id: int
+    cmd: MainInternal
+
+class MainInternalCommandEvent(TypedDict):
+    type: Literal['send_internal_message']
+    cmd: MainInternalCommand
+
+async def async_send_mainserver_internal_command(player_channel: str, cmd: MainInternalCommand):
+    layer = get_channel_layer()
+    if layer:
+        await layer.send(player_channel, {
+            'type': 'send_internal_message',
+            'cmd': cmd
+        })
 
 async def async_send_command_response(event: GameEngineMessage, success: bool, message: str,
     status_code: WebsocketErrorCode = WebsocketErrorCode.OK, payload: Any = None) -> None:

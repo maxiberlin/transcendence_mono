@@ -72,6 +72,8 @@ export class Fetcher {
     static #handleResponse(response) {
         return response.text()
             .then((text) => {
+                console.log(text);
+                
                 /** @type {APITypes.ApiResponse} */
                 const data = text && JSON.parse(text);
                 // console.log('fetch response: ', data);
@@ -176,7 +178,7 @@ export class Fetcher {
         // // console.log("fetch headers: ", usedRequest.headers);
         // // console.log("fetch body Data: ", usedRequest.body);
 
-        // // console.log('fetch url: ', usedUrl);
+        console.log('fetch url: ', usedUrl);
         return fetch(usedUrl, usedRequest).then(
             Fetcher.#handleResponse.bind(this),
         );
