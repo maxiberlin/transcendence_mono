@@ -58,7 +58,7 @@ def serializer_chat_room_data(chat_room: 'ChatRoom', user: UserAccount | None = 
     unread_count = None
     if user is not None:
         unread_count = chat_room.get_unread_messages_for_user(user)
-        print(f"unread messages: {unread_count} in room {chat_room}")
+        # print(f"unread messages: {unread_count} in room {chat_room}")
     users = chat_room.users.all()
     userdata = [serializer_basic_user_data(u) for u in users if isinstance(u, UserAccount)]
     return {
@@ -161,20 +161,20 @@ class ChatRoomManager(models.Manager['ChatRoom']):
     def create_private_chat(self, user1: UserAccount, user2: UserAccount):
         title = f"{user1.username}.{user2.username}"
         room = self.get_private_chat(user1, user2)
-        print(f"ROOM FOUND?: {room}")
+        # print(f"ROOM FOUND?: {room}")
         if room is not None and room.is_active == True:
-            print(f"INVALID USE, PRIVATE CHAT IS ALREADY CREATED AND ACTIVE")
+            # print(f"INVALID USE, PRIVATE CHAT IS ALREADY CREATED AND ACTIVE")
             return room
         if room is not None:
             room.is_active = True
-            print(f"OK: ROOM JUST INACTIVE -> REACTIVATE")
+            # print(f"OK: ROOM JUST INACTIVE -> REACTIVATE")
         else:
             try:
-                print(f"ROOM DOES NOT EXIST-> CREATE")
+                # print(f"ROOM DOES NOT EXIST-> CREATE")
                 room = self.create(title = str(user1.username + '.' + user2.username), type='private')
                 room.users.add(user1)
                 room.users.add(user2)
-                print(f'--->>> private_room created')
+                # print(f'--->>> private_room created')
             except Exception as e:
                 raise RuntimeError(str(e))
         try:
@@ -195,19 +195,19 @@ class ChatRoomManager(models.Manager['ChatRoom']):
         if room is None:
             return
         if action == 'activate' and room.is_active == False:
-            print(f"ACTIVATE INACTIVATED ROOM")
+            # print(f"ACTIVATE INACTIVATED ROOM")
             room.is_active = True
             room.save()
             notify_consumer_chat_room(room, user1, 'add')
             notify_consumer_chat_room(room, user2, 'add')
         elif action == 'inactivate' and room.is_active == True:
-            print(f"INACTIVATE ACTIVATED ROOM")
+            # print(f"INACTIVATE ACTIVATED ROOM")
             room.is_active = False
             room.save()
             notify_consumer_chat_room(room, user1, 'remove')
             notify_consumer_chat_room(room, user2, 'remove')
-        else:
-            print(f"Error, room already in {action} state")
+        # else:
+        #     print(f"Error, room already in {action} state")
         
     # def get_or_create_private_chat(self, user1: UserAccount, user2: UserAccount):
     #     try:

@@ -6,14 +6,53 @@ import PongPaddle from './Paddle.js';
 /** @param {number} degrees */
 const degToRad = (degrees) => degrees * (Math.PI/180);
 
+
 function calcRandAngleSinCos() {
     const upperBound = (225 * Math.PI) / 180;
     const lowerBound = (135 * Math.PI) / 180;
     const angle = Math.random() * (upperBound - lowerBound) + lowerBound;
     return {
-        sin: Math.sin(angle),
-        cos: Math.cos(angle),
+        dy: Math.sin(angle),
+        dx: Math.cos(angle),
     };
+}
+
+// 'none' | 'left' | 'right'
+/** @param {PongGameplayTypes.ServeSide} serveSide  */
+function calcAngleBySide(serveSide) {
+    let {dy, dx } = calcRandAngleSinCos();
+    console.log('dy: ', dy);
+    console.log('dx: ', dx);
+    
+    if (serveSide == "serve-left" && dx > 0) {
+        dx = -dx
+    } else if (serveSide == "serve-right" && dx < 0) {
+        dx = -dx;
+    }
+    console.log('dy: ', dy);
+    console.log('dx: ', dx);
+    return { dy, dx };
+}
+
+/**
+ * @param {PongGameplayTypes.ServeMode} mode
+ * @param {PongGameplayTypes.PongGameSides | 'none'}[scoreSide]
+ */
+function calcAngleByMode(mode, scoreSide) {
+    /** @type {PongGameplayTypes.ServeSide} */
+    let serveSide = 'serve-left';
+    if (!scoreSide || scoreSide == 'none') {
+        serveSide = 'serve-left';
+    } else if (mode === 'serve-winner') {
+        serveSide = scoreSide === "right" ? 'serve-left' : 'serve-right';
+    } else if (mode === 'serve-loser') {
+        serveSide = scoreSide === 'left' ? 'serve-left' : 'serve-right';
+    } else if (mode === 'serve-random') {
+        serveSide = Math.random() < 0.5 ? 'serve-left' : 'serve-right';
+    } else {
+        serveSide = scoreSide === 'left' ? 'serve-left' : 'serve-right';
+    }
+    return calcAngleBySide(serveSide);
 }
 
 export default class PongBall extends DrawObj {
@@ -30,15 +69,25 @@ export default class PongBall extends DrawObj {
     /**
      * @param {PongGameplayTypes.GameObjData} initDataBall
      * @param {boolean} setBallAngle
+     * @param {PongGameplayTypes.ServeMode} [serveMode]
+     * @param {PongGameplayTypes.PongGameSides} [scoreSide]
      */
-    constructor(initDataBall, setBallAngle) {
+    constructor(initDataBall, setBallAngle, serveMode, scoreSide) {
         super(initDataBall);
-        if (setBallAngle) {
+        console.log('constructor ball, mode: ', serveMode);
+        console.log('set ball abngel: ', setBallAngle);
+        
+        if (setBallAngle && serveMode) {
             // console.log('ball set Ball angles');
             // console.log(this);
-            const { sin, cos } = calcRandAngleSinCos();
-            this.dx = cos;
-            this.dy = sin;
+            // const { sin, cos } = calcRandAngleSinCos();
+            const { dy, dx } = calcAngleByMode(serveMode, scoreSide);
+            console.log('dy: ', dy);
+            console.log('dx: ', dx);
+            
+            
+            this.dx = dx;
+            this.dy = dy;
             // console.log('init data: ', initDataBall);
         }
     }
@@ -188,7 +237,7 @@ export default class PongBall extends DrawObj {
         } else {
             scored = PongBall.Scored.SCORE_NONE;
             const paddle = this.left < paddleLeft.right ? paddleLeft : paddleRight;
-            const [collision, diffTime] = this.coll_ision(paddle);
+            const [collision, diffTime] = this.collision(paddle);
     
             // console.log('\n\n\ncollision: ', DrawObj.getCollisionStr(collision));
             // console.log('difftime: ', diffTime);
@@ -218,6 +267,8 @@ export default class PongBall extends DrawObj {
                 this.#recalcDirY(elapsed, diffTime);
             }
         }
+        console.log('scored: ', scored);
+        
         return scored;
     }
 

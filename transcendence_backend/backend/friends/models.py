@@ -118,14 +118,14 @@ class BlockList(models.Model):
             raise ConflictExcept("You can not block yourself")
         self.blocked.add(account)
         self.save()
-        print('@@@@@@@@---> BLocked')
+        # print('@@@@@@@@---> BLocked')
         ChatRoom.rooms.toggle_private_chat('inactivate', self.user, account)
         cancel_game_request_schedules(self.user, account)
         # room = get_private_room_or_create(self.user, account)
         # if room.is_active:
         #     room.is_active = False
         #     room.save()
-        print('Room deactivated @@@@@@@@---')
+        # print('Room deactivated @@@@@@@@---')
 
     def unblock_user(self, account: UserAccount):
         if not (account in self.blocked.all()):
@@ -135,7 +135,7 @@ class BlockList(models.Model):
         self.blocked.remove(account)
         other_list = BlockList.objects.get(user=account)
         if self.user not in other_list.blocked.all():
-            print(f'<<<---------->>>')
+            # print(f'<<<---------->>>')
             ChatRoom.rooms.toggle_private_chat('activate', self.user, account)
             # room = get_private_room_or_create(self.user, account)
             # if not room.is_active:
@@ -164,8 +164,8 @@ def cancel_game_request_schedules(user, friend):
     #  player_two=Player.objects.get(user=friend))
     p1 = Player.objects.get(user=user)
     p2 = Player.objects.get(user=friend)
-    print(f"p1: {p1}")
-    print(f"p1: {p2}")
+    # print(f"p1: {p1}")
+    # print(f"p1: {p2}")
     schedules=GameSchedule.objects.filter(( ( Q(player_one=p1) & Q(player_two=p2) ) | ( Q(player_one=p2) & Q(player_two=p1) ) ), game_mode='1vs1', is_active=True)
     # schedules=GameSchedule.objects.filter(
     #     (
@@ -176,7 +176,7 @@ def cancel_game_request_schedules(user, friend):
     #     is_active=True
     # )
     
-    print(f"cancel_game_request_schedules schedule: {schedules}")
+    # print(f"cancel_game_request_schedules schedule: {schedules}")
     if len(schedules) > 0:
         for schedule in schedules:
             schedule.is_active = False

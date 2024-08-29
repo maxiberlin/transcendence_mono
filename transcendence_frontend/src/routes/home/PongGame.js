@@ -406,8 +406,13 @@ export default class GameScreen extends BaseElement {
     renderGameHeader = () => html`
         <button type="button" class=" btn btn-outline-dark rounded-circle"
                 @click=${() => {
-                    if (!this.#paused) this.currentGame?.pauseGame();
-                    else this.currentGame?.continueGame();
+                    if (!this.#paused) {
+                        this.currentGame?.pauseGame();
+                        this.#paused = true;
+                    } else {
+                        this.currentGame?.continueGame();
+                        this.#paused = false;
+                    }
                     super.requestUpdateDirect();
                 }}
             >

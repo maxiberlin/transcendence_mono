@@ -290,8 +290,14 @@ export class TournamentDetailsView extends BaseElement {
         
                 <div class="container-fluid opacity-transition ${this.tournamentData ? 'content-loaded' : ''}">
                     <h3 class="display-6">${ getTournamentIcon(this.tournamentData?.mode)}  ${this.tournamentData?.name} ${this.tournamentData?.status === 'waiting' ? ` | ${this.tournamentData?.mode}` : ''}</h3>
-                    <div class="m-2">
-                        <single-chat-view icon="paper-plane" text="tournament chat" .offcanvas=${true} .user_or_tournament=${this.tournamentData} ></single-chat-view>
+                    <div class="d-flex align-item-center m-2">
+                        <div class="me-2">
+                            <single-chat-view icon="paper-plane" text="tournament chat" .offcanvas=${true} .user_or_tournament=${this.tournamentData} ></single-chat-view>
+                        </div>
+                        <a href="/settings" role="button" class="btn btn-primary">
+                            <i class="fa-solid fa-gear"></i>
+                            change your alias
+                        </a>
                     </div>
                     <div class="tournament-grid">
                         <div class="tournament-grid-item-a">

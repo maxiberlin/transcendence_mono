@@ -167,7 +167,7 @@ export default class DrawObj {
     /**
      * @param {DrawObj} obj 
      */
-    coll_ision(obj) {
+    collision(obj) {
         let diffTimeX = Infinity;
         let diffTimeY = Infinity;
         let collisionX = DrawObj.COLL_NONE;

@@ -2,6 +2,7 @@ import { avatarLink } from '../../../components/bootstrap/AvatarComponent';
 import { getPongSvg, renderInlineMatch } from '../../../components/gameUtils';
 import { BaseElement, html, ifDefined } from '../../../lib_templ/BaseElement';
 import { gameAPI, sessionService } from '../../../services/api/API';
+import { TournamentListView } from '../tournament/TournamentListView';
 
 export class PongInfoView extends BaseElement {
     static observedAttributes = [];
@@ -92,24 +93,25 @@ export class PongInfoView extends BaseElement {
     `
 
     renderInfoTab = () => html`
+        <tournament-list-view></tournament-list-view>
     `
 
 
     render() {
-        
+
         console.log('current page from params: ', this.searchParams?.get('page'));
         
         return html`
             <div>
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="match-history" data-bs-toggle="tab" data-bs-target="#match-history-pane" type="button" role="tab" aria-controls="match-history-pane" aria-selected="true">Home</button>
+                        <button class="nav-link" id="leaderboard" data-bs-toggle="tab" data-bs-target="#leaderboard-pane" type="button" role="tab" aria-controls="leaderboard-pane" aria-selected="false">Leaderboard</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="leaderboard" data-bs-toggle="tab" data-bs-target="#leaderboard-pane" type="button" role="tab" aria-controls="leaderboard-pane" aria-selected="false">Profile</button>
+                        <button class="nav-link active" id="match-history" data-bs-toggle="tab" data-bs-target="#match-history-pane" type="button" role="tab" aria-controls="match-history-pane" aria-selected="true">Matches</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="game-info" data-bs-toggle="tab" data-bs-target="#game-info-pane" type="button" role="tab" aria-controls="game-info-pane" aria-selected="false">Contact</button>
+                        <button class="nav-link" id="game-info" data-bs-toggle="tab" data-bs-target="#game-info-pane" type="button" role="tab" aria-controls="game-info-pane" aria-selected="false">Tournaments</button>
                     </li>
                 </ul>
                 <div class="tab-content" id="gameInfoContent">

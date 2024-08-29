@@ -170,7 +170,9 @@ export const getMatchIcon = (schedule) => {
             ${img}
             </a>
     `
-            
+         
+         
+
     // return !tdata ? img : html`
     //     <a class="d-inline-flex"
     //         href="${ifDefined(`/games/${tdata.game_id.toLowerCase()}/tournament/${tdata.id}`)}"
@@ -179,6 +181,38 @@ export const getMatchIcon = (schedule) => {
     //         ${img}
     //     </a>
     // `
+}
+
+/**
+ * @param {number} [tid]
+ */
+export const getMatchIconByTournamentId = (tid) => {
+    const tdata = sessionService.getTournamentById(tid);
+    const img = tdata?.mode === 'round robin' ? getRRMatchImg() : tdata?.mode === 'single elimination' ? getSEMatchImg() : get1vs1MatchImg();
+    return html`
+        <a class="d-inline-flex"
+            href="#"
+            data-bs-toggle="popover" data-bs-placement="top" data-bs-html="true"
+            
+            data-bs-content="${`
+                ${!tdata ? '1vs1' : tdata.mode} Match
+                ${!tdata ? '' : `
+                    <a class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                        href="${ifDefined(`/games/${tdata.game_id.toLowerCase()}/tournament/${tdata.id}`)}"
+                    >
+                        <br>
+                        <br>
+                        <b>Tournament:</b>
+                        <br>
+                         ${tdata.name}
+                    </a>
+                `}
+                
+            `}"
+        >
+            ${img}
+            </a>
+    `
 }
 
 /** @param {APITypes.TournamentItem | APITypes.TournamentData | string} [d] */

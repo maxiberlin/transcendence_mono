@@ -77,7 +77,7 @@ class ChatMessageView(View):
         room_id = int(room_id)
         pageno = int(pageno)
         messages = ChatMessage.messages.by_room(room_id)
-        print(f"room_id: {room_id}, MESSAGES: {messages}")
+        # print(f"room_id: {room_id}, MESSAGES: {messages}")
         paginator = Paginator(messages, 20)
         messagepage = paginator.get_page(pageno)
         m = [serializer_chat_message_data(msg) for msg in messagepage if isinstance(msg, ChatMessage)]

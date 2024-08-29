@@ -17,8 +17,8 @@ def get_default_user():
 def calculate_user_xp(margin, winner):
     xp_map = {
         range(1, 4): 4,
-        range(4, 7): 7,
-        range(7, 10): 10
+        range(4, 8): 7,
+        range(8, 11): 10
     }
     xp = 0
     for margin_range, xp_value in xp_map.items():

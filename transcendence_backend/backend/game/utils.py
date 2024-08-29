@@ -163,3 +163,4 @@ def update_leaderboard():
         Leaderboard.objects.create(player=player, rank=rank)
 
 
+    

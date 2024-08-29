@@ -3,7 +3,7 @@ import GameCourt from './GameCourt';
 import PongBall from './Ball';
 import PongPaddle from './Paddle';
 import { pushMessageToMainThread } from './utils';
-import { ballDefault, courtDefault, paddleLeftDefault, paddleRightDefault } from './localInitial';
+import { ballDefault, courtDefault, defaultSettings, paddleLeftDefault, paddleRightDefault } from './localInitial';
 
 
 /** @param {DrawObj} paddle */
@@ -69,7 +69,7 @@ export class PongObjManager {
         this.ctx = c;
         this.ballData = ballDefault;
         this.court = new GameCourt(courtDefault);
-        this.ball = new PongBall(ballDefault, true);
+        this.ball = new PongBall(ballDefault, true, defaultSettings.serve_mode);
         this.paddleLeft = new PongPaddle(paddleLeftDefault);
         this.paddleRight = new PongPaddle(paddleRightDefault);
         this.width = this.ctx.canvas.width;
@@ -94,7 +94,7 @@ export class PongObjManager {
      */
     recreateGameObjects(courtData, ballData, paddleLeftData, paddleRightData) {
         this.court = new GameCourt(courtData);
-        this.ball = new PongBall(ballData, !this.remote);
+        this.ball = new PongBall(ballData, !this.remote, defaultSettings.serve_mode);
         this.paddleLeft = new PongPaddle(paddleLeftData);
         this.paddleRight = new PongPaddle(paddleRightData);
         this.#setObjectSizes(this.width, this.height);
@@ -179,11 +179,12 @@ export class PongObjManager {
         return this.playerOneId === id ? "left" : this.playerTwoId === id ? "right" : "none";
     }
 
-    resetBall() {
+    /** @param {PongGameplayTypes.PongGameSides} scoreSide  */
+    resetBall(scoreSide) {
         this.scoreBreak = true;
         setTimeout(() => {
             // console.log('timeout done old ball: ', this.ball);
-            this.ball = new PongBall(this.ballData, !this.remote);
+            this.ball = new PongBall(this.ballData, !this.remote, defaultSettings.serve_mode, scoreSide);
             if (this.objectColor) this.ball.setColor(this.objectColor);
             // console.log('new ball created: ', this.ball);
             this.ball.setCanvasSizes(this.width, this.height);
@@ -193,30 +194,32 @@ export class PongObjManager {
         }, this.ballTimeout);
     }
 
-    /** @param {number | PongGameplayTypes.PongGameSides | 'none'} side  */
+    /** @param {PongGameplayTypes.PongGameSides} side  */
     localScored(side) {
-        if (typeof side === 'number') {
-            side = this.getSideById(side);
-        }
+      
         let end = false;
-        if (side === "left") {
+        if (side === 'right') {
             this.court.scoreL++;
             if (this.court.scoreL === this.maxScore) {
+                pushMessageToMainThread(this.#getGameDoneMessage(side, 'reguar'));
                 end = true;
+            } else {
+                pushMessageToMainThread(this.#getScoredMessage(side));
+                this.resetBall(side);
             }
-        } else if (side === "right") {
+        } else if (side === 'left') {
             this.court.scoreR++;
             if (this.court.scoreR === this.maxScore) {
+                pushMessageToMainThread(this.#getGameDoneMessage(side, 'reguar'));
                 end = true;
+            } else {
+                pushMessageToMainThread(this.#getScoredMessage(side));
+                this.resetBall(side);
             }
         } else {
             throw new Error("PongObjsManager: invalid side");
         }
-        pushMessageToMainThread(this.#getScoredMessage(side));
-        if (end === true) {
-            pushMessageToMainThread(this.#getGameDoneMessage(side, 'reguar'));
-        }
-        this.resetBall();
+        
         return end;
     }
 
@@ -242,7 +245,7 @@ export class PongObjManager {
             throw new Error("PongObjsManager: invalid side");
         }
         pushMessageToMainThread(this.#getScoredMessage(side));
-        this.resetBall();
+        this.resetBall(side);
     }
 
 

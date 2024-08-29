@@ -9,6 +9,7 @@ import { get1vs1MatchImg, getMatchIcon, getRRMatchImg, getSEMatchImg, getStatusB
 
 import { Tooltip } from 'bootstrap';
 import { getTournamentLink } from './utils.js';
+import router from '../../services/router.js';
 
 export default class GameWindow extends BaseElement {
     constructor() {
@@ -25,6 +26,12 @@ export default class GameWindow extends BaseElement {
     connectedCallback() {
         super.connectedCallback();
         this.init();
+    }
+
+    onBeforeMount() {
+        if (!sessionService.isLoggedIn) {
+            return router.redirect('/auth/login')
+        }
     }
 
     // /** @param {APITypes.GameInvitationItem} data @param {boolean} received */
@@ -93,8 +100,84 @@ export default class GameWindow extends BaseElement {
             </div>
     `)}
 
+
+
+
+  /** @param {APITypes.GameInvitationItem} data @param {boolean} received */
+    renderInvitationItem = (data, received) => {
+        const tdata = this.sessionUser.value?.tournaments?.find(t => t.id === data.tournament);        
+        return renderListItem(html`
+            <div class="col-6 col-sm-4 text-start">
+                ${avatarLink(data)}
+            </div>
+            <div class="col-3 col-sm-2 text-center">
+                ${renderCardInfo('Mode', data.game_mode === '1vs1' ? html`<span><i class="fa-solid fa-hand-fist me-2"></i>${data.game_mode}</span>`
+                : html`<span >T  <i class="fa-solid fa-skull-crossbones me-2"></i></span>`)}
+            </div>
+            ${tdata ? html`
+                <div class="col-3 col-sm-2 text-center">
+                    ${renderCardInfo('Name', html`<a class="link-body-emphasis link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" href="${ifDefined(`/games/${tdata.game_id.toLowerCase()}/tournament/${tdata.id}`)}" >${tdata?.name}</a>`)}
+                </div>
+            ` : ''}
+
+         
+            <div class="col-12 col-sm-auto text-end mt-2 mt-sm-0">
+                <div class="row">
+                    ${received ? html`
+                        <div class="col-6 col-sm-auto">
+                            ${actions.acceptGameInvitation(data.invite_id, { host: this, showText: false, stretch: true })}
+                        </div>
+                        <div class="col-6 col-sm-auto">
+                            ${actions.rejectGameInvitation(data.invite_id, { host: this, showText: false, stretch: true })}
+                        </div>
+                    ` : html`
+                        ${actions.cancelGameInvitation(data.invite_id, { host: this, showText: false, stretch: true })}
+                    `}
+                </div>
+            </div>
+    `)}
+
+// renderTablelikeCard(`Invitations ${type}`, 'trophy', invitationList, [
+//     {
+//         heading: type === 'received' ? 'Inviter' : 'Invitee',
+//         col: 'col-6 col-sm-4 text-start text-truncate py-2',
+//         cb: (n, v) => avatarLink(v, true)
+//     },
+//     {
+//         heading: '',
+//         col: 'col-6 col-sm-2 col-md-2 text-start align-middle py-2',
+//         cb: (n, v) => getMatchIconByTournamentId(v.tournament)
+//     },
+//     {
+//         heading: '',
+//         col: 'col-6 col-sm-2 col-md-2 text-start py-2',
+//         cb: (n, v) => html`
+//             <div class="row">
+
+//             </div>
+//             ${type === 'received' ? html`
+//                 <div class="col-6 col-sm-auto">
+//                     ${actions.acceptGameInvitation(v.invite_id, { host: this, showText: false, stretch: true })}
+//                 </div>
+//                 <div class="col-6 col-sm-auto">
+//                     ${actions.rejectGameInvitation(v.invite_id, { host: this, showText: false, stretch: true })}
+//                 </div>
+//             ` : html`
+//                 ${actions.cancelGameInvitation(v.invite_id, { host: this, showText: false, stretch: true })}
+//             `}
+//         `
+//     },
+// ])
+
+   /** @param {'received' | 'sent'} type @param {APITypes.GameInvitationItem[]} [invitationList] */
+   renderInvitationList = (type, invitationList) => renderListCard( `Invitations ${type}`, 'scroll',
+    !invitationList || invitationList.length === 0 ?
+        renderListItem(html`<p class="text-center m-0">No Invitations ${type}</p>`)
+    :   invitationList.map((data) => this.renderInvitationItem(data, type === 'received'))
+)
+
     /** @param {'received' | 'sent'} type @param {APITypes.GameInvitationItem[]} [invitationList] */
-    renderInvitationList = (type, invitationList) => renderListCard( `Invitations ${type}`, 'scroll',
+    renderInvitationList2 = (type, invitationList) => renderListCard( `Invitations ${type}`, 'scroll',
         !invitationList || invitationList.length === 0 ?
             renderListItem(html`<p class="text-center m-0">No Invitations ${type}</p>`)
         :   invitationList.map((data) => this.renderInvitationItem(data, type === 'received'))
@@ -149,7 +232,7 @@ export default class GameWindow extends BaseElement {
 
     /** @param {APITypes.GameScheduleItem[]} gameSchedule */
     renderGameMatches = (gameSchedule) => {
-        return  renderTablelikeCard('Tournaments', 'trophy', gameSchedule, [
+        return  renderTablelikeCard('Matches', 'trophy', gameSchedule, [
             {
                 heading: 'Left Side',
                 col: 'col-6 col-sm-4 text-start text-truncate py-2',

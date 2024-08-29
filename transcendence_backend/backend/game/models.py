@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from notification.utils import create_notification, update_notification
 from websocket_server.utils import sync_send_consumer_internal_command, sync_send_consumer_internal_command_list
 from websocket_server.constants import *
+from django.db.models import Q
 from django.db.models.query import QuerySet
 
 def query_players_with_status(tournament: "Tournament"):
@@ -305,8 +306,6 @@ class GameSchedule(models.Model):
 
     def __str__(self):
         return f'{self.pk} - {self.player_one} vs {self.player_two}'
-   
-
             
     
     def finish_game_and_update(self, score_one: int, score_two: int): #TODO send user xp gained ot lost + winner to consumer
@@ -348,7 +347,14 @@ class GameSchedule(models.Model):
         scheduled_tournament_games = GameSchedule.objects.filter(tournament=self.tournament, is_active=True)
         # check final game and set winner
         if self.tournament.mode == 'round robin' and len(scheduled_tournament_games) == 0:
-            tournament_player_winner = TournamentPlayer.objects.filter(tournament=self.tournament).order_by('-xp').first()
+            players_xp_sorted = TournamentPlayer.objects.filter(tournament=self.tournament).order_by('-xp')
+            top_player_xp = players_xp_sorted[0].xp
+            if get_tied_players(top_player_xp, players_xp_sorted):
+                tied_players = players_xp_sorted.filter(xp=top_player_xp)
+                top_player = get_top_by_score_margin(tied_players, self.tournament)
+                tournament_player_winner = top_player
+            else:
+                tournament_player_winner = players_xp_sorted.first()
             if tournament_player_winner:
                 self.tournament.winner = tournament_player_winner.player.user
                 self.tournament.finish_tournament()
@@ -380,8 +386,6 @@ def create_next_game_notification(tournament: Tournament):
             {'type': 'game.message', 'id': tournament.pk, 'msg_type': MSG_TYPE_TOURNAMENT_GAME_NEXT}
         )
        
-        
-        
 
 
 def send_tournament_refresh(tournament: Tournament):
@@ -432,13 +436,29 @@ class GameRequest(models.Model):
         if self.tournament is None:
             return
         self.tournament.players.remove(get_object_or_404(Player, user=self.invitee))
-        ChatRoom.rooms.remove_user_from_tournament_chat(tournament_name=self.tournament.name, user=self.invitee)
         # if TournamentPlayer.objects.filter(tournament=self.tournament).count() == self.tournament.players.all().count():
         if len(TournamentPlayer.objects.filter(tournament=self.tournament)) == len(self.tournament.players.all()):
             self.tournament.update(True, False)
-        if len(self.tournament.players.all()) < 3:
+        if self.tournament is not None:
+            send_tournament_refresh(self.tournament)
+
+
+    def check_tournament_deletion(self):
+        if self.tournament is None:
+            return
+        print(f"number of tournament players: {len(self.tournament.players.all())}")
+        if len(self.tournament.players.all()) <= 3:
+            req = GameRequest.objects.filter(tournament=self.tournament, is_active=True)
+            print(f"requests: {req}")
+            for r in req:
+                r._update_status("cancelled")
+                self.tournament.players.remove(get_object_or_404(Player, user=r.invitee))
+                update_notification(r, f"tournament {self.tournament.name} was deleted, minimum number of players not met.")
             self.tournament.delete()
-        send_tournament_refresh(self.tournament)
+            self.tournament = None
+            return True
+        return False
+
 
     def accept_tournament_invitation(self):
         if self.tournament is None:
@@ -459,7 +479,6 @@ class GameRequest(models.Model):
         if len(self.tournament.players.all()) < 3:
             self.tournament.delete()
         send_tournament_refresh(self.tournament)
- 
 
     def _update_status(self, state: Literal["accepted", "rejected", "cancelled"]):
         self.status = state
@@ -490,21 +509,24 @@ class GameRequest(models.Model):
         update_notification(self, f"You accepted {self.user.username}'s game invite.")
         return create_notification(self, self.invitee, self.user, f"{self.invitee.username} accepted your game request.")
 
-
     def reject(self):
         if not self.is_active: return
+
         if self.tournament:
+            if self.check_tournament_deletion():
+                return
             self.clear_tournament_invitation()
         self._update_status("rejected")
         # self._update_notification(f"You declined {self.user}'s game request.")
         # return self._create_notification(self.user, f"{self.invitee.username} declined your game request.")
         update_notification(self, f"You declined {self.user}'s game request.")
         create_notification(self, self.invitee,  self.user, f"{self.invitee.username} declined your game request.")
-    
 
     def cancel(self):
         if not self.is_active: return
         if self.tournament:
+            if self.check_tournament_deletion():
+                return
             self.clear_tournament_invitation()
             # self._handle_tournament(False, None)
         self._update_status("cancelled")
@@ -573,6 +595,32 @@ def add_user_to_chat_room(user: UserAccount, tournament_name: str):
         room.save()
     except:
         pass
+
+
+def get_tied_players(xp, sorted_players):
+    tied_players = sorted_players.filter(xp=xp)
+    if len(tied_players) > 1:
+        return True
+    return False
+
+def get_top_by_score_margin(players, tournament):
+    top_margin = 0
+    top_player = None
+    for player in players:
+        player_margin = 0
+        player_games = GameSchedule.objects.filter(Q(player_one=player.player) | Q(player_two=player.player), tournament=tournament, is_active=False)
+        for game in player_games:
+            result = GameResults.objects.get(game_schedule=game.pk)
+            score_margin = abs(result.player_one_score - result.player_two_score)
+            if result.winner == player.player.user:
+                player_margin += score_margin
+            else:
+                player_margin -= score_margin
+        if player_margin > top_margin:
+            top_margin = player_margin
+            top_player = player
+
+    return top_player
 
 
 

@@ -15,7 +15,7 @@ export const defaultSettings = {
     initial_serve_to: 'initial-serve-left',
     max_score: 10,
     point_wait_time_ms: 1000,
-    serve_mode: 'serve-winner',
+    serve_mode: 'serve-loser',
     tick_rate: 66,
 };
 
